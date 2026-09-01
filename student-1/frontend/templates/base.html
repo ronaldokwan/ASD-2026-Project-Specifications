@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Product Catalogue{% endblock %} &middot; ASD 2026 Group 40</title>
+
+  <!-- Team-wide theme, mounted read-only from shared/ -->
+  <link rel="stylesheet" href="/shared/css/theme.css">
+  <!-- Feature-specific styling for the Product Catalogue -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/catalogue.css') }}">
+
+  <!-- HTMX is vendored locally so the showcase demo works without internet -->
+  <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}" defer></script>
+  <script src="/shared/js/app.js" defer></script>
+  <script src="{{ url_for('static', filename='js/catalogue.js') }}" defer></script>
+</head>
+
+<body>
+  <header class="app-header">
+    <h1>Product Catalogue</h1>
+    <span class="subtitle">Student 1 &middot; Ronaldo Kwan</span>
+    <span class="spacer"></span>
+    <a href="{{ home_url }}">&larr; All features</a>
+    <a href="/health" target="_blank" rel="noopener">Health</a>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="container muted" style="padding-bottom:32px">
+    ASD 2026 &middot; Canvas Group 40 &middot; Agentic AI Retail Application &middot;
+    frontend &rarr; backend/API &rarr; AI-Mode &rarr; Ollama &rarr; LLM
+  </footer>
+</body>
+
+</html>

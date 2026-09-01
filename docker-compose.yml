@@ -1,0 +1,164 @@
+# ---------------------------------------------------------------------------
+# Run: docker compose up --build
+# ---------------------------------------------------------------------------
+
+name: asd2026-group40
+
+x-ai-env: &ai-env
+  OLLAMA_URL: http://ollama:11434
+  LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+  LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
+  AI_MODE_URL: http://ai-mode:7000
+
+services:
+
+  # ======================= TEAM / SHARED SERVICES ==========================
+
+  # Unified home page (index.html) linking every student's frontend feature.
+  shared-home:
+    image: nginx:1.27-alpine
+    container_name: asd-shared-home
+    ports:
+      - "3000:80"
+    volumes:
+      - ./shared:/usr/share/nginx/html:ro
+    networks: [asd-net]
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: asd-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: asd-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      'echo "Pulling $${LLM_MODEL} ..." && ollama pull "$${LLM_MODEL}" && ollama list'
+    networks: [asd-net]
+    restart: "no"
+
+  ai-mode:
+    build: ./ai-services/ai-mode
+    container_name: asd-ai-mode
+    environment:
+      <<: *ai-env
+      AI_MODE_MAX_ADAPT_ATTEMPTS: ${AI_MODE_MAX_ADAPT_ATTEMPTS:-2}
+    ports:
+      - "7000:7000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:7000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =================== STUDENT 1 - Ronaldo Kwan ============================
+  # Feature: Product Catalogue
+
+  student-1-db:
+    build: ./student-1/database
+    container_name: asd-student-1-db
+    environment:
+      DB_PATH: /data/products.db
+      SERVICE_PORT: "9001"
+    ports:
+      - "9001:9001"
+    volumes:
+      - student-1-data:/data
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:9001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  student-1-backend:
+    build: ./student-1/backend
+    container_name: asd-student-1-backend
+    environment:
+      <<: *ai-env
+      DATABASE_URL: http://student-1-db:9001
+      SERVICE_PORT: "8001"
+    ports:
+      - "8001:8001"
+    depends_on:
+      student-1-db:
+        condition: service_healthy
+      ai-mode:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  student-1-frontend:
+    build: ./student-1/frontend
+    container_name: asd-student-1-frontend
+    environment:
+      BACKEND_URL: http://student-1-backend:8001
+      HOME_URL: http://localhost:3000
+      SERVICE_PORT: "3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./shared:/app/shared:ro 
+    depends_on:
+      student-1-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
+
+  # =================== STUDENT 2 - Jinying Li ==============================
+  # Feature: Customer Orders. Ports 3002 / 8002 / 9002.
+
+  # =================== STUDENT 3 - Vishvak A. Rameshkumar ==================
+  # Feature: Customer Account and Access Management. Ports 3003 / 8003 / 9003.
+
+
+  # =================== STUDENT 4 - Jonathan Czesler ========================
+  # Feature: Inventory and Stock. Ports 3004 / 8004 / 9004
+
+  # =================== STUDENT 5 - Alexander McGuinn =======================
+  # Feature: Reviews and Ratings. Ports 3005 / 8005 / 9005
+
+networks:
+  asd-net:
+    driver: bridge
+
+volumes:
+  ollama-data:
+  student-1-data:
+  # student-2-data:
+  # student-3-data:
+  # student-4-data:
+  # student-5-data:
