@@ -1,0 +1,21 @@
+server:
+  port: ${SERVER_PORT:5201}
+
+spring:
+  application:
+    name: student2-frontend
+  thymeleaf:
+    cache: false
+
+services:
+  backend-url: ${BACKEND_URL:http://localhost:5202}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

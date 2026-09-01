@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartShop · Request failed</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<main class="page-shell narrow error-page">
+    <section class="panel">
+        <span class="eyebrow">Something went wrong</span>
+        <h1>We could not complete that request.</h1>
+        <p th:text="${message}">The service is temporarily unavailable.</p>
+        <a class="button primary" th:href="@{/orders}">Return to orders</a>
+    </section>
+</main>
+</body>
+</html>

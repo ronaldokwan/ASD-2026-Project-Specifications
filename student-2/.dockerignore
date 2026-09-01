@@ -1,0 +1,7 @@
+**/target
+**/*.db
+**/.DS_Store
+.git
+.idea
+.vscode
+docs
