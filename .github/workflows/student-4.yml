@@ -1,0 +1,18 @@
+# ===========================================================================
+# Student 4 - Jonathan Czesler - Inventory and Stock
+# ===========================================================================
+name: student-4
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Not implemented yet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          echo "Student 4 (Jonathan Czesler) - Inventory and Stock"
+          echo "The student-4 microservices have not been implemented yet."
+          echo "Copy .github/workflows/student-1.yml to build them."

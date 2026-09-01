@@ -1,0 +1,18 @@
+# ===========================================================================
+# Student 5 - Alexander McGuinn - Reviews and Ratings
+# ===========================================================================
+name: student-5
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Not implemented yet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          echo "Student 5 (Alexander McGuinn) - Reviews and Ratings"
+          echo "The student-5 microservices have not been implemented yet."
+          echo "Copy .github/workflows/student-1.yml to build them."

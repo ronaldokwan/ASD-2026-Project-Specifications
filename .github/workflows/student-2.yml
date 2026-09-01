@@ -1,0 +1,18 @@
+# ===========================================================================
+# Student 2 - Jinying Li - Customer Orders
+# ===========================================================================
+name: student-2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Not implemented yet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          echo "Student 2 (Jinying Li) - Customer Orders"
+          echo "The student-2 microservices have not been implemented yet."
+          echo "Copy .github/workflows/student-1.yml to build them."

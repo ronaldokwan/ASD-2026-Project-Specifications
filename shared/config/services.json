@@ -1,0 +1,64 @@
+{
+  "team": {
+    "canvasGroup": 40,
+    "topic": "Agentic AI Retail Application",
+    "llms": ["qwen2.5:0.5b", "llama3.1:8b", "deepseek-r1:8b"]
+  },
+  "shared": {
+    "home": "http://localhost:3000",
+    "aiMode": "http://localhost:7000",
+    "ollama": "http://localhost:11434"
+  },
+  "features": [
+    {
+      "student": 1,
+      "owner": "Ronaldo Kwan",
+      "feature": "Product Catalogue",
+      "description": "Browse, filter and manage products, with AI-generated descriptions and price suggestions.",
+      "status": "ready",
+      "frontend": "http://localhost:3001",
+      "backend": "http://localhost:8001",
+      "database": "http://localhost:9001"
+    },
+    {
+      "student": 2,
+      "owner": "Jinying Li",
+      "feature": "Customer Orders",
+      "description": "Create, track and cancel customer orders, with AI order summaries and shipping-delay emails.",
+      "status": "pending",
+      "frontend": "http://localhost:3002",
+      "backend": "http://localhost:8002",
+      "database": "http://localhost:9002"
+    },
+    {
+      "student": 3,
+      "owner": "Vishvak Ananthakrishnan Rameshkumar",
+      "feature": "Customer Account and Access Management",
+      "description": "Customer registration, login and profiles, with AI loyalty-reward suggestions.",
+      "status": "pending",
+      "frontend": "http://localhost:3003",
+      "backend": "http://localhost:8003",
+      "database": "http://localhost:9003"
+    },
+    {
+      "student": 4,
+      "owner": "Jonathan Czesler",
+      "feature": "Inventory and Stock",
+      "description": "Warehouse stock levels with low-stock alerts and AI restocking advice.",
+      "status": "pending",
+      "frontend": "http://localhost:3004",
+      "backend": "http://localhost:8004",
+      "database": "http://localhost:9004"
+    },
+    {
+      "student": 5,
+      "owner": "Alexander McGuinn",
+      "feature": "Reviews and Ratings",
+      "description": "Product reviews and star ratings, with AI pros/cons review summaries.",
+      "status": "pending",
+      "frontend": "http://localhost:3005",
+      "backend": "http://localhost:8005",
+      "database": "http://localhost:9005"
+    }
+  ]
+}

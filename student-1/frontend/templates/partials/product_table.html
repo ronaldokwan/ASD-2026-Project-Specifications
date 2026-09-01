@@ -1,0 +1,60 @@
+{# Product table. Rendered inside index.html on first load, and swapped by HTMX
+   afterwards - out of band when the response's primary target is #alerts. #}
+<div class="card" id="product-table" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <div class="table-head">
+    <h2 style="margin:0">{{ products|length }} product{{ '' if products|length == 1 else 's' }}</h2>
+    {% if filters.category or filters.status or filters.search %}
+      <a class="muted" href="/">clear filters</a>
+    {% endif %}
+  </div>
+
+  {% if not products %}
+    <p class="muted">No products match the current filters.</p>
+  {% else %}
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th class="num">Price</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+            <tr id="product-row-{{ product.id }}">
+              <td><code>{{ product.sku }}</code></td>
+              <td>
+                <strong>{{ product.name }}</strong>
+                <div class="muted" style="font-size:12px">
+                  #{{ product.id }} &middot; updated {{ product.updated_at }}
+                </div>
+              </td>
+              <td>{{ product.category }}</td>
+              <td class="num">${{ '%.2f'|format(product.price) }}</td>
+              <td><span class="badge {{ product.status }}">{{ product.status }}</span></td>
+              <td class="description">{{ product.description or '—' }}</td>
+              <td class="actions">
+                <button class="btn secondary"
+                        hx-get="/partials/form/{{ product.id }}"
+                        hx-target="#product-form"
+                        hx-swap="outerHTML">Edit</button>
+                <button class="btn danger"
+                        hx-post="/products/{{ product.id }}/delete"
+                        hx-target="#alerts"
+                        hx-swap="innerHTML"
+                        hx-confirm="Delete &quot;{{ product.name }}&quot;? This cannot be undone.">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
