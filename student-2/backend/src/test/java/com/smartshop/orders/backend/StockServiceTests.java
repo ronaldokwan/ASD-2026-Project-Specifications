@@ -119,7 +119,59 @@ class StockServiceTests {
         server.verify();
     }
 
+    @Test
+    void returnsStockThroughStudent4UpdateApi() {
+        expectStockLookup(1, "SKU-AUD-1001", 18);
+        server.expect(once(), requestTo("http://student-4-backend:8004/api/stock/1"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(content().json("{\"quantity\":21}"))
+            .andRespond(withSuccess("{\"id\":1,\"sku\":\"SKU-AUD-1001\",\"quantity\":21}",
+                MediaType.APPLICATION_JSON));
+
+        var result = stockService.adjustStock(
+            "ORD-RETURN",
+            List.of(new StockItemRequest("SKU-AUD-1001", -3))
+        );
+
+        assertThat(result.success()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void rollsBackEarlierUpdatesWhenAStockAdjustmentPartiallyFails() {
+        expectStockLookup(1, "SKU-AUD-1001", 18);
+        expectStockLookup(2, "SKU-HOM-3001", 10);
+        server.expect(once(), requestTo("http://student-4-backend:8004/api/stock/1"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(content().json("{\"quantity\":16}"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        server.expect(once(), requestTo("http://student-4-backend:8004/api/stock/2"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(content().json("{\"quantity\":8}"))
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(once(), requestTo("http://student-4-backend:8004/api/stock/1"))
+            .andExpect(method(HttpMethod.PUT))
+            .andExpect(content().json("{\"quantity\":18}"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        var result = stockService.adjustStock(
+            "ORD-ROLLBACK",
+            List.of(
+                new StockItemRequest("SKU-AUD-1001", 2),
+                new StockItemRequest("SKU-HOM-3001", 2)
+            )
+        );
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).contains("ORD-ROLLBACK");
+        server.verify();
+    }
+
     private void expectStockLookup(String sku, int quantity) {
+        expectStockLookup(1, sku, quantity);
+    }
+
+    private void expectStockLookup(long id, String sku, int quantity) {
         server.expect(once(), requestTo("http://student-4-backend:8004/api/stock?sku=" + sku))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withSuccess("""
@@ -127,7 +179,7 @@ class StockServiceTests {
                   "count": 1,
                   "stock": [
                     {
-                      "id": 1,
+                      "id": %d,
                       "sku": "%s",
                       "name": "Inventory item",
                       "quantity": %d,
@@ -135,6 +187,6 @@ class StockServiceTests {
                     }
                   ]
                 }
-                """.formatted(sku, quantity), MediaType.APPLICATION_JSON));
+                """.formatted(id, sku, quantity), MediaType.APPLICATION_JSON));
     }
 }

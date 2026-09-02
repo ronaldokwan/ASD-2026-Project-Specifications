@@ -13,8 +13,10 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -44,35 +46,83 @@ public class StockService {
     }
 
     public StockUpdateResult deductStock(String orderNumber, List<StockItemRequest> items) {
+        return adjustStock(orderNumber, items);
+    }
+
+    /**
+     * Applies signed order quantity changes to Student 4 inventory.
+     * Positive quantities consume stock; negative quantities return stock.
+     */
+    public StockUpdateResult adjustStock(String orderNumber, List<StockItemRequest> adjustments) {
         try {
-            List<StockDeduction> deductions = new ArrayList<>();
-            for (StockItemRequest item : items) {
-                String sku = normaliseSku(item.sku());
+            List<StockAdjustment> planned = new ArrayList<>();
+            for (Map.Entry<String, Integer> entry : combineAdjustments(adjustments).entrySet()) {
+                String sku = entry.getKey();
+                int orderQuantityChange = entry.getValue();
+                if (orderQuantityChange == 0) {
+                    continue;
+                }
+
                 Optional<StockRecord> stock = findBySku(sku);
                 if (stock.isEmpty()) {
                     return new StockUpdateResult(false, "No stock record exists for SKU " + sku);
                 }
-                if (stock.get().quantity() < item.quantity()) {
+
+                long targetQuantity = (long) stock.get().quantity() - orderQuantityChange;
+                if (targetQuantity < 0) {
                     return new StockUpdateResult(
                         false,
-                        insufficientMessage(sku, stock.get().quantity(), item.quantity())
+                        insufficientMessage(sku, stock.get().quantity(), orderQuantityChange)
                     );
                 }
-                deductions.add(new StockDeduction(stock.get(), item.quantity()));
+                if (targetQuantity > 999_999) {
+                    return new StockUpdateResult(false, "Stock quantity exceeds the supported maximum for SKU " + sku);
+                }
+                planned.add(new StockAdjustment(stock.get(), (int) targetQuantity));
             }
 
-            for (StockDeduction deduction : deductions) {
-                int remainingQuantity = deduction.stock().quantity() - deduction.requestedQuantity();
-                stockClient.put()
-                    .uri("/api/stock/{id}", deduction.stock().id())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new StockQuantityUpdate(remainingQuantity))
-                    .retrieve()
-                    .toBodilessEntity();
+            List<StockAdjustment> applied = new ArrayList<>();
+            try {
+                for (StockAdjustment adjustment : planned) {
+                    updateQuantity(adjustment.stock().id(), adjustment.targetQuantity());
+                    applied.add(adjustment);
+                }
+            } catch (RestClientException exception) {
+                rollbackApplied(applied);
+                return new StockUpdateResult(false, "Stock service could not update order " + orderNumber);
             }
             return new StockUpdateResult(true, "Stock updated successfully for order " + orderNumber);
         } catch (ResponseStatusException | RestClientException exception) {
             return new StockUpdateResult(false, "Stock service could not update order " + orderNumber);
+        }
+    }
+
+    private Map<String, Integer> combineAdjustments(List<StockItemRequest> adjustments) {
+        Map<String, Integer> combined = new LinkedHashMap<>();
+        for (StockItemRequest adjustment : adjustments) {
+            String sku = normaliseSku(adjustment.sku());
+            combined.merge(sku, adjustment.quantity(), Math::addExact);
+        }
+        return combined;
+    }
+
+    private void updateQuantity(long stockId, int quantity) {
+        stockClient.put()
+            .uri("/api/stock/{id}", stockId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(new StockQuantityUpdate(quantity))
+            .retrieve()
+            .toBodilessEntity();
+    }
+
+    private void rollbackApplied(List<StockAdjustment> applied) {
+        for (int index = applied.size() - 1; index >= 0; index--) {
+            StockAdjustment adjustment = applied.get(index);
+            try {
+                updateQuantity(adjustment.stock().id(), adjustment.stock().quantity());
+            } catch (RestClientException ignored) {
+                // Best-effort compensation; the caller still receives a failed update result.
+            }
         }
     }
 
@@ -115,5 +165,5 @@ public class StockService {
 
     private record StockQuantityUpdate(int quantity) {}
 
-    private record StockDeduction(StockRecord stock, int requestedQuantity) {}
+    private record StockAdjustment(StockRecord stock, int targetQuantity) {}
 }

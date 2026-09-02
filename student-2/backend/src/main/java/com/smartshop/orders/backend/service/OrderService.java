@@ -20,11 +20,15 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Service
 public class OrderService {
@@ -76,11 +80,18 @@ public class OrderService {
     }
 
     public OrderResponse update(long id, OrderRequest request) {
+        DatabaseOrder existing = databaseApi.get(id);
         List<OrderLineRequest> confirmedLines = confirmProducts(request.lines());
         validateDistinctSkus(confirmedLines);
-        return enrich(databaseApi.update(id, new OrderRequest(
-            request.customerEmail(), request.status(), confirmedLines
-        )));
+        List<StockItemRequest> adjustments = inventoryChanges(existing.lines(), confirmedLines);
+        DatabaseOrder updated = withInventoryAdjustment(
+            existing.orderNumber(),
+            adjustments,
+            () -> databaseApi.update(id, new OrderRequest(
+                request.customerEmail(), request.status(), confirmedLines
+            ))
+        );
+        return enrich(updated);
     }
 
     public OrderResponse updateStatus(long id, StatusRequest request) {
@@ -88,7 +99,14 @@ public class OrderService {
     }
 
     public void delete(long id) {
-        databaseApi.delete(id);
+        DatabaseOrder existing = databaseApi.get(id);
+        List<StockItemRequest> returns = existing.lines().stream()
+            .map(line -> new StockItemRequest(line.sku(), -line.quantity()))
+            .toList();
+        withInventoryAdjustment(existing.orderNumber(), returns, () -> {
+            databaseApi.delete(id);
+            return null;
+        });
     }
 
     public List<OrderLineResponse> listLines(long orderId) {
@@ -96,20 +114,43 @@ public class OrderService {
     }
 
     public OrderLineResponse addLine(long orderId, OrderLineRequest request) {
+        DatabaseOrder existing = databaseApi.get(orderId);
         OrderLineRequest confirmedLine = confirmProduct(request);
-        StockCheckResult stock = stockService.checkStock(toStockItems(List.of(confirmedLine)));
-        if (!stock.sufficient()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, stock.message());
-        }
-        return enrichLine(databaseApi.addLine(orderId, confirmedLine));
+        List<StockItemRequest> adjustment = toStockItems(List.of(confirmedLine));
+        DatabaseOrderLine added = withInventoryAdjustment(
+            existing.orderNumber(),
+            adjustment,
+            () -> databaseApi.addLine(orderId, confirmedLine)
+        );
+        return enrichLine(added);
     }
 
     public OrderLineResponse updateLine(long orderId, long lineId, OrderLineRequest request) {
-        return enrichLine(databaseApi.updateLine(orderId, lineId, confirmProduct(request)));
+        DatabaseOrder existing = databaseApi.get(orderId);
+        DatabaseOrderLine existingLine = findLine(existing, lineId);
+        OrderLineRequest confirmedLine = confirmProduct(request);
+        List<StockItemRequest> adjustments = inventoryChanges(
+            List.of(existingLine),
+            List.of(confirmedLine)
+        );
+        DatabaseOrderLine updated = withInventoryAdjustment(
+            existing.orderNumber(),
+            adjustments,
+            () -> databaseApi.updateLine(orderId, lineId, confirmedLine)
+        );
+        return enrichLine(updated);
     }
 
     public void deleteLine(long orderId, long lineId) {
-        databaseApi.deleteLine(orderId, lineId);
+        DatabaseOrder existing = databaseApi.get(orderId);
+        DatabaseOrderLine existingLine = findLine(existing, lineId);
+        List<StockItemRequest> returns = List.of(
+            new StockItemRequest(existingLine.sku(), -existingLine.quantity())
+        );
+        withInventoryAdjustment(existing.orderNumber(), returns, () -> {
+            databaseApi.deleteLine(orderId, lineId);
+            return null;
+        });
     }
 
     public StockCheckResult checkStock(List<OrderLineRequest> lines) {
@@ -121,6 +162,90 @@ public class OrderService {
         return lines.stream()
             .map(line -> new StockItemRequest(line.sku().trim().toUpperCase(Locale.ROOT), line.quantity()))
             .toList();
+    }
+
+    private List<StockItemRequest> inventoryChanges(
+        List<DatabaseOrderLine> existingLines,
+        List<OrderLineRequest> replacementLines
+    ) {
+        Map<String, Integer> changes = new LinkedHashMap<>();
+        existingLines.forEach(line -> changes.merge(
+            normaliseSku(line.sku()), -line.quantity(), Math::addExact
+        ));
+        replacementLines.forEach(line -> changes.merge(
+            normaliseSku(line.sku()), line.quantity(), Math::addExact
+        ));
+
+        List<StockItemRequest> result = new ArrayList<>();
+        changes.forEach((sku, quantity) -> {
+            if (quantity != 0) {
+                result.add(new StockItemRequest(sku, quantity));
+            }
+        });
+        return result;
+    }
+
+    private <T> T withInventoryAdjustment(
+        String orderNumber,
+        List<StockItemRequest> adjustments,
+        Supplier<T> databaseOperation
+    ) {
+        List<StockItemRequest> effective = adjustments.stream()
+            .filter(item -> item.quantity() != 0)
+            .toList();
+        if (effective.isEmpty()) {
+            return databaseOperation.get();
+        }
+
+        List<StockItemRequest> requiredStock = effective.stream()
+            .filter(item -> item.quantity() > 0)
+            .toList();
+        if (!requiredStock.isEmpty()) {
+            StockCheckResult stock = stockService.checkStock(requiredStock);
+            if (!stock.sufficient()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, stock.message());
+            }
+        }
+
+        StockUpdateResult adjustment = stockService.adjustStock(orderNumber, effective);
+        if (!adjustment.success()) {
+            throw stockAdjustmentFailure(adjustment);
+        }
+
+        try {
+            return databaseOperation.get();
+        } catch (RuntimeException databaseFailure) {
+            List<StockItemRequest> inverse = effective.stream()
+                .map(item -> new StockItemRequest(item.sku(), -item.quantity()))
+                .toList();
+            StockUpdateResult rollback = stockService.adjustStock(orderNumber + " rollback", inverse);
+            if (!rollback.success()) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Order update failed and inventory rollback also failed",
+                    databaseFailure
+                );
+            }
+            throw databaseFailure;
+        }
+    }
+
+    private ResponseStatusException stockAdjustmentFailure(StockUpdateResult result) {
+        HttpStatus status = result.message().startsWith("Insufficient stock")
+            ? HttpStatus.CONFLICT
+            : HttpStatus.BAD_GATEWAY;
+        return new ResponseStatusException(status, result.message());
+    }
+
+    private DatabaseOrderLine findLine(DatabaseOrder order, long lineId) {
+        return order.lines().stream()
+            .filter(line -> line.id() != null && line.id() == lineId)
+            .findFirst()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order line not found"));
+    }
+
+    private String normaliseSku(String sku) {
+        return sku == null ? "" : sku.trim().toUpperCase(Locale.ROOT);
     }
 
     private List<OrderLineRequest> confirmProducts(List<OrderLineRequest> lines) {
