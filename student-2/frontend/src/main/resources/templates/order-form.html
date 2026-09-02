@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${editing ? 'Edit order' : 'Create order'}">Order</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header compact">
+    <div>
+        <a class="back-link" th:href="@{/orders}">← All orders</a>
+        <h1 th:text="${editing ? 'Edit order' : 'Create an order'}">Create an order</h1>
+        <p>One order can contain multiple product lines.</p>
+    </div>
+</header>
+
+<main class="page-shell narrow">
+    <div class="notice error" th:if="${error}" th:text="${error}"></div>
+    <form class="panel order-form" method="post"
+          th:action="${editing ? '/orders/' + orderId : '/orders'}">
+        <section>
+            <div class="section-heading">
+                <div><span class="step">01</span><h2>Order details</h2></div>
+            </div>
+            <div class="two-column">
+                <label>
+                    <span>Customer email</span>
+                    <input type="email" name="customerEmail" th:value="${customerEmail}" required>
+                </label>
+                <label>
+                    <span>Status</span>
+                    <select name="status" required>
+                        <option value="pending" th:selected="${status == 'pending'}">Pending</option>
+                        <option value="shipped" th:selected="${status == 'shipped'}">Shipped</option>
+                        <option value="delivered" th:selected="${status == 'delivered'}">Delivered</option>
+                    </select>
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-heading">
+                <div><span class="step">02</span><h2>Products</h2></div>
+                <button class="button secondary small" type="button" id="add-line">+ Add product</button>
+            </div>
+            <div id="order-lines" class="line-list">
+                <div class="order-line" th:each="line : ${lines}">
+                    <input type="hidden" name="lineId" th:value="${line.id}">
+                    <label class="sku-field">
+                        <span>Product</span>
+                        <select name="sku" required>
+                            <option value="">Choose a product</option>
+                            <option th:each="product : ${products}"
+                                    th:value="${product.sku}"
+                                    th:data-price="${product.price}"
+                                    th:selected="${product.sku == line.sku}"
+                                    th:text="|${product.name} (${product.sku}) — $${#numbers.formatDecimal(product.price, 1, 2)}|">
+                                Product
+                            </option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Quantity</span>
+                        <input name="quantity" type="number" min="1" th:value="${line.quantity}" required>
+                    </label>
+                    <label>
+                        <span>Unit price</span>
+                        <input name="unitPrice" type="number" min="0" step="0.01"
+                               th:value="${line.unitPrice}" readonly required>
+                    </label>
+                    <div class="line-total"><span>Line total</span><strong>$0.00</strong></div>
+                    <button class="icon-button remove-line" type="button" aria-label="Remove line">×</button>
+                </div>
+            </div>
+            <div class="order-total"><span>Estimated order total</span><strong id="grand-total">$0.00</strong></div>
+            <p class="hint">Product identity and price are confirmed against the catalogue, then stock is checked before the order is saved.</p>
+        </section>
+
+        <div class="form-actions">
+            <a class="button secondary" th:href="${editing ? '/orders/' + orderId : '/orders'}">Cancel</a>
+            <button class="button primary" type="submit" th:text="${editing ? 'Save changes' : 'Create order'}">Create order</button>
+        </div>
+    </form>
+</main>
+
+<template id="line-template">
+    <div class="order-line">
+        <input type="hidden" name="lineId" value="">
+        <label class="sku-field">
+            <span>Product</span>
+            <select name="sku" required>
+                <option value="">Choose a product</option>
+                <option th:each="product : ${products}"
+                        th:value="${product.sku}"
+                        th:data-price="${product.price}"
+                        th:text="|${product.name} (${product.sku}) — $${#numbers.formatDecimal(product.price, 1, 2)}|">
+                    Product
+                </option>
+            </select>
+        </label>
+        <label><span>Quantity</span><input name="quantity" type="number" min="1" value="1" required></label>
+        <label><span>Unit price</span><input name="unitPrice" type="number" min="0" step="0.01" value="0.00" readonly required></label>
+        <div class="line-total"><span>Line total</span><strong>$0.00</strong></div>
+        <button class="icon-button remove-line" type="button" aria-label="Remove line">×</button>
+    </div>
+</template>
+
+<script>
+    const lines = document.getElementById('order-lines');
+    const template = document.getElementById('line-template');
+    const grandTotal = document.getElementById('grand-total');
+
+    function calculate() {
+        let total = 0;
+        lines.querySelectorAll('.order-line').forEach(row => {
+            const quantity = Number(row.querySelector('[name="quantity"]').value || 0);
+            const price = Number(row.querySelector('[name="unitPrice"]').value || 0);
+            const lineTotal = quantity * price;
+            row.querySelector('.line-total strong').textContent = `$${lineTotal.toFixed(2)}`;
+            total += lineTotal;
+        });
+        grandTotal.textContent = `$${total.toFixed(2)}`;
+    }
+
+    function updateProductAvailability() {
+        const productSelects = [...lines.querySelectorAll('[name="sku"]')];
+        const selectedCounts = new Map();
+
+        productSelects.forEach(select => {
+            if (select.value) {
+                selectedCounts.set(select.value, (selectedCounts.get(select.value) || 0) + 1);
+            }
+        });
+
+        productSelects.forEach(select => {
+            const duplicateSelection = select.value && selectedCounts.get(select.value) > 1;
+            select.setCustomValidity(
+                duplicateSelection ? 'Choose each product only once. Increase its quantity instead.' : ''
+            );
+
+            [...select.options].forEach(option => {
+                option.disabled = Boolean(
+                    option.value && option.value !== select.value && selectedCounts.has(option.value)
+                );
+            });
+        });
+    }
+
+    document.getElementById('add-line').addEventListener('click', () => {
+        lines.appendChild(template.content.cloneNode(true));
+        updateProductAvailability();
+        calculate();
+    });
+
+    lines.addEventListener('click', event => {
+        if (event.target.classList.contains('remove-line') && lines.children.length > 1) {
+            event.target.closest('.order-line').remove();
+            updateProductAvailability();
+            calculate();
+        }
+    });
+    lines.addEventListener('change', event => {
+        if (event.target.matches('[name="sku"]')) {
+            const row = event.target.closest('.order-line');
+            const selectedProduct = event.target.selectedOptions[0];
+            row.querySelector('[name="unitPrice"]').value = selectedProduct?.dataset.price || '0.00';
+            updateProductAvailability();
+            calculate();
+        }
+    });
+    lines.addEventListener('input', calculate);
+    updateProductAvailability();
+    calculate();
+</script>
+</body>
+</html>

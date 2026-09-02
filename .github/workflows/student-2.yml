@@ -1,18 +1,54 @@
-# ===========================================================================
-# Student 2 - Jinying Li - Customer Orders
-# ===========================================================================
-name: student-2
+name: Student 2 Orders CI
 
 on:
-  workflow_dispatch:
+  push:
+    paths:
+      - "student-2/**"
+      - ".github/workflows/student-2.yml"
+  pull_request:
+    paths:
+      - "student-2/**"
+      - ".github/workflows/student-2.yml"
 
 jobs:
-  placeholder:
-    name: Not implemented yet
+  build-test-and-validate-containers:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: student-2
+
     steps:
-      - name: Report status
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build and test all modules
+        run: mvn --batch-mode clean verify
+
+      - name: Validate Compose configuration
+        run: docker compose config -q
+
+      - name: Build the three service images
+        run: docker compose build
+
+      - name: Start and health-check the integrated slice
         run: |
-          echo "Student 2 (Jinying Li) - Customer Orders"
-          echo "The student-2 microservices have not been implemented yet."
-          echo "Copy .github/workflows/student-1.yml to build them."
+          docker compose up -d
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:5201/actuator/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v

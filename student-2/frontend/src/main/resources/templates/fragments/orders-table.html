@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="panel table-panel" th:fragment="table">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">Order register</span>
+            <h2 th:text="|${#lists.size(orders)} orders|">0 orders</h2>
+        </div>
+    </div>
+    <div class="table-wrap" th:if="${!#lists.isEmpty(orders)}">
+        <table>
+            <thead>
+            <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${orders}">
+                <td class="strong" th:text="${order.orderNumber}">ORD-001</td>
+                <td th:text="${order.customerEmail}">customer@example.com</td>
+                <td th:text="${order.totalQuantity}">1</td>
+                <td th:text="|$${#numbers.formatDecimal(order.orderTotal, 1, 2)}|">$0.00</td>
+                <td><span class="badge" th:classappend="${order.status}" th:text="${order.status}">pending</span></td>
+                <td th:text="${#temporals.format(order.orderedAt, 'dd MMM yyyy')}">30 Aug 2026</td>
+                <td><a class="text-link" th:href="@{/orders/{id}(id=${order.id})}">View →</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="empty-state" th:if="${#lists.isEmpty(orders)}">
+        <h3>No orders found</h3>
+        <p>Adjust the filters or create a new customer order.</p>
+    </div>
+</section>
+</body>
+</html>
