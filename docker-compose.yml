@@ -139,7 +139,74 @@ services:
     restart: unless-stopped
 
   # =================== STUDENT 2 - Jinying Li ==============================
-  # Feature: Customer Orders. Ports 3002 / 8002 / 9002.
+  # Feature: Customer Orders. Ports 5201 / 5202 / 5203.
+
+  student2-db:
+    build:
+      context: ./student-2
+      dockerfile: database-api/Dockerfile
+    container_name: asd-student2-db
+    environment:
+      SERVER_PORT: "5203"
+      DATABASE_URL: jdbc:sqlite:/data/orders.db
+    ports:
+      - "5203:5203"
+    volumes:
+      - student2-orders-data:/data
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5203/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  student2-api:
+    build:
+      context: ./student-2
+      dockerfile: backend/Dockerfile
+    container_name: asd-student2-api
+    environment:
+      SERVER_PORT: "5202"
+      DATABASE_API_URL: http://student2-db:5203
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+    ports:
+      - "5202:5202"
+    depends_on:
+      student2-db:
+        condition: service_healthy
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5202/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  student2-frontend:
+    build:
+      context: ./student-2
+      dockerfile: frontend/Dockerfile
+    container_name: asd-student2-frontend
+    environment:
+      SERVER_PORT: "5201"
+      BACKEND_URL: http://student2-api:5202
+    ports:
+      - "5201:5201"
+    depends_on:
+      student2-api:
+        condition: service_healthy
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5201/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
 
   # =================== STUDENT 3 - Vishvak A. Rameshkumar ==================
   # Feature: Customer Account and Access Management. Ports 3003 / 8003 / 9003.
@@ -158,7 +225,7 @@ networks:
 volumes:
   ollama-data:
   student-1-data:
-  # student-2-data:
+  student2-orders-data:
   # student-3-data:
   # student-4-data:
   # student-5-data:
