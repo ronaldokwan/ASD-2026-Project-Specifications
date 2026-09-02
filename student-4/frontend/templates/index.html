@@ -14,10 +14,9 @@
     <!-- ============================ LEFT: create / edit + AI ============ -->
     <section>
       <div class="card">
-        <h2>Add or edit a product</h2>
+        <h2>Add or edit stock</h2>
         <p class="hint">
-          Fill the form manually, or enter a name and category and let the AI draft the
-          description and suggest a price.
+          Record inventory, set stock thresholds, and ask the AI for restock guidance by category.
         </p>
         {% include "partials/product_form.html" %}
       </div>
@@ -30,30 +29,30 @@
         </p>
         <div id="ai-panel">
           <p class="muted">
-            No suggestion yet. Enter a product name and category above, then press
-            <em>Generate with AI</em>.
+            No recommendation yet. Choose a category above, then press
+            <em>Generate restock advice</em>.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- ============================ RIGHT: catalogue =================== -->
+    <!-- ============================ RIGHT: stock list =================== -->
     <section>
       <div class="card">
-        <h2>Catalogue</h2>
-        <p class="hint">Filter the catalogue, then read, edit or delete any product.</p>
+        <h2>Stock Inventory</h2>
+        <p class="hint">Filter stock levels, then read, edit or delete any item.</p>
 
         <form id="filters"
               hx-get="/partials/products"
               hx-target="#product-table"
               hx-swap="outerHTML"
-              hx-trigger="submit, change from:#category, change from:#status, change from:#sort,
+              hx-trigger="submit, change from:#category, change from:#stock_level, change from:#sort,
                           keyup changed delay:350ms from:#search">
           <div class="row">
             <div class="field">
               <label for="search">Search</label>
               <input type="search" id="search" name="search" value="{{ filters.search }}"
-                     placeholder="name, SKU or description">
+                     placeholder="name, SKU or location">
             </div>
             <div class="field">
               <label for="category">Category</label>
@@ -67,11 +66,11 @@
               </select>
             </div>
             <div class="field">
-              <label for="status">Status</label>
-              <select id="status" name="status">
+              <label for="stock_level">Stock status</label>
+              <select id="stock_level" name="stock_level">
                 <option value="">Any status</option>
                 {% for status in statuses %}
-                  <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
+                  <option value="{{ status }}" {% if filters.stock_level == status %}selected{% endif %}>
                     {{ status }}
                   </option>
                 {% endfor %}
@@ -81,9 +80,9 @@
               <label for="sort">Sort by</label>
               <select id="sort" name="sort">
                 <option value="name"       {% if filters.sort == 'name' %}selected{% endif %}>Name</option>
-                <option value="price_asc"  {% if filters.sort == 'price_asc' %}selected{% endif %}>Price (low to high)</option>
-                <option value="price_desc" {% if filters.sort == 'price_desc' %}selected{% endif %}>Price (high to low)</option>
-                <option value="newest"     {% if filters.sort == 'newest' %}selected{% endif %}>Newest first</option>
+                <option value="qty_asc"    {% if filters.sort == 'qty_asc' %}selected{% endif %}>Qty (low to high)</option>
+                <option value="qty_desc"   {% if filters.sort == 'qty_desc' %}selected{% endif %}>Qty (high to low)</option>
+                <option value="last_restocked" {% if filters.sort == 'last_restocked' %}selected{% endif %}>Recently restocked</option>
               </select>
             </div>
           </div>

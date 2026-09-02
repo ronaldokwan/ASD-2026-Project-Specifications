@@ -12,29 +12,35 @@
     </div>
   {% else %}
     <div class="alert ok">
-      Suggestion ready — model <code>{{ outcome.model }}</code>,
+      Recommendation ready — model <code>{{ outcome.model }}</code>,
       {{ outcome.attempts }} attempt{{ '' if outcome.attempts == 1 else 's' }},
       {{ outcome.elapsed_ms }} ms.
     </div>
   {% endif %}
 
-  <div class="field">
-    <label>Suggested description</label>
-    <p id="ai-description" class="ai-output">{{ result.description }}</p>
-  </div>
+  {% set recommendations = result.recommendations or [] %}
+  {% if recommendations %}
+    {% set first = recommendations[0] %}
+    <div class="field">
+      <label>Top restock recommendation</label>
+      <p id="ai-description" class="ai-output">
+        <strong>{{ first.sku }}</strong> &middot; order <strong>{{ first.order_quantity }}</strong> units
+      </p>
+    </div>
 
-  <div class="field">
-    <label>Suggested price</label>
-    <p class="ai-output"><strong id="ai-price">{{ '%.2f'|format(result.price|float) }}</strong> AUD</p>
-  </div>
+    <div class="field">
+      <label>Reason</label>
+      <p class="ai-output">{{ first.reason }}</p>
+    </div>
 
-  <button type="button" class="btn"
-          data-apply-ai
-          data-description="{{ result.description }}"
-          data-price="{{ '%.2f'|format(result.price|float) }}">
-    Apply to the form
-  </button>
-  <span class="muted" style="margin-left:8px">You review it before anything is saved.</span>
+    <button type="button" class="btn"
+            data-apply-ai
+            data-sku="{{ first.sku }}"
+            data-quantity="{{ first.order_quantity }}">
+      Apply to the form
+    </button>
+    <span class="muted" style="margin-left:8px">You review it before anything is saved.</span>
+  {% endif %}
 
   <h3 style="font-size:13px;margin:18px 0 6px">Agentic workflow trace</h3>
   <div class="trace">

@@ -1,18 +1,105 @@
 # ===========================================================================
 # Student 4 - Jonathan Czesler - Inventory and Stock
+# lint -> unit tests -> Docker build -> container smoke test
 # ===========================================================================
 name: student-4
 
 on:
+  push:
+    branches: ["**"]
+    paths:
+      - "student-4/**"
+      - "ai-services/ai-mode/**"
+      - "shared/**"
+      - "docker-compose.yml"
+      - ".github/workflows/student-4.yml"
+  pull_request:
+    paths:
+      - "student-4/**"
+      - "ai-services/ai-mode/**"
+      - "shared/**"
+      - "docker-compose.yml"
+      - ".github/workflows/student-4.yml"
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: "3.11"
+
 jobs:
-  placeholder:
-    name: Not implemented yet
+  test:
+    name: Unit tests (frontend, backend/API, database)
     runs-on: ubuntu-latest
     steps:
-      - name: Report status
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
         run: |
-          echo "Student 4 (Jonathan Czesler) - Inventory and Stock"
-          echo "The student-4 microservices have not been implemented yet."
-          echo "Copy .github/workflows/student-1.yml to build them."
+          python -m pip install --upgrade pip
+          pip install -r student-4/database/requirements.txt
+          pip install -r student-4/backend/requirements.txt
+          pip install -r student-4/frontend/requirements.txt
+          pip install -r ai-services/ai-mode/requirements.txt
+          pip install flake8
+      - name: Lint
+        run: |
+          flake8 student-4 ai-services/ai-mode --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 student-4 ai-services/ai-mode --count --max-line-length=100 --exit-zero --statistics
+      - name: Student 4 microservice tests
+        run: pytest student-4/tests -v --junitxml=reports/student-4-tests.xml
+      - name: Shared agentic loop tests (AI-Mode)
+        run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+      - name: Upload test evidence for the technical report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-4-test-reports
+          path: reports/
+
+  docker:
+    name: Build containers and smoke test
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the shared Docker Compose configuration
+        run: docker compose config --quiet
+      - name: Build the three Student 4 images
+        run: |
+          docker build -t asd/student-4-db:ci student-4/database
+          docker build -t asd/student-4-backend:ci student-4/backend
+          docker build -t asd/student-4-frontend:ci student-4/frontend
+      - name: Start the Student 4 stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build --no-deps student-4-db student-4-backend student-4-frontend
+      - name: Wait for the database microservice
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:9004/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "database microservice did not become healthy"; exit 1
+      - name: Smoke test the CRUD path through the API
+        run: |
+          set -e
+          curl -fs http://localhost:9004/health | tee /dev/stderr | grep -q '"status": *"ok"'
+          curl -fs http://localhost:8004/health > /dev/null
+          test "$(curl -fs http://localhost:8004/api/stock | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["stock"]))')" -ge 10
+          created=$(curl -fs -X POST http://localhost:8004/api/stock -H 'Content-Type: application/json' -d '{"sku":"SKU-CI-0001","name":"CI Smoke Stock","category":"Audio","location":"Shelf C1","quantity":10,"restock_threshold":20,"stock_level":"low"}')
+          id=$(echo "$created" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          curl -fs -X PUT "http://localhost:8004/api/stock/$id" -H 'Content-Type: application/json' -d '{"quantity": 25}' | grep -q '25'
+          curl -fs -X DELETE "http://localhost:8004/api/stock/$id" > /dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8004/api/stock/$id)" = "404"
+      - name: Smoke test the frontend microservice
+        run: |
+          curl -fs http://localhost:3004/ | grep -q "Inventory and Stock"
+          curl -fs http://localhost:3004/partials/products | grep -q "product-table"
+      - name: Container logs (evidence on failure)
+        if: always()
+        run: docker compose logs --no-color --tail=200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

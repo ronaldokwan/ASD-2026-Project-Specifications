@@ -9,7 +9,7 @@ import os
 
 import requests
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://student-1-backend:8001").rstrip("/")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://student-4-backend:8004").rstrip("/")
 TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
 
@@ -29,7 +29,7 @@ def _call(method, path, timeout=None, **kwargs):
     try:
         response = requests.request(method, url, timeout=timeout or TIMEOUT, **kwargs)
     except requests.RequestException as exc:
-        raise ApiError("Product Catalogue API is unreachable ({}).".format(exc), 503) from exc
+        raise ApiError("Inventory and Stock API is unreachable ({}).".format(exc), 503) from exc
 
     try:
         body = response.json() if response.content else {}
@@ -40,42 +40,45 @@ def _call(method, path, timeout=None, **kwargs):
         raise ApiError(
             body.get("error", "Request failed with status {}".format(response.status_code)),
             response.status_code,
-            body.get("details"),
+            body.get("details") or body.get("detail"),
         )
     return body
 
 
-def list_products(**filters):
+def list_stock(**filters):
     params = {key: value for key, value in filters.items() if value}
-    return _call("GET", "/api/products", params=params).get("products", [])
+    return _call("GET", "/api/stock", params=params).get("stock", [])
 
 
-def get_product(product_id):
-    return _call("GET", "/api/products/{}".format(product_id))
+def get_stock(stock_id):
+    return _call("GET", "/api/stock/{}".format(stock_id))
 
 
-def create_product(payload):
-    return _call("POST", "/api/products", json=payload)
+def create_stock(payload):
+    return _call("POST", "/api/stock", json=payload)
 
 
-def update_product(product_id, payload):
-    return _call("PUT", "/api/products/{}".format(product_id), json=payload)
+def update_stock(stock_id, payload):
+    return _call("PUT", "/api/stock/{}".format(stock_id), json=payload)
 
 
-def delete_product(product_id):
-    return _call("DELETE", "/api/products/{}".format(product_id))
+def delete_stock(stock_id):
+    return _call("DELETE", "/api/stock/{}".format(stock_id))
 
 
 def list_categories():
-    return _call("GET", "/api/categories").get("categories", [])
+    try:
+        return _call("GET", "/api/stock").get("stock", [])
+    except ApiError:
+        return []
 
 
-def generate_copy(name, category, keywords=""):
+def generate_recommendation(category):
     return _call(
         "POST",
-        "/api/products/ai",
+        "/api/stock/recommend",
         timeout=AI_TIMEOUT,
-        json={"name": name, "category": category, "keywords": keywords},
+        json={"category": category},
     )
 
 

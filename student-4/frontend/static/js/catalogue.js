@@ -10,14 +10,15 @@
     var button = event.target.closest("[data-apply-ai]");
     if (!button) return;
 
-    var description = document.getElementById("description");
-    var price = document.getElementById("price");
-    if (description) description.value = button.dataset.description || "";
-    if (price) price.value = button.dataset.price || "";
+    var skuField = document.getElementById("sku");
+    var quantityField = document.getElementById("quantity");
+
+    if (skuField) skuField.value = button.dataset.sku || skuField.value;
+    if (quantityField) quantityField.value = button.dataset.quantity || quantityField.value;
 
     button.textContent = "Applied to the form";
     button.disabled = true;
-    if (description) description.focus();
+    if (skuField) skuField.focus();
   });
 
   /* 2. Fade success banners away; errors stay until the next action. */

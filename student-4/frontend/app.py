@@ -4,14 +4,14 @@ Server-rendered HTMX interface. Every partial route
 returns an HTML fragment that HTMX swaps into the page, so the browser never
 talks to the backend/API microservice directly.
 
-    GET  /                          catalogue page
-    GET  /partials/products         product table rows (filtered)
+    GET  /                          inventory page
+    GET  /partials/products         stock table rows (filtered)
     GET  /partials/form             blank create form
-    GET  /partials/form/<id>        edit form for one product
-    POST /products                  create
-    POST /products/<id>             update
-    POST /products/<id>/delete      delete
-    POST /ai/suggest                AI description + price suggestion
+    GET  /partials/form/<id>        edit form for one stock item
+    POST /stock                     create
+    POST /stock/<id>                update
+    POST /stock/<id>/delete         delete
+    POST /ai/recommend              AI restock recommendation
     GET  /health                    frontend liveness + downstream health
     GET  /shared/<path>             the team's shared CSS/JS (read-only volume)
 """
@@ -26,7 +26,7 @@ from api_client import ApiError
 app = Flask(__name__)
 
 HOME_URL = os.getenv("HOME_URL", "http://localhost:3000")
-STATUSES = ("active", "draft", "archived")
+STOCK_LEVELS = ("good", "low")
 
 # The team's shared theme is mounted read-only by docker-compose; fall back to
 # the repository copy when the frontend is run directly on a laptop.
@@ -47,14 +47,19 @@ def _filters():
     return {
         "search": request.args.get("search", "").strip(),
         "category": request.args.get("category", "").strip(),
-        "status": request.args.get("status", "").strip(),
+        "stock_level": request.args.get("stock_level", "").strip(),
         "sort": request.args.get("sort", "name").strip(),
     }
 
 
 def _categories():
     try:
-        return [row["category"] for row in api_client.list_categories()]
+        categories = []
+        for row in api_client.list_stock():
+            category = str(row.get("category", "")).strip()
+            if category and category not in categories:
+                categories.append(category)
+        return categories
     except ApiError:
         return []
 
@@ -64,9 +69,10 @@ def _form_payload(form):
         "sku": form.get("sku", "").strip(),
         "name": form.get("name", "").strip(),
         "category": form.get("category", "").strip(),
-        "price": form.get("price", "").strip(),
-        "description": form.get("description", "").strip(),
-        "status": form.get("status", "active").strip(),
+        "location": form.get("location", "").strip(),
+        "quantity": form.get("quantity", "").strip(),
+        "restock_threshold": form.get("restock_threshold", "").strip(),
+        "stock_level": form.get("stock_level", "good").strip(),
     }
 
 
@@ -75,15 +81,11 @@ def _alert(message, level="ok"):
 
 
 def _table(oob=False):
-    """Render the products table with the current filters applied.
-
-    ``oob=True`` marks the fragment as an HTMX out-of-band swap, used when the
-    primary swap target of the response is the alert area instead.
-    """
+    """Render the stock table with the current filters applied."""
     filters = _filters()
-    products = api_client.list_products(**filters)
+    stock = api_client.list_stock(**filters)
     return render_template(
-        "partials/product_table.html", products=products, filters=filters, oob=oob
+        "partials/product_table.html", stock=stock, products=stock, filters=filters, oob=oob
     )
 
 
@@ -92,18 +94,19 @@ def _table(oob=False):
 def index():
     filters = _filters()
     error = None
-    products = []
+    stock = []
     try:
-        products = api_client.list_products(**filters)
+        stock = api_client.list_stock(**filters)
     except ApiError as exc:
         error = exc.message
 
     return render_template(
         "index.html",
-        products=products,
+        stock=stock,
+        products=stock,
         filters=filters,
         categories=_categories(),
-        statuses=STATUSES,
+        statuses=STOCK_LEVELS,
         error=error,
         home_url=HOME_URL,
     )
@@ -123,74 +126,89 @@ def partial_new_form():
         "partials/product_form.html",
         product=None,
         categories=_categories(),
-        statuses=STATUSES,
+        statuses=STOCK_LEVELS,
     )
 
 
-@app.get("/partials/form/<int:product_id>")
-def partial_edit_form(product_id):
+@app.get("/partials/form/<int:stock_id>")
+def partial_edit_form(stock_id):
     try:
-        product = api_client.get_product(product_id)
+        item = api_client.get_stock(stock_id)
     except ApiError as exc:
         return _alert(exc.message, "error"), exc.status
     return render_template(
         "partials/product_form.html",
-        product=product,
+        product=item,
         categories=_categories(),
-        statuses=STATUSES,
+        statuses=STOCK_LEVELS,
     )
 
 
 # ---------------------------------------------------------------------- CRUD
-@app.post("/products")
-def create_product():
+@app.post("/stock")
+def create_stock():
     payload = _form_payload(request.form)
     try:
-        product = api_client.create_product(payload)
+        item = api_client.create_stock(payload)
     except ApiError as exc:
         return _validation_response(exc, payload)
 
     return (
-        _alert('Created "{}" ({}).'.format(product["name"], product["sku"]))
+        _alert('Created "{}" ({}).'.format(item["name"], item["sku"]))
         + _table(oob=True)
         + _blank_form_oob()
     )
+
+
+@app.post("/stock/<int:stock_id>")
+def update_stock(stock_id):
+    payload = _form_payload(request.form)
+    try:
+        item = api_client.update_stock(stock_id, payload)
+    except ApiError as exc:
+        return _validation_response(exc, payload, stock_id)
+
+    return (
+        _alert('Updated "{}" ({}).'.format(item["name"], item["sku"]))
+        + _table(oob=True)
+        + _blank_form_oob()
+    )
+
+
+@app.post("/products")
+def create_product():
+    return create_stock()
 
 
 @app.post("/products/<int:product_id>")
 def update_product(product_id):
-    payload = _form_payload(request.form)
-    try:
-        product = api_client.update_product(product_id, payload)
-    except ApiError as exc:
-        return _validation_response(exc, payload, product_id)
+    return update_stock(product_id)
 
-    return (
-        _alert('Updated "{}" ({}).'.format(product["name"], product["sku"]))
-        + _table(oob=True)
-        + _blank_form_oob()
-    )
+
+@app.post("/stock/<int:stock_id>/delete")
+def delete_stock(stock_id):
+    try:
+        api_client.delete_stock(stock_id)
+    except ApiError as exc:
+        return _alert(exc.message, "error"), exc.status
+    return _alert("Stock item #{} deleted.".format(stock_id)) + _table(oob=True)
 
 
 @app.post("/products/<int:product_id>/delete")
 def delete_product(product_id):
-    try:
-        api_client.delete_product(product_id)
-    except ApiError as exc:
-        return _alert(exc.message, "error"), exc.status
-    return _alert("Product #{} deleted.".format(product_id)) + _table(oob=True)
+    return delete_stock(product_id)
 
 
-def _validation_response(exc, payload, product_id=None):
+def _validation_response(exc, payload, stock_id=None):
     """Re-render the form with the API's validation messages attached."""
-    product = dict(payload)
-    if product_id:
-        product["id"] = product_id
+    item = dict(payload)
+    if stock_id:
+        item["id"] = stock_id
     form = render_template(
         "partials/product_form.html",
-        product=product,
+        product=item,
         categories=_categories(),
-        statuses=STATUSES,
+        statuses=STOCK_LEVELS,
         errors=exc.details or [exc.message],
         oob=True,
     )
@@ -202,33 +220,38 @@ def _blank_form_oob():
         "partials/product_form.html",
         product=None,
         categories=_categories(),
-        statuses=STATUSES,
+        statuses=STOCK_LEVELS,
         oob=True,
     )
 
 
 # ------------------------------------------------------------------- AI-Mode
-@app.post("/ai/suggest")
-def ai_suggest():
-    """Run the Plan -> Act -> Observe -> Adapt loop for the product in the form."""
-    name = request.form.get("name", "").strip()
+@app.post("/ai/recommend")
+def ai_recommend():
+    """Run the Plan -> Act -> Observe -> Adapt loop for low-stock restocking."""
     category = request.form.get("category", "").strip()
-    keywords = request.form.get("keywords", "").strip()
 
-    if len(name) < 2 or len(category) < 2:
+    if len(category) < 2:
         return render_template(
             "partials/ai_result.html",
-            error="Enter a product name and a category first, then ask the AI.",
+            error="Enter a category first, then ask the AI.",
         )
 
     try:
-        outcome = api_client.generate_copy(name, category, keywords)
+        outcome = api_client.generate_recommendation(category)
     except ApiError as exc:
         return render_template("partials/ai_result.html", error=exc.message)
 
     return render_template(
-        "partials/ai_result.html", outcome=outcome, result=outcome.get("result", {})
+        "partials/ai_result.html",
+        outcome=outcome,
+        result=outcome.get("result", {}),
     )
+
+
+@app.post("/ai/suggest")
+def ai_suggest():
+    return ai_recommend()
 
 
 # -------------------------------------------------------------------- health
@@ -238,10 +261,10 @@ def health():
     healthy = downstream.get("status") == "ok"
     return jsonify(
         {
-            "service": "student-1-frontend",
-            "student": 1,
-            "owner": "Ronaldo Kwan",
-            "feature": "Product Catalogue",
+            "service": "student-4-frontend",
+            "student": 4,
+            "owner": "Jonathan Czesler",
+            "feature": "Inventory and Stock",
             "status": "ok" if healthy else "degraded",
             "backend": downstream,
         }
@@ -249,4 +272,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3001")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3004")), debug=True)
