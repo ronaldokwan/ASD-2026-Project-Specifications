@@ -24,6 +24,7 @@ services:
     environment:
       SERVER_PORT: 5202
       DATABASE_API_URL: http://student2-db:5203
+      PRODUCT_API_URL: ${PRODUCT_API_URL:-http://host.docker.internal:8001}
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: qwen2.5:3b
     ports:

@@ -12,6 +12,7 @@ public final class FrontendModels {
     public record OrderRequest(String customerEmail, String status, List<OrderLineRequest> lines) {}
     public record StatusRequest(String status) {}
     public record CustomerSummaryRequest(String customerEmail) {}
+    public record ProductInfo(String sku, String name, BigDecimal price) {}
 
     public record OrderLineResponse(
         Long id,

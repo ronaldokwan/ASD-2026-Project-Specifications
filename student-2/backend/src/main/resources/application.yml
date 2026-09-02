@@ -7,6 +7,7 @@ spring:
 
 services:
   database-api-url: ${DATABASE_API_URL:http://localhost:5203}
+  product-api-url: ${PRODUCT_API_URL:http://localhost:8001}
   ollama-url: ${OLLAMA_URL:http://localhost:11434}
   ollama-model: ${OLLAMA_MODEL:qwen2.5:3b}
 

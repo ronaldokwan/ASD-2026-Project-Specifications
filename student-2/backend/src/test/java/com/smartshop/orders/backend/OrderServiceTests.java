@@ -48,14 +48,17 @@ class OrderServiceTests {
     void checksAndDeductsStockWhenCreatingAnOrder() {
         OrderRequest request = new OrderRequest(
             "buyer@example.com", "pending",
-            List.of(new OrderLineRequest(null, "SKU-1", 2, new BigDecimal("7.50")))
+            List.of(new OrderLineRequest(null, "SKU-1", 2, new BigDecimal("0.01")))
         );
         when(stockService.checkStock(any())).thenReturn(new StockCheckResult(true, "ok"));
         when(stockService.deductStock(anyString(), any())).thenReturn(new StockUpdateResult(true, "ok"));
+        when(productService.requireProductBySku("SKU-1"))
+            .thenReturn(new ProductInfo("SKU-1", "Test product", new BigDecimal("7.50")));
         when(productService.getProductBySku("SKU-1"))
             .thenReturn(new ProductInfo("SKU-1", "Test product", new BigDecimal("7.50")));
         when(databaseApi.create(any(DatabaseCreateRequest.class))).thenAnswer(invocation -> {
             DatabaseCreateRequest create = invocation.getArgument(0);
+            assertThat(create.lines().getFirst().unitPrice()).isEqualByComparingTo("7.50");
             return new DatabaseOrder(
                 1L, create.orderNumber(), create.customerEmail(), create.status(),
                 LocalDateTime.now(), LocalDateTime.now(),
@@ -81,11 +84,34 @@ class OrderServiceTests {
         );
         when(stockService.checkStock(any()))
             .thenReturn(new StockCheckResult(false, "Insufficient stock"));
+        when(productService.requireProductBySku("SKU-1"))
+            .thenReturn(new ProductInfo("SKU-1", "Test product", BigDecimal.ONE));
 
         assertThatThrownBy(() -> orderService.create(request))
             .isInstanceOf(ResponseStatusException.class)
             .hasMessageContaining("Insufficient stock");
         verify(databaseApi, never()).create(any());
+        verify(stockService, never()).deductStock(anyString(), any());
+    }
+
+    @Test
+    void doesNotSaveAnUnknownProduct() {
+        OrderRequest request = new OrderRequest(
+            "buyer@example.com", "pending",
+            List.of(new OrderLineRequest(null, "INVALID-SKU", 1, new BigDecimal("0.01")))
+        );
+        when(productService.requireProductBySku("INVALID-SKU"))
+            .thenThrow(new ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Unknown product SKU: INVALID-SKU"
+            ));
+
+        assertThatThrownBy(() -> orderService.create(request))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("Unknown product SKU: INVALID-SKU");
+
+        verify(databaseApi, never()).create(any());
+        verify(stockService, never()).checkStock(any());
         verify(stockService, never()).deductStock(anyString(), any());
     }
 }

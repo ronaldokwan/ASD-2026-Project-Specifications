@@ -54,8 +54,9 @@ public class OrderService {
     }
 
     public OrderResponse create(OrderRequest request) {
-        validateDistinctSkus(request.lines());
-        List<StockItemRequest> items = toStockItems(request.lines());
+        List<OrderLineRequest> confirmedLines = confirmProducts(request.lines());
+        validateDistinctSkus(confirmedLines);
+        List<StockItemRequest> items = toStockItems(confirmedLines);
         StockCheckResult stock = stockService.checkStock(items);
         if (!stock.sufficient()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, stock.message());
@@ -63,7 +64,7 @@ public class OrderService {
 
         String orderNumber = generateOrderNumber();
         DatabaseOrder created = databaseApi.create(new DatabaseCreateRequest(
-            orderNumber, request.customerEmail(), request.status(), request.lines()
+            orderNumber, request.customerEmail(), request.status(), confirmedLines
         ));
 
         StockUpdateResult update = stockService.deductStock(orderNumber, items);
@@ -75,8 +76,11 @@ public class OrderService {
     }
 
     public OrderResponse update(long id, OrderRequest request) {
-        validateDistinctSkus(request.lines());
-        return enrich(databaseApi.update(id, request));
+        List<OrderLineRequest> confirmedLines = confirmProducts(request.lines());
+        validateDistinctSkus(confirmedLines);
+        return enrich(databaseApi.update(id, new OrderRequest(
+            request.customerEmail(), request.status(), confirmedLines
+        )));
     }
 
     public OrderResponse updateStatus(long id, StatusRequest request) {
@@ -92,15 +96,16 @@ public class OrderService {
     }
 
     public OrderLineResponse addLine(long orderId, OrderLineRequest request) {
-        StockCheckResult stock = stockService.checkStock(toStockItems(List.of(request)));
+        OrderLineRequest confirmedLine = confirmProduct(request);
+        StockCheckResult stock = stockService.checkStock(toStockItems(List.of(confirmedLine)));
         if (!stock.sufficient()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, stock.message());
         }
-        return enrichLine(databaseApi.addLine(orderId, request));
+        return enrichLine(databaseApi.addLine(orderId, confirmedLine));
     }
 
     public OrderLineResponse updateLine(long orderId, long lineId, OrderLineRequest request) {
-        return enrichLine(databaseApi.updateLine(orderId, lineId, request));
+        return enrichLine(databaseApi.updateLine(orderId, lineId, confirmProduct(request)));
     }
 
     public void deleteLine(long orderId, long lineId) {
@@ -116,6 +121,21 @@ public class OrderService {
         return lines.stream()
             .map(line -> new StockItemRequest(line.sku().trim().toUpperCase(Locale.ROOT), line.quantity()))
             .toList();
+    }
+
+    private List<OrderLineRequest> confirmProducts(List<OrderLineRequest> lines) {
+        return lines.stream().map(this::confirmProduct).toList();
+    }
+
+    private OrderLineRequest confirmProduct(OrderLineRequest line) {
+        ProductInfo product = productService.requireProductBySku(line.sku());
+        if (product.price() == null) {
+            throw new ResponseStatusException(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Product catalogue returned no price for SKU: " + product.sku()
+            );
+        }
+        return new OrderLineRequest(line.id(), product.sku(), line.quantity(), product.price());
     }
 
     private void validateDistinctSkus(List<OrderLineRequest> lines) {
