@@ -1,0 +1,47 @@
+{# Review list. Rendered inside index.html on first load, and swapped by HTMX
+   afterwards - out of band when the response's primary target is #alerts. #}
+<div class="card" id="review-table" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <div class="table-head">
+    <h2 style="margin:0">{{ reviews|length }} review{{ '' if reviews|length == 1 else 's' }}</h2>
+    {% if filters.product_sku or filters.rating %}
+      <a class="muted" href="/">clear filters</a>
+    {% endif %}
+  </div>
+
+  {% if not reviews %}
+    <p class="muted">No reviews match the current filters.</p>
+  {% else %}
+    <div class="review-list">
+      {% for review in reviews %}
+        <article class="review" id="review-{{ review.review_id }}">
+          <div class="review-head">
+            <div>
+              <strong>{{ review.product_name or review.product_sku }}</strong>
+              <span class="muted" style="font-size:12px">&middot; {{ review.product_sku }}</span>
+            </div>
+            <span class="stars" aria-label="{{ review.rating }} out of 5 stars">
+              {% for _ in range(review.rating) %}&#9733;{% endfor %}{% for _ in range(5 - review.rating) %}&#9734;{% endfor %}
+            </span>
+          </div>
+          <p class="review-body">{{ review.review }}</p>
+          <div class="review-meta muted">
+            Reviewer {{ review.user_id[:8] }} &middot; {{ review.created_at }}
+          </div>
+          <div class="actions">
+            <button class="btn secondary"
+                    hx-get="/partials/form/{{ review.review_id }}"
+                    hx-target="#review-form"
+                    hx-swap="outerHTML">Edit</button>
+            <button class="btn danger"
+                    hx-post="/reviews/{{ review.review_id }}/delete"
+                    hx-target="#alerts"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete this review? This cannot be undone.">
+              Delete
+            </button>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>

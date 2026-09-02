@@ -149,7 +149,69 @@ services:
   # Feature: Inventory and Stock. Ports 3004 / 8004 / 9004
 
   # =================== STUDENT 5 - Alexander McGuinn =======================
-  # Feature: Reviews and Ratings. Ports 3005 / 8005 / 9005
+  # Feature: Reviews and Ratings
+
+  student-5-db:
+    build: ./student-5/database
+    container_name: asd-student-5-db
+    environment:
+      DB_PATH: /data/reviews.db
+      SERVICE_PORT: "9005"
+    ports:
+      - "9005:9005"
+    volumes:
+      - student-5-data:/data
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:9005/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  student-5-backend:
+    build: ./student-5/backend
+    container_name: asd-student-5-backend
+    environment:
+      <<: *ai-env
+      DATABASE_URL: http://student-5-db:9005
+      CATALOGUE_URL: http://student-1-backend:8001
+      SERVICE_PORT: "8005"
+    ports:
+      - "8005:8005"
+    depends_on:
+      student-5-db:
+        condition: service_healthy
+      ai-mode:
+        condition: service_started
+      student-1-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  student-5-frontend:
+    build: ./student-5/frontend
+    container_name: asd-student-5-frontend
+    environment:
+      BACKEND_URL: http://student-5-backend:8005
+      HOME_URL: http://localhost:3000
+      SERVICE_PORT: "3005"
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      student-5-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
 
 networks:
   asd-net:
@@ -161,4 +223,4 @@ volumes:
   # student-2-data:
   # student-3-data:
   # student-4-data:
-  # student-5-data:
+  student-5-data:

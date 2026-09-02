@@ -1,18 +1,134 @@
 # ===========================================================================
 # Student 5 - Alexander McGuinn - Reviews and Ratings
+# lint -> unit tests -> Docker build -> container smoke test
 # ===========================================================================
 name: student-5
 
 on:
+  push:
+    branches: ["**"]
+    paths:
+      - "student-5/**"
+      - "ai-services/ai-mode/**"
+      - "shared/**"
+      - "docker-compose.yml"
+      - ".github/workflows/student-5.yml"
+  pull_request:
+    paths:
+      - "student-5/**"
+      - "ai-services/ai-mode/**"
+      - "shared/**"
+      - "docker-compose.yml"
+      - ".github/workflows/student-5.yml"
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: "3.11"
+
 jobs:
-  placeholder:
-    name: Not implemented yet
+  # -------------------------------------------------------------------------
+  test:
+    name: Unit tests (frontend, backend/API, database)
     runs-on: ubuntu-latest
     steps:
-      - name: Report status
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
         run: |
-          echo "Student 5 (Alexander McGuinn) - Reviews and Ratings"
-          echo "The student-5 microservices have not been implemented yet."
-          echo "Copy .github/workflows/student-1.yml to build them."
+          python -m pip install --upgrade pip
+          pip install -r student-5/database/requirements.txt
+          pip install -r student-5/backend/requirements.txt
+          pip install -r student-5/frontend/requirements.txt
+          pip install -r ai-services/ai-mode/requirements.txt
+          pip install flake8
+
+      - name: Lint (syntax errors and undefined names fail the build)
+        run: |
+          flake8 student-5 ai-services/ai-mode \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 student-5 ai-services/ai-mode \
+            --count --max-line-length=100 --exit-zero --statistics
+
+      - name: Student 5 microservice tests
+        run: pytest student-5/tests -v --junitxml=reports/student-5-tests.xml
+
+      - name: Shared agentic loop tests (AI-Mode)
+        run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+
+      - name: Upload test evidence for the technical report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-5-test-reports
+          path: reports/
+
+  # -------------------------------------------------------------------------
+  docker:
+    name: Build containers and smoke test
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the shared Docker Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build the three Student 5 images
+        run: |
+          docker build -t asd/student-5-db:ci       student-5/database
+          docker build -t asd/student-5-backend:ci  student-5/backend
+          docker build -t asd/student-5-frontend:ci student-5/frontend
+
+      - name: Start the Student 5 stack
+        # --no-deps keeps the multi-gigabyte Ollama image and the Product
+        # Catalogue stack out of CI; the AI path is covered by the stubbed
+        # AI-Mode tests in the job above, and the catalogue lookup degrades to
+        # the raw SKU when unreachable (see backend/app/catalogue_client.py).
+        run: |
+          cp .env.example .env
+          docker compose up -d --build --no-deps \
+            student-5-db student-5-backend student-5-frontend
+
+      - name: Wait for the database microservice
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:9005/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "database microservice did not become healthy"; exit 1
+
+      - name: Smoke test the CRUD path through the API
+        run: |
+          set -e
+          curl -fs http://localhost:9005/health | tee /dev/stderr | grep -q '"status": *"ok"'
+          curl -fs http://localhost:8005/health > /dev/null
+          test "$(curl -fs http://localhost:8005/api/reviews | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["reviews"]))')" -ge 10
+
+          created=$(curl -fs -X POST http://localhost:8005/api/reviews \
+            -H 'Content-Type: application/json' \
+            -d '{"product_sku":"SKU-CI-0001","user_id":"ci-runner","rating":4,"review":"Created by GitHub Actions."}')
+          echo "$created"
+          id=$(echo "$created" | python3 -c 'import json,sys; print(json.load(sys.stdin)["review_id"])')
+
+          curl -fs -X PUT "http://localhost:8005/api/reviews/$id" \
+            -H 'Content-Type: application/json' -d '{"rating": 2}' | grep -q '"rating": *2'
+          curl -fs -X DELETE "http://localhost:8005/api/reviews/$id" > /dev/null
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8005/api/reviews/$id)" = "404"
+
+      - name: Smoke test the frontend microservice
+        run: |
+          curl -fs http://localhost:3005/ | grep -q "Reviews and Ratings"
+          curl -fs http://localhost:3005/partials/reviews | grep -q "review-table"
+
+      - name: Container logs (evidence on failure)
+        if: always()
+        run: docker compose logs --no-color --tail=200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
