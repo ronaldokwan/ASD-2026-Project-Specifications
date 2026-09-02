@@ -1,111 +1,124 @@
 -- ===========================================================================
--- Student 1 - Product Catalogue - seed data.
--- requires a minimum of ten (10) records per table; 12 are seeded
--- so that the category filter and the AI price grounding have real data.
+-- Student 4 - Inventory and Stock - seed data.
+-- 12 sample stock records across 4 categories for inventory testing.
+-- Includes items at healthy levels and items below restock threshold.
 -- ===========================================================================
 
 INSERT OR IGNORE INTO
-    products (
+    stock (
         sku,
         name,
-        description,
+        quantity,
         category,
-        price,
-        status
+        location,
+        restock_threshold,
+        stock_level
     )
 VALUES (
         'SKU-AUD-1001',
         'Aurora Wireless Headphones',
-        'Over-ear Bluetooth headphones with active noise cancelling and a 30 hour battery.',
+        50,
         'Audio',
-        199.95,
-        'active'
+        'Shelf A1',
+        30,
+        'good'
     ),
     (
         'SKU-AUD-1002',
         'Pebble Bluetooth Speaker',
-        'Pocket-sized waterproof speaker with 12 hours of playback and a carabiner clip.',
+        5,
         'Audio',
-        59.00,
-        'active'
+        'Shelf A2',
+        30,
+        'low'
     ),
     (
         'SKU-AUD-1003',
         'Studio Wired Earbuds',
-        'In-ear monitors with a braided cable, inline microphone and three silicone tip sizes.',
+        15,
         'Audio',
-        34.50,
-        'active'
+        'Shelf A3',
+        30,
+        'low'
     ),
     (
         'SKU-COM-2001',
         'Nimbus 14 Laptop Sleeve',
-        'Felt and recycled-leather sleeve that fits 14 inch laptops, with a magnetic closure.',
+        8,
         'Computing',
-        45.00,
-        'active'
+        'Bin B1',
+        20,
+        'low'
     ),
     (
         'SKU-COM-2002',
         'Orbit Wireless Mouse',
-        'Silent-click ergonomic mouse with adjustable DPI and a rechargeable battery.',
+        35,
         'Computing',
-        39.95,
-        'active'
+        'Bin B2',
+        30,
+        'good'
     ),
     (
         'SKU-COM-2003',
         'Mechanical Keyboard TKL',
-        'Tenkeyless hot-swappable mechanical keyboard with brown switches and PBT keycaps.',
+        12,
         'Computing',
-        129.00,
-        'active'
+        'Bin B3',
+        25,
+        'low'
     ),
     (
         'SKU-COM-2004',
         'Dual Port USB-C Charger',
-        'Compact 65W gallium nitride charger that fast-charges a laptop and a phone together.',
+        42,
         'Computing',
-        69.90,
-        'draft'
+        'Bin B4',
+        30,
+        'good'
     ),
     (
         'SKU-HOM-3001',
         'Ceramic Pour-Over Set',
-        'Two-cup ceramic pour-over dripper with a matching carafe and a reusable steel filter.',
+        18,
         'Home',
-        74.00,
-        'active'
+        'Cabinet C1',
+        25,
+        'low'
     ),
     (
         'SKU-HOM-3002',
         'Linen Throw Blanket',
-        'Stonewashed French linen throw, 130 x 170 cm, that softens with every wash.',
+        28,
         'Home',
-        119.00,
-        'active'
+        'Cabinet C2',
+        20,
+        'good'
     ),
     (
         'SKU-HOM-3003',
         'Aroma Diffuser Mini',
-        'Ultrasonic diffuser with a 150 ml tank, warm night light and eight hour timer.',
+        22,
         'Home',
-        49.95,
-        'archived'
+        'Cabinet C3',
+        20,
+        'good'
     ),
     (
         'SKU-WEA-4001',
         'Trail Runner Cap',
-        'Lightweight running cap in perforated recycled polyester with a reflective trim.',
+        45,
         'Wearables',
-        29.95,
-        'active'
+        'Rack D1',
+        30,
+        'good'
     ),
     (
         'SKU-WEA-4002',
         'Everyday Fitness Band',
-        'Slim activity tracker with heart-rate monitoring, sleep tracking and a seven day battery.',
+        9,
         'Wearables',
-        89.00,
-        'active'
+        'Rack D2',
+        25,
+        'low'
     );

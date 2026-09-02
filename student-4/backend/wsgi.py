@@ -1,4 +1,4 @@
-"""WSGI entry point for the Product Catalogue backend/API microservice."""
+"""WSGI entry point for the Inventory and Stock backend/API microservice."""
 
 import os
 

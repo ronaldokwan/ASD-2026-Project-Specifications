@@ -1,18 +1,18 @@
-"""AI assistance for the Product Catalogue (POST /api/products/ai).
+"""AI assistance for inventory restocking (POST /api/stock/recommend).
 
-This module is the Product Catalogue's half of the team's shared agentic
+This module is the Inventory and Stock's half of the team's shared agentic
 workflow. It does not call the LLM directly:
 
     frontend -> backend/API -> AI-Mode -> Ollama -> LLM
 
-* **Plan**    - the backend grounds the request by pulling real facts out of its
-                own database microservice (how many products the category has,
-                its average / minimum / maximum price, sample products).
-* **Act**     - AI-Mode calls the approved open-source LLM.
-* **Observe** - AI-Mode validates the answer against the catalogue guardrails
-                declared below (word count, price range).
-* **Adapt**   - AI-Mode re-prompts with the violations, and this module supplies
-                a deterministic fallback so the catalogue UI always gets copy.
+* **Plan**    - the backend gathers current low-stock items from the database
+                microservice and provides their details for context.
+* **Act**     - AI-Mode calls the approved open-source LLM to generate
+                restock recommendations.
+* **Observe** - AI-Mode validates the answer against the inventory guardrails
+                (order quantity range, item selection).
+* **Adapt**   - AI-Mode re-prompts with violations, and this module supplies
+                a deterministic fallback for basic recommendations.
 """
 
 import requests
@@ -20,90 +20,115 @@ import requests
 from . import db_client
 from .config import Config
 
-DEFAULT_PRICE = 49.95
-
 
 class AIServiceError(RuntimeError):
     """The shared AI-Mode service could not be reached."""
 
 
 # ----------------------------------------------------------------- Plan step
-def build_context(name, category, keywords=""):
-    """Gather grounding facts for the prompt from the database microservice."""
+def build_context(category):
+    """Gather low-stock items in the category for the recommendation prompt."""
     context = {
-        "product_name": name,
         "category": category,
         "currency": "AUD",
-        "seller": "Group 40 retail store",
+        "business": "Group 40 retail inventory",
     }
-    if keywords:
-        context["seller_keywords"] = keywords
 
     try:
-        stats = db_client.category_stats(category)
+        low = db_client.list_low_stock()
+        items_in_category = [item for item in low if item.get("category") == category]
     except db_client.DatabaseError:
         # Grounding is best-effort: a database blip must not disable the AI.
-        context["category_products"] = "unknown (catalogue statistics unavailable)"
+        context["low_stock_items"] = "unknown (low stock query unavailable)"
         return context
 
-    if stats.get("product_count"):
-        context["category_products"] = stats["product_count"]
-        context["category_avg_price"] = stats.get("avg_price")
-        context["category_price_range"] = "{} to {}".format(
-            stats.get("min_price"), stats.get("max_price"))
-        context["comparable_products"] = ", ".join(
-            "{} at ${}".format(item["name"], item["price"]) for item in stats.get("sample", [])
-        ) or "none"
+    if items_in_category:
+        context["low_stock_count"] = len(items_in_category)
+        context["low_stock_items"] = [
+            {
+                "sku": item.get("sku"),
+                "name": item.get("name"),
+                "quantity": item.get("quantity"),
+                "restock_threshold": item.get("restock_threshold"),
+                "location": item.get("location"),
+            }
+            for item in items_in_category
+        ]
     else:
-        context["category_products"] = 0
-        context["note"] = "This is the first product in this category."
+        context["low_stock_count"] = 0
+        context["low_stock_items"] = []
+        context["note"] = "No low-stock items in this category at the moment."
 
     return context
 
 
-def _fallback(name, category, context):
+def _fallback(category, context):
     """Deterministic result used when the LLM cannot produce a valid answer."""
-    price = context.get("category_avg_price") or DEFAULT_PRICE
-    description = (
-        "{name} is a {category_lower} product in the Group 40 catalogue. "
-        "This description was generated locally because the AI model could not be reached, "
-        "so please review the wording and the suggested price before publishing the product."
-    ).format(name=name, category_lower=category.lower())
-    return {"description": description, "price": round(float(price), 2)}
+    items = context.get("low_stock_items", [])
+    recommendations = []
+    
+    if isinstance(items, list):
+        for item in items:
+            if isinstance(item, dict):
+                qty = item.get("quantity", 0)
+                threshold = item.get("restock_threshold", 50)
+                order_qty = max(Config.RECOMMENDATION_MIN_ORDER, threshold * 2 - qty)
+                order_qty = min(order_qty, Config.RECOMMENDATION_MAX_ORDER)
+                
+                recommendations.append({
+                    "sku": item.get("sku", "UNKNOWN"),
+                    "order_quantity": order_qty,
+                    "reason": "Stock below threshold; recommend restocking to {} units".format(
+                        threshold * 2),
+                })
+    
+    return {"recommendations": recommendations}
 
 
 # ------------------------------------------------------------- Act / Observe
-def suggest_product_copy(name, category, keywords=""):
-    """Ask AI-Mode for a description and a price suggestion for one product.
+def recommend_restocking(category):
+    """Ask AI-Mode for restock recommendations for items in a category.
 
     Returns the AI-Mode envelope: result, attempts, fallback_used, model,
     elapsed_ms and the Plan/Act/Observe/Adapt trace shown in the UI.
     """
-    context = build_context(name, category, keywords)
-    fallback = _fallback(name, category, context)
+    context = build_context(category)
+    fallback = _fallback(category, context)
 
     payload = {
-        "goal": "product_catalogue_copy",
+        "goal": "inventory_restocking",
         "task": (
-            "Write marketing copy and a competitive retail price for a product that is about to "
-            "be listed in an online store. Keep the tone factual and concise, mention what the "
-            "product is and who it suits, and price it sensibly against the comparable products "
-            "in the context."
+            "Provide specific restock order recommendations for items in the inventory that are "
+            "below their restock threshold. For each item, suggest an order quantity that will "
+            "bring stock levels to a comfortable level for sales. Consider current quantity, "
+            "restock threshold, and typical demand patterns."
         ),
         "context": context,
         # These guardrails are the Observe step.
         "output_schema": {
-            "description": {
-                "type": "string",
-                "min_words": Config.DESCRIPTION_MIN_WORDS,
-                "max_words": Config.DESCRIPTION_MAX_WORDS,
-                "hint": "one paragraph of retail copy, no bullet points",
-            },
-            "price": {
-                "type": "number",
-                "min": Config.PRICE_MIN,
-                "max": Config.PRICE_MAX,
-                "hint": "retail price in AUD",
+            "recommendations": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "sku": {
+                            "type": "string",
+                            "hint": "product SKU from context",
+                        },
+                        "order_quantity": {
+                            "type": "integer",
+                            "min": Config.RECOMMENDATION_MIN_ORDER,
+                            "max": Config.RECOMMENDATION_MAX_ORDER,
+                            "hint": "recommended number of units to order",
+                        },
+                        "reason": {
+                            "type": "string",
+                            "hint": "brief justification for the recommendation",
+                        },
+                    },
+                    "required": ["sku", "order_quantity", "reason"],
+                },
+                "hint": "array of restock recommendations, one per low-stock item",
             },
         },
         "fallback": fallback,

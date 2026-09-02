@@ -1,4 +1,4 @@
-"""Student 1 - Product Catalogue - BACKEND/API microservice (Flask)."""
+"""Student 4 - Inventory and Stock - BACKEND/API microservice (Flask)."""
 
 from flask import Flask
 

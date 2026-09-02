@@ -1,22 +1,23 @@
-"""REST API for the Product Catalogue (Student 1).
+"""REST API for the Inventory and Stock (Student 4).
 
 Endpoints registered in the Project Group Registration Form:
 
-    GET    /api/products              list + filter (?sku= ?category= ?status= ?search= ?sort=)
-    POST   /api/products              create
-    GET    /api/products/<id>         read one
-    PUT    /api/products/<id>         update
-    DELETE /api/products/<id>         delete
-    POST   /api/products/ai           AI description + price suggestion
+    GET    /api/stock               list + filter (?sku= ?category= ?stock_level= ?search= ?sort=)
+    POST   /api/stock               create
+    GET    /api/stock/<id>          read one
+    PUT    /api/stock/<id>          update
+    DELETE /api/stock/<id>          delete
+    GET    /api/stock/low           low-stock items (qty <= restock_threshold)
+    POST   /api/stock/recommend     AI restock recommendation
 
-Plus supporting endpoints: GET /health, GET /api/categories.
+Plus supporting endpoints: GET /health.
 """
 
 from flask import Blueprint, jsonify, request
 
 from . import ai_agent, db_client
 from .config import Config
-from .validation import ValidationError, clean_product
+from .validation import ValidationError, clean_stock
 
 api = Blueprint("api", __name__)
 
@@ -42,65 +43,62 @@ def health():
     return jsonify(body), (200 if database_ok else 503)
 
 
-@api.get("/api/categories")
-def categories():
-    return jsonify({"categories": db_client.list_categories()})
-
-
-# ---------------------------------------------------------------------- CRUD
-@api.get("/api/products")
-def list_products():
-    products = db_client.list_products(
+@api.get("/api/stock")
+def list_stock():
+    stock = db_client.list_stock(
         sku=request.args.get("sku"),
         category=request.args.get("category"),
-        status=request.args.get("status"),
+        stock_level=request.args.get("stock_level"),
         search=request.args.get("search"),
         sort=request.args.get("sort", "name"),
     )
-    return jsonify({"count": len(products), "products": products})
+    return jsonify({"count": len(stock), "stock": stock})
 
 
-@api.get("/api/products/<int:product_id>")
-def get_product(product_id):
-    return jsonify(db_client.get_product(product_id))
+@api.get("/api/stock/low")
+def list_low_stock():
+    """Return items below restock threshold."""
+    low = db_client.list_low_stock()
+    return jsonify({"count": len(low), "low_stock": low})
 
 
-@api.post("/api/products")
-def create_product():
-    payload = clean_product(request.get_json(silent=True) or {})
-    return jsonify(db_client.create_product(payload)), 201
+@api.get("/api/stock/<int:stock_id>")
+def get_stock(stock_id):
+    return jsonify(db_client.get_stock(stock_id))
 
 
-@api.put("/api/products/<int:product_id>")
-def update_product(product_id):
-    payload = clean_product(request.get_json(silent=True) or {}, partial=True)
-    return jsonify(db_client.update_product(product_id, payload))
+@api.post("/api/stock")
+def create_stock():
+    payload = clean_stock(request.get_json(silent=True) or {})
+    return jsonify(db_client.create_stock(payload)), 201
 
 
-@api.delete("/api/products/<int:product_id>")
-def delete_product(product_id):
-    db_client.delete_product(product_id)
-    return jsonify({"deleted": product_id})
+@api.put("/api/stock/<int:stock_id>")
+def update_stock(stock_id):
+    payload = clean_stock(request.get_json(silent=True) or {}, partial=True)
+    return jsonify(db_client.update_stock(stock_id, payload))
+
+
+@api.delete("/api/stock/<int:stock_id>")
+def delete_stock(stock_id):
+    db_client.delete_stock(stock_id)
+    return jsonify({"deleted": stock_id})
 
 
 # ------------------------------------------------------------------- AI-mode
-@api.post("/api/products/ai")
-def generate_product_copy():
-    """Generate a description and price suggestion for a draft product."""
+@api.post("/api/stock/recommend")
+def recommend_restocking():
+    """Request AI restock recommendation for low inventory items."""
     payload = request.get_json(silent=True) or {}
-    name = str(payload.get("name", "")).strip()
     category = str(payload.get("category", "")).strip()
-    keywords = str(payload.get("keywords", "")).strip()
-
+    
     errors = []
-    if len(name) < 2:
-        errors.append("name is required (at least 2 characters)")
     if len(category) < 2:
         errors.append("category is required (at least 2 characters)")
     if errors:
         raise ValidationError(errors)
 
-    outcome = ai_agent.suggest_product_copy(name, category, keywords)
+    outcome = ai_agent.recommend_restocking(category)
     return jsonify(outcome), (200 if outcome.get("ok") else 502)
 
 

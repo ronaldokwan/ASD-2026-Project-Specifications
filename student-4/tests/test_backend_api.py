@@ -1,4 +1,4 @@
-"""Student 1 - backend/API microservice tests.
+"""Student 4 - backend/API microservice tests.
 
 The database and AI-Mode hops are stubbed, so these tests cover the API
 contract, the validation rules and the AI request the backend builds.

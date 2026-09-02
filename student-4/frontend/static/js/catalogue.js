@@ -1,4 +1,4 @@
-/* Product Catalogue (Student 1) - small client-side helpers.
+/* Inventory and Stock (Student 4) - small client-side helpers.
    All rendering is server-side via HTMX; this only handles the two
    interactions that are purely local to the browser. */
 (function () {

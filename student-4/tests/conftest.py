@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for the Student 1 microservices.
+"""Shared pytest fixtures for the Student 4 microservices.
 
 All three services are exercised in-process with Flask test clients, and every
 network hop between them is stubbed, so the suite runs in GitHub Actions with

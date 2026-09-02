@@ -1,4 +1,4 @@
-"""Student 1 - frontend microservice tests (HTMX partials).
+"""Student 4 - frontend microservice tests (HTMX partials).
 
 The backend/API microservice is stubbed, so these tests verify the rendered
 HTML and the HTMX wiring rather than the API itself.

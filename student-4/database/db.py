@@ -1,4 +1,4 @@
-"""SQLite access layer for the Product Catalogue database microservice.
+"""SQLite access layer for the Inventory and Stock database microservice.
 
 Only this microservice touches the SQLite file; the backend/API microservice
 reaches the data over HTTP, keeping the three microservices independently
@@ -9,17 +9,17 @@ import os
 import sqlite3
 import threading
 
-DB_PATH = os.getenv("DB_PATH", "/data/products.db")
+DB_PATH = os.getenv("DB_PATH", "/data/stock.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 SEED_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed.sql")
 
 _write_lock = threading.Lock()
 
-COLUMNS = ("sku", "name", "description", "category", "price", "status")
+COLUMNS = ("sku", "name", "quantity", "category", "location", "restock_threshold", "stock_level")
 
 
 class NotFound(Exception):
-    """Raised when a product id does not exist."""
+    """Raised when a stock record id does not exist."""
 
 
 class Conflict(Exception):
@@ -48,44 +48,44 @@ def init_db(force_reseed=False):
             conn.executescript(handle.read())
 
         if force_reseed:
-            conn.execute("DELETE FROM products")
-            conn.execute("DELETE FROM sqlite_sequence WHERE name = 'products'")
+            conn.execute("DELETE FROM stock")
+            conn.execute("DELETE FROM sqlite_sequence WHERE name = 'stock'")
 
-        count = conn.execute("SELECT COUNT(*) AS n FROM products").fetchone()["n"]
+        count = conn.execute("SELECT COUNT(*) AS n FROM stock").fetchone()["n"]
         if count == 0:
             with open(SEED_PATH, "r", encoding="utf-8") as handle:
                 conn.executescript(handle.read())
-            count = conn.execute("SELECT COUNT(*) AS n FROM products").fetchone()["n"]
+            count = conn.execute("SELECT COUNT(*) AS n FROM stock").fetchone()["n"]
 
     return count
 
 
 # --------------------------------------------------------------------- READ
-def list_products(
-    category=None, status=None, sku=None, search=None, sort="name", limit=200
+def list_stock(
+    category=None, stock_level=None, sku=None, search=None, sort="name", limit=200
 ):
-    sql = "SELECT * FROM products WHERE 1 = 1"
+    sql = "SELECT * FROM stock WHERE 1 = 1"
     params = []
 
     if category:
         sql += " AND category = ?"
         params.append(category)
-    if status:
-        sql += " AND status = ?"
-        params.append(status)
+    if stock_level:
+        sql += " AND stock_level = ?"
+        params.append(stock_level)
     if sku:
         sql += " AND sku = ?"
         params.append(sku)
     if search:
-        sql += " AND (name LIKE ? OR description LIKE ? OR sku LIKE ?)"
+        sql += " AND (name LIKE ? OR sku LIKE ?)"
         term = "%{}%".format(search)
-        params.extend([term, term, term])
+        params.extend([term, term])
 
     sort_columns = {
         "name": "name ASC",
-        "price_asc": "price ASC",
-        "price_desc": "price DESC",
-        "newest": "datetime(created_at) DESC, id DESC",
+        "qty_asc": "quantity ASC",
+        "qty_desc": "quantity DESC",
+        "last_restocked": "datetime(last_restocked) DESC, id DESC",
     }
     sql += " ORDER BY " + sort_columns.get(sort, sort_columns["name"])
     sql += " LIMIT ?"
@@ -95,81 +95,59 @@ def list_products(
         return [dict(row) for row in conn.execute(sql, params).fetchall()]
 
 
-def get_product(product_id):
+def list_low_stock(limit=200):
+    """Return items where quantity <= restock_threshold."""
+    sql = "SELECT * FROM stock WHERE quantity <= restock_threshold ORDER BY name ASC LIMIT ?"
+    with connect() as conn:
+        return [dict(row) for row in conn.execute(sql, (int(limit),)).fetchall()]
+
+
+def get_stock(stock_id):
     with connect() as conn:
         row = conn.execute(
-            "SELECT * FROM products WHERE id = ?", (product_id,)
+            "SELECT * FROM stock WHERE id = ?", (stock_id,)
         ).fetchone()
     if row is None:
-        raise NotFound("product {} does not exist".format(product_id))
+        raise NotFound("stock item {} does not exist".format(stock_id))
     return dict(row)
 
 
-def list_categories():
-    with connect() as conn:
-        rows = conn.execute(
-            "SELECT category, COUNT(*) AS product_count, ROUND(AVG(price), 2) AS avg_price "
-            "FROM products GROUP BY category ORDER BY category"
-        ).fetchall()
-    return [dict(row) for row in rows]
-
-
-def category_stats(category):
-    """Facts used to ground the AI price suggestion (the Plan step)."""
-    with connect() as conn:
-        row = conn.execute(
-            "SELECT COUNT(*) AS product_count, ROUND(AVG(price), 2) AS avg_price, "
-            "MIN(price) AS min_price, MAX(price) AS max_price "
-            "FROM products WHERE category = ?",
-            (category,),
-        ).fetchone()
-        sample = conn.execute(
-            "SELECT name, price FROM products WHERE category = ? ORDER BY price LIMIT 5",
-            (category,),
-        ).fetchall()
-
-    stats = dict(row)
-    stats["category"] = category
-    stats["sample"] = [dict(item) for item in sample]
-    return stats
-
-
 # -------------------------------------------------------------------- WRITE
-def create_product(data):
+def create_stock(data):
     values = [data.get(column) for column in COLUMNS]
-    sql = "INSERT INTO products (sku, name, description, category, price, status) VALUES (?,?,?,?,?,?)"
+    sql = "INSERT INTO stock (sku, name, quantity, category, location, restock_threshold, stock_level) VALUES (?,?,?,?,?,?,?)"
     with _write_lock, connect() as conn:
         try:
             cursor = conn.execute(sql, values)
         except sqlite3.IntegrityError as exc:
             raise Conflict(str(exc)) from exc
         new_id = cursor.lastrowid
-    return get_product(new_id)
+    return get_stock(new_id)
 
 
-def update_product(product_id, data):
-    existing = get_product(product_id)  # raises NotFound
+def update_stock(stock_id, data):
+    existing = get_stock(stock_id)  # raises NotFound
     merged = {column: data.get(column, existing[column]) for column in COLUMNS}
 
     sql = (
-        "UPDATE products SET sku = ?, name = ?, description = ?, category = ?, "
-        "price = ?, status = ? WHERE id = ?"
+        "UPDATE stock SET sku = ?, name = ?, quantity = ?, category = ?, "
+        "location = ?, restock_threshold = ?, stock_level = ? WHERE id = ?"
     )
     with _write_lock, connect() as conn:
         try:
-            conn.execute(sql, [merged[column] for column in COLUMNS] + [product_id])
+            conn.execute(sql, [merged[column] for column in COLUMNS] + [stock_id])
         except sqlite3.IntegrityError as exc:
             raise Conflict(str(exc)) from exc
-    return get_product(product_id)
+    return get_stock(stock_id)
 
 
-def delete_product(product_id):
-    get_product(product_id)  # raises NotFound
+def delete_stock(stock_id):
+    get_stock(stock_id)  # raises NotFound
     with _write_lock, connect() as conn:
-        conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+        conn.execute("DELETE FROM stock WHERE id = ?", (stock_id,))
     return True
 
 
-def count_products():
+def count_stock():
     with connect() as conn:
-        return conn.execute("SELECT COUNT(*) AS n FROM products").fetchone()["n"]
+        return conn.execute("SELECT COUNT(*) AS n FROM stock").fetchone()["n"]

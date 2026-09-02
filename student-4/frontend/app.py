@@ -1,4 +1,4 @@
-"""Student 1 - Product Catalogue - FRONTEND microservice.
+"""Student 4 - Inventory and Stock - FRONTEND microservice.
 
 Server-rendered HTMX interface. Every partial route
 returns an HTML fragment that HTMX swaps into the page, so the browser never

@@ -1,7 +1,7 @@
-"""Request validation for the Product Catalogue API.
+"""Request validation for the Inventory and Stock API.
 
 Keeps every business rule in one place so POST, PUT and the AI endpoint all
-agree on what a valid product looks like.
+agree on what a valid stock record looks like.
 """
 
 import re
@@ -17,8 +17,8 @@ class ValidationError(Exception):
         self.errors = errors
 
 
-def clean_product(payload, partial=False):
-    """Validate and normalise a product payload.
+def clean_stock(payload, partial=False):
+    """Validate and normalise a stock payload.
 
     ``partial=True`` (PUT) allows a subset of fields; missing fields are simply
     left out so the database microservice keeps the stored values.
@@ -62,40 +62,54 @@ def clean_product(payload, partial=False):
     elif not partial:
         errors.append("category is required")
 
-    # --- price -------------------------------------------------------------
-    if present("price"):
+    # --- location ----------------------------------------------------------
+    if present("location"):
+        location = str(payload["location"]).strip()
+        if not 2 <= len(location) <= 100:
+            errors.append("location must be between 2 and 100 characters")
+        else:
+            cleaned["location"] = location
+    elif not partial:
+        errors.append("location is required")
+
+    # --- quantity ----------------------------------------------------------
+    if present("quantity"):
         try:
-            price = float(str(payload["price"]).replace("$", "").replace(",", "").strip())
+            quantity = int(str(payload["quantity"]).strip())
         except (TypeError, ValueError):
-            errors.append("price must be a number")
+            errors.append("quantity must be an integer")
         else:
-            if not Config.PRICE_MIN <= price <= Config.PRICE_MAX:
-                errors.append("price must be between {} and {}".format(
-                    Config.PRICE_MIN, Config.PRICE_MAX))
+            if not Config.QUANTITY_MIN <= quantity <= Config.QUANTITY_MAX:
+                errors.append("quantity must be between {} and {}".format(
+                    Config.QUANTITY_MIN, Config.QUANTITY_MAX))
             else:
-                cleaned["price"] = round(price, 2)
+                cleaned["quantity"] = quantity
     elif not partial:
-        errors.append("price is required")
+        errors.append("quantity is required")
 
-    # --- description (optional) -------------------------------------------
-    if present("description"):
-        description = str(payload["description"]).strip()
-        if len(description) > 1200:
-            errors.append("description must be 1200 characters or fewer")
+    # --- restock_threshold -------------------------------------------------
+    if present("restock_threshold"):
+        try:
+            threshold = int(str(payload["restock_threshold"]).strip())
+        except (TypeError, ValueError):
+            errors.append("restock_threshold must be an integer")
         else:
-            cleaned["description"] = description
+            if not Config.RESTOCK_THRESHOLD_MIN <= threshold <= Config.RESTOCK_THRESHOLD_MAX:
+                errors.append("restock_threshold must be between {} and {}".format(
+                    Config.RESTOCK_THRESHOLD_MIN, Config.RESTOCK_THRESHOLD_MAX))
+            else:
+                cleaned["restock_threshold"] = threshold
     elif not partial:
-        cleaned["description"] = ""
+        errors.append("restock_threshold is required")
 
-    # --- status (optional, defaults to active) -----------------------------
-    if present("status"):
-        status = str(payload["status"]).strip().lower()
-        if status not in Config.VALID_STATUSES:
-            errors.append("status must be one of {}".format(", ".join(Config.VALID_STATUSES)))
+    # --- stock_level (optional, computed from quantity vs threshold) ------
+    if present("stock_level"):
+        stock_level = str(payload["stock_level"]).strip().lower()
+        if stock_level not in Config.VALID_STOCK_LEVELS:
+            errors.append("stock_level must be one of {}".format(
+                ", ".join(Config.VALID_STOCK_LEVELS)))
         else:
-            cleaned["status"] = status
-    elif not partial:
-        cleaned["status"] = "active"
+            cleaned["stock_level"] = stock_level
 
     if errors:
         raise ValidationError(errors)

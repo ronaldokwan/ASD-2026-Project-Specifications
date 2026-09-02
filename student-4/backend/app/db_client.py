@@ -1,4 +1,4 @@
-"""HTTP client for the Student 1 database microservice.
+"""HTTP client for the Student 4 database microservice.
 
 The backend never opens the SQLite file itself - it talks to the database
 microservice over REST, which is what keeps the three services independently
@@ -15,7 +15,7 @@ class DatabaseError(RuntimeError):
 
 
 class NotFound(Exception):
-    """The requested product does not exist."""
+    """The requested stock item does not exist."""
 
 
 class Conflict(Exception):
@@ -49,34 +49,31 @@ def _error_of(response):
         return response.text
 
 
-# ---------------------------------------------------------------- catalogue
-def list_products(**filters):
+# ---------------------------------------------------------------- inventory
+def list_stock(**filters):
     params = {key: value for key, value in filters.items() if value}
-    return _request("GET", "/products", params=params).get("products", [])
+    return _request("GET", "/stock", params=params).get("stock", [])
 
 
-def get_product(product_id):
-    return _request("GET", "/products/{}".format(product_id))
+def list_low_stock(**filters):
+    params = {key: value for key, value in filters.items() if value}
+    return _request("GET", "/stock/low", params=params).get("low_stock", [])
 
 
-def create_product(payload):
-    return _request("POST", "/products", json=payload)
+def get_stock(stock_id):
+    return _request("GET", "/stock/{}".format(stock_id))
 
 
-def update_product(product_id, payload):
-    return _request("PUT", "/products/{}".format(product_id), json=payload)
+def create_stock(payload):
+    return _request("POST", "/stock", json=payload)
 
 
-def delete_product(product_id):
-    return _request("DELETE", "/products/{}".format(product_id))
+def update_stock(stock_id, payload):
+    return _request("PUT", "/stock/{}".format(stock_id), json=payload)
 
 
-def list_categories():
-    return _request("GET", "/categories").get("categories", [])
-
-
-def category_stats(category):
-    return _request("GET", "/stats/category/{}".format(category))
+def delete_stock(stock_id):
+    return _request("DELETE", "/stock/{}".format(stock_id))
 
 
 def health():

@@ -1,35 +1,42 @@
 -- ===========================================================================
--- Student 1 - Ronaldo Kwan - Product Catalogue
+-- Student 4 - Jonathan Czesler - Inventory and Stock
 -- Database microservice schema (SQLite)
 --
--- products: id, sku, name, description, category, price, status,
---           created_at, updated_at
+-- stock: id, sku, name, quantity, category, location, restock_threshold, 
+--        stock_level (computed: good if qty >= threshold, low otherwise),
+--        last_restocked, created_at, updated_at
 -- ===========================================================================
 
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE IF NOT EXISTS stock (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     sku TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
     category TEXT NOT NULL,
-    price REAL NOT NULL CHECK (price >= 0),
-    status TEXT NOT NULL DEFAULT 'active' CHECK (
-        status IN ('active', 'draft', 'archived')
+    location TEXT NOT NULL,
+    restock_threshold INTEGER NOT NULL CHECK (restock_threshold >= 0),
+    stock_level TEXT NOT NULL DEFAULT 'good' CHECK (
+        stock_level IN ('good', 'low')
     ),
+    last_restocked TEXT NOT NULL DEFAULT (datetime('now')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_products_category ON products (category);
+CREATE INDEX IF NOT EXISTS idx_stock_category ON stock (category);
 
-CREATE INDEX IF NOT EXISTS idx_products_status ON products (status);
+CREATE INDEX IF NOT EXISTS idx_stock_stock_level ON stock (stock_level);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku ON products (sku);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_sku ON stock (sku);
 
--- Keep updated_at accurate without every caller having to remember it.
-CREATE TRIGGER IF NOT EXISTS trg_products_updated_at
-AFTER UPDATE ON products
+-- Update last_restocked timestamp only when quantity is changed (shipment received).
+-- Also update updated_at for any change.
+CREATE TRIGGER IF NOT EXISTS trg_stock_update_timestamp
+AFTER UPDATE ON stock
 FOR EACH ROW
 BEGIN
-    UPDATE products SET updated_at = datetime('now') WHERE id = OLD.id;
+    UPDATE stock SET updated_at = datetime('now') WHERE id = NEW.id;
+    -- Update last_restocked only if quantity changed
+    UPDATE stock SET last_restocked = datetime('now') 
+    WHERE id = NEW.id AND NEW.quantity <> OLD.quantity;
 END;

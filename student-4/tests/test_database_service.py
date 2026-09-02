@@ -1,4 +1,4 @@
-"""Student 1 - database microservice tests (SQLite CRUD + seed data)."""
+"""Student 4 - database microservice tests (SQLite CRUD + seed data)."""
 
 import pytest
 

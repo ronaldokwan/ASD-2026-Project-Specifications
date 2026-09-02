@@ -1,4 +1,4 @@
-"""HTTP client for the Student 1 backend/API microservice.
+"""HTTP client for the Student 4 backend/API microservice.
 
 The frontend microservice holds no business logic and no database access - it
 renders HTML and calls the API, which is what makes the three services
