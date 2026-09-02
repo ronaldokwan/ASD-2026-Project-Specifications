@@ -1,0 +1,63 @@
+{# Result of one Plan -> Act -> Observe -> Adapt run, plus the trace that is
+   screenshotted as evidence in the technical report. #}
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+
+{% else %}
+  {% if outcome.fallback_used %}
+    <div class="alert error">
+      The LLM could not produce a valid answer, so a local fallback was used.
+      {% if outcome.error %}<div class="muted">{{ outcome.error }}</div>{% endif %}
+    </div>
+  {% else %}
+    <div class="alert ok">
+      Suggestion ready — model <code>{{ outcome.model }}</code>,
+      {{ outcome.attempts }} attempt{{ '' if outcome.attempts == 1 else 's' }},
+      {{ outcome.elapsed_ms }} ms.
+    </div>
+  {% endif %}
+
+  <div class="field">
+    <label>Suggested description</label>
+    <p id="ai-description" class="ai-output">{{ result.description }}</p>
+  </div>
+
+  <div class="field">
+    <label>Suggested price</label>
+    <p class="ai-output"><strong id="ai-price">{{ '%.2f'|format(result.price|float) }}</strong> AUD</p>
+  </div>
+
+  <button type="button" class="btn"
+          data-apply-ai
+          data-description="{{ result.description }}"
+          data-price="{{ '%.2f'|format(result.price|float) }}">
+    Apply to the form
+  </button>
+  <span class="muted" style="margin-left:8px">You review it before anything is saved.</span>
+
+  <h3 style="font-size:13px;margin:18px 0 6px">Agentic workflow trace</h3>
+  <div class="trace">
+    {% for step in outcome.trace %}
+      <div class="trace-step {{ step.status if step.status in ['failed', 'fallback'] else '' }}">
+        <span class="step-name">{{ step.step }}</span>
+        {% if step.attempt %}<span class="muted"> · attempt {{ step.attempt }}</span>{% endif %}
+        <div>{{ step.detail }}</div>
+        {% if step.raw_preview %}
+          <pre>{{ step.raw_preview }}</pre>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if outcome.grounding %}
+    <details style="margin-top:12px">
+      <summary class="muted">Grounding facts sent to the model (from the database microservice)</summary>
+      <table style="margin-top:8px">
+        {% for key, value in outcome.grounding.items() %}
+          <tr><td class="muted">{{ key }}</td><td>{{ value }}</td></tr>
+        {% endfor %}
+      </table>
+    </details>
+  {% endif %}
+{% endif %}
