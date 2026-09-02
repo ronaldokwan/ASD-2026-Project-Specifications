@@ -123,14 +123,40 @@
         grandTotal.textContent = `$${total.toFixed(2)}`;
     }
 
+    function updateProductAvailability() {
+        const productSelects = [...lines.querySelectorAll('[name="sku"]')];
+        const selectedCounts = new Map();
+
+        productSelects.forEach(select => {
+            if (select.value) {
+                selectedCounts.set(select.value, (selectedCounts.get(select.value) || 0) + 1);
+            }
+        });
+
+        productSelects.forEach(select => {
+            const duplicateSelection = select.value && selectedCounts.get(select.value) > 1;
+            select.setCustomValidity(
+                duplicateSelection ? 'Choose each product only once. Increase its quantity instead.' : ''
+            );
+
+            [...select.options].forEach(option => {
+                option.disabled = Boolean(
+                    option.value && option.value !== select.value && selectedCounts.has(option.value)
+                );
+            });
+        });
+    }
+
     document.getElementById('add-line').addEventListener('click', () => {
         lines.appendChild(template.content.cloneNode(true));
+        updateProductAvailability();
         calculate();
     });
 
     lines.addEventListener('click', event => {
         if (event.target.classList.contains('remove-line') && lines.children.length > 1) {
             event.target.closest('.order-line').remove();
+            updateProductAvailability();
             calculate();
         }
     });
@@ -139,10 +165,12 @@
             const row = event.target.closest('.order-line');
             const selectedProduct = event.target.selectedOptions[0];
             row.querySelector('[name="unitPrice"]').value = selectedProduct?.dataset.price || '0.00';
+            updateProductAvailability();
             calculate();
         }
     });
     lines.addEventListener('input', calculate);
+    updateProductAvailability();
     calculate();
 </script>
 </body>
