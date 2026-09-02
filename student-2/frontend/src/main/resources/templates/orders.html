@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartShop Orders</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+<header class="site-header">
+    <div>
+        <span class="eyebrow">SmartShop · Student 2</span>
+        <h1>Customer orders</h1>
+        <p>Manage purchases, check stock and prepare customer communications.</p>
+    </div>
+    <a class="button primary" th:href="@{/orders/new}">Create order</a>
+</header>
+
+<main class="page-shell">
+    <div class="notice success" th:if="${param.deleted}">Order deleted.</div>
+
+    <section class="panel filter-panel">
+        <form class="filter-grid" method="get" th:action="@{/orders}"
+              hx-get="/orders/table" hx-target="#orders-table" hx-push-url="false">
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="">All statuses</option>
+                    <option value="pending" th:selected="${selectedStatus == 'pending'}">Pending</option>
+                    <option value="shipped" th:selected="${selectedStatus == 'shipped'}">Shipped</option>
+                    <option value="delivered" th:selected="${selectedStatus == 'delivered'}">Delivered</option>
+                </select>
+            </label>
+            <label>
+                <span>Customer email</span>
+                <input name="customerEmail" th:value="${customerEmail}" placeholder="customer@example.com">
+            </label>
+            <label>
+                <span>Order number</span>
+                <input name="orderNumber" th:value="${orderNumber}" placeholder="ORD-...">
+            </label>
+            <button class="button secondary" type="submit">Apply filters</button>
+        </form>
+    </section>
+
+    <section id="orders-table" th:insert="~{fragments/orders-table :: table}"></section>
+
+    <section class="panel ai-panel">
+        <div>
+            <span class="eyebrow">AI assistant</span>
+            <h2>Summarise a customer's history</h2>
+        </div>
+        <form class="inline-form" hx-post="/orders/ai/customer-summary" hx-target="#summary-result">
+            <input type="email" name="customerEmail" required placeholder="customer@example.com">
+            <button class="button dark" type="submit">Generate summary</button>
+        </form>
+        <div id="summary-result" class="ai-result muted">The generated summary will appear here.</div>
+    </section>
+</main>
+</body>
+</html>
