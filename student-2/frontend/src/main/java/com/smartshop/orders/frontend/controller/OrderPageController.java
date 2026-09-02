@@ -162,6 +162,7 @@ public class OrderPageController {
         model.addAttribute("customerEmail", customerEmail);
         model.addAttribute("status", status);
         model.addAttribute("lines", lines);
+        model.addAttribute("products", backend.listProducts());
         model.addAttribute("error", error);
     }
 

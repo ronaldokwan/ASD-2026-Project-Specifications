@@ -109,8 +109,13 @@ public class OrderController {
         return orderService.checkStock(request.lines());
     }
 
-    @GetMapping("/catalog/products")
+    @GetMapping(value = "/catalog/products", params = "sku")
     public ProductInfo product(@RequestParam String sku) {
         return productService.getProductBySku(sku);
+    }
+
+    @GetMapping(value = "/catalog/products", params = "!sku")
+    public List<ProductInfo> products() {
+        return productService.listProducts();
     }
 }

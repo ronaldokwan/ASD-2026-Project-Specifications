@@ -4,6 +4,7 @@ import com.smartshop.orders.frontend.dto.FrontendModels.AiResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.CustomerSummaryRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.ProductInfo;
 import com.smartshop.orders.frontend.dto.FrontendModels.StatusRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -58,6 +59,11 @@ public class BackendClient {
 
     public void delete(long id) {
         restClient.delete().uri("/api/orders/{id}", id).retrieve().toBodilessEntity();
+    }
+
+    public List<ProductInfo> listProducts() {
+        return restClient.get().uri("/api/catalog/products")
+            .retrieve().body(new ParameterizedTypeReference<>() {});
     }
 
     public AiResponse delayEmail(long id) {

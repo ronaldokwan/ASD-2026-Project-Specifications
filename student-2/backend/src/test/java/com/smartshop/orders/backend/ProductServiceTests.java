@@ -9,10 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -77,6 +79,68 @@ class ProductServiceTests {
         ProductInfo result = productService.getProductBySku("SKU-AUD-1001");
 
         assertThat(result).isEqualTo(new ProductInfo("SKU-AUD-1001", "SKU-AUD-1001", BigDecimal.ZERO));
+        server.verify();
+    }
+
+    @Test
+    void requiresARealProductForOrderCreation() {
+        server.expect(once(), requestTo("http://student-1-backend:8001/api/products?sku=SKU-AUD-1001"))
+            .andRespond(withSuccess("""
+                {
+                  "count": 1,
+                  "products": [
+                    {"sku":"SKU-AUD-1001","name":"Aurora Wireless Headphones","price":199.95}
+                  ]
+                }
+                """, MediaType.APPLICATION_JSON));
+
+        ProductInfo result = productService.requireProductBySku("SKU-AUD-1001");
+
+        assertThat(result.price()).isEqualByComparingTo("199.95");
+        server.verify();
+    }
+
+    @Test
+    void rejectsAnUnknownProductForOrderCreation() {
+        server.expect(once(), requestTo("http://student-1-backend:8001/api/products?sku=INVALID-SKU"))
+            .andRespond(withSuccess("{\"count\":0,\"products\":[]}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> productService.requireProductBySku("INVALID-SKU"))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("400 BAD_REQUEST")
+            .hasMessageContaining("Unknown product SKU: INVALID-SKU");
+        server.verify();
+    }
+
+    @Test
+    void rejectsOrderCreationWhenStudent1IsUnavailable() {
+        server.expect(once(), requestTo("http://student-1-backend:8001/api/products?sku=SKU-AUD-1001"))
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertThatThrownBy(() -> productService.requireProductBySku("SKU-AUD-1001"))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("503 SERVICE_UNAVAILABLE")
+            .hasMessageContaining("Product catalogue is unavailable");
+        server.verify();
+    }
+
+    @Test
+    void listsProductsForTheOrderForm() {
+        server.expect(once(), requestTo("http://student-1-backend:8001/api/products"))
+            .andRespond(withSuccess("""
+                {
+                  "count": 2,
+                  "products": [
+                    {"sku":"SKU-AUD-1001","name":"Headphones","price":199.95},
+                    {"sku":"SKU-COM-2001","name":"Keyboard","price":89.50}
+                  ]
+                }
+                """, MediaType.APPLICATION_JSON));
+
+        var products = productService.listProducts();
+
+        assertThat(products).extracting(ProductInfo::sku)
+            .containsExactly("SKU-AUD-1001", "SKU-COM-2001");
         server.verify();
     }
 }

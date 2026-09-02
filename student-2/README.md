@@ -24,6 +24,8 @@ Open <http://localhost:5201/orders>.
 
 The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product details are loaded from Student 1's catalogue API; if that service is unavailable or the SKU is not found, the order service falls back to the raw SKU. Stock methods still return fixed development values until Student 3's API is ready.
 
+The create and edit forms load real products from Student 1. Every order mutation confirms each SKU again in the backend and stores the catalogue price instead of trusting the submitted `unitPrice`. Unknown SKUs are rejected, and orders are not saved while the catalogue is unavailable.
+
 ## Run locally
 
 Use three terminals from the project root:
@@ -60,6 +62,9 @@ DELETE http://localhost:5202/api/orders/{orderId}/lines/{lineId}
 POST   http://localhost:5202/api/orders/stock-check
 POST   http://localhost:5202/api/orders/{id}/ai/delay-email
 POST   http://localhost:5202/api/orders/ai/customer-summary
+
+GET    http://localhost:5202/api/catalog/products
+GET    http://localhost:5202/api/catalog/products?sku=SKU-AUD-1001
 ```
 
 Example create request:
