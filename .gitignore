@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Databases (generated at runtime, never committed)
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Secrets / local config
+.env
+*.local.env
+secrets/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build / logs
+dist/
+build/
+*.log
+
+# Generated test evidence
+reports/

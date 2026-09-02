@@ -1,0 +1,62 @@
+{# Stock table. Rendered inside index.html on first load, and swapped by HTMX
+   afterwards - out of band when the response's primary target is #alerts. #}
+<div class="card" id="product-table" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <div class="table-head">
+    <h2 style="margin:0">{{ stock|length }} stock item{{ '' if stock|length == 1 else 's' }}</h2>
+    {% if filters.category or filters.stock_level or filters.search %}
+      <a class="muted" href="/">clear filters</a>
+    {% endif %}
+  </div>
+
+  {% if not stock %}
+    <p class="muted">No stock items match the current filters.</p>
+  {% else %}
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Location</th>
+            <th class="num">Qty</th>
+            <th>Threshold</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in stock %}
+            <tr id="product-row-{{ item.id }}">
+              <td><code>{{ item.sku }}</code></td>
+              <td>
+                <strong>{{ item.name }}</strong>
+                <div class="muted" style="font-size:12px">
+                  #{{ item.id }} &middot; last restock {{ item.last_restocked or '—' }}
+                </div>
+              </td>
+              <td>{{ item.category }}</td>
+              <td>{{ item.location }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td>{{ item.restock_threshold }}</td>
+              <td><span class="badge {{ item.stock_level }}">{{ item.stock_level }}</span></td>
+              <td class="actions">
+                <button class="btn secondary"
+                        hx-get="/partials/form/{{ item.id }}"
+                        hx-target="#product-form"
+                        hx-swap="outerHTML">Edit</button>
+                <button class="btn danger"
+                        hx-post="/stock/{{ item.id }}/delete"
+                        hx-target="#alerts"
+                        hx-swap="innerHTML"
+                        hx-confirm="Delete &quot;{{ item.name }}&quot;? This cannot be undone.">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>

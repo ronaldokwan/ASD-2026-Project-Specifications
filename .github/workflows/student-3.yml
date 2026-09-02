@@ -1,0 +1,18 @@
+# ===========================================================================
+# Student 3 - Vishvak Ananthakrishnan Rameshkumar - Customer Account and Access Management
+# ===========================================================================
+name: student-3
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    name: Not implemented yet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report status
+        run: |
+          echo "Student 3 (Vishvak Ananthakrishnan Rameshkumar) - Customer Account and Access Management"
+          echo "The student-3 microservices have not been implemented yet."
+          echo "Copy .github/workflows/student-1.yml to build them."
