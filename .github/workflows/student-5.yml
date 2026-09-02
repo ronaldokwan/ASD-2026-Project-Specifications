@@ -94,13 +94,28 @@ jobs:
           docker compose up -d --build --no-deps \
             student-5-db student-5-backend student-5-frontend
 
-      - name: Wait for the database microservice
+      - name: Wait for all three microservices
+        # Every container publishes its port before gunicorn is accepting, so a
+        # bare connect succeeds and the proxy then resets it (curl exit 56).
+        # Poll each endpoint until it actually answers before smoke testing.
         run: |
-          for i in $(seq 1 30); do
-            if curl -fs http://localhost:9005/health > /dev/null; then exit 0; fi
-            sleep 2
-          done
-          echo "database microservice did not become healthy"; exit 1
+          wait_for() {
+            name=$1; url=$2; svc=$3
+            for i in $(seq 1 45); do
+              if curl -fs "$url" > /dev/null; then
+                echo "$name is ready after ${i} attempt(s)"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "::error::$name did not become ready at $url"
+            docker compose ps
+            docker compose logs --no-color --tail=100 "$svc"
+            return 1
+          }
+          wait_for "database microservice"    http://localhost:9005/health student-5-db
+          wait_for "backend/API microservice" http://localhost:8005/health student-5-backend
+          wait_for "frontend microservice"    http://localhost:3005/       student-5-frontend
 
       - name: Smoke test the CRUD path through the API
         run: |
