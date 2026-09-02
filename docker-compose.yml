@@ -63,7 +63,7 @@ services:
       <<: *ai-env
       AI_MODE_MAX_ADAPT_ATTEMPTS: ${AI_MODE_MAX_ADAPT_ATTEMPTS:-2}
     ports:
-      - "7000:7000"
+      - "7001:7000"
     depends_on:
       ollama:
         condition: service_healthy
