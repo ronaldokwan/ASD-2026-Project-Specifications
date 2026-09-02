@@ -1,51 +1,89 @@
-# Student 2 — Jinying Li — Customer Orders
+# Student 2 — Customer Orders
 
-Status: **skeleton only — not implemented.**
+Java/Spring Boot implementation of the SmartShop Customer Orders feature.
 
-Create, view, update, cancel and track customer orders containing one or more products.
+## Services
 
-## What to build
+| Service | Local port | Responsibility |
+| --- | ---: | --- |
+| `frontend` | 5201 | Thymeleaf and HTMX pages |
+| `backend` | 5202 | Order business API, product/stock coordination, AI |
+| `database-api` | 5203 | SQLite ownership and internal CRUD API |
 
-| Microservice  | Folder      | Port | Stack                                |
-| ------------- | ----------- | ---- | ------------------------------------ |
-| Frontend      | `frontend/` | 3002 | Flask + HTMX + the shared CSS theme  |
-| Backend / API | `backend/`  | 8002 | Flask REST API                       |
-| Database      | `database/` | 9002 | SQLite behind a small Flask data API |
+SQLite is embedded inside `database-api`; port 5203 belongs to the Spring Boot API, not to SQLite. The SQLite file is persisted in the Docker volume `student2-orders-data`.
 
-- **Frontend functions:** View and filter orders by status; create and edit orders; add or remove order lines; cancel orders; show product names, quantities, prices and totals; generate AI order summaries and shipping-delay emails.
-- **Backend/API functions:** CRUD APIs for orders and order lines; filter by status or customer email; validate orders and calculate totals; look up product names from the Student 1 catalogue API by SKU (fall back to the raw SKU); AI order summaries and shipping-delay emails.
-- **Database tables:** `orders (order_number, customer_email, status, ordered_at)` and `order_lines (order_id, sku, quantity, unit_price)` — seed **at least 10 records**.
+## Run with Docker
 
-## Use Student 1 as the reference implementation
-
-`student-1/` is a complete, working example of exactly this structure. The fastest route:
+From this directory:
 
 ```bash
-cp -r student-1/database  student-2/database
-cp -r student-1/backend   student-2/backend
-cp -r student-1/frontend  student-2/frontend
-cp -r student-1/tests     student-2/tests
+docker compose up --build
 ```
 
-Then work through this checklist:
+Open <http://localhost:5201/orders>.
 
-- [ ] `database/schema.sql` + `database/seed.sql` — your tables, 10+ seed records
-- [ ] `database/db.py` / `database/app.py` — your queries, ports `9002`, `DB_PATH=/data/orders.db`
-- [ ] `backend/app/validation.py` — your business rules
-- [ ] `backend/app/routes.py` — your endpoints, port `8002`
-- [ ] `backend/app/ai_agent.py` — your AI task: Summarise a customer's order history / draft a shipping-delay email, grounded in that customer's real orders.
-- [ ] `frontend/` templates — your screens, port `3002`, keep `/shared/css/theme.css`
-- [ ] `tests/` — adapt the fixtures; keep every downstream hop stubbed so CI needs no Docker
-- [ ] `docker-compose.yml` — uncomment and renumber your three services (root of the repo)
-- [ ] `shared/config/services.json` — change your feature's `status` to `"ready"`
-- [ ] `.github/workflows/student-2.yml` — copy the steps from `student-1.yml`
+The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product and stock methods currently return fixed development values. Their method bodies can be replaced with Student 1 and Student 3 HTTP calls later.
 
-## Rules that apply to every feature
+## Run locally
 
-- All AI calls go through the shared AI-Mode service (`ai-services/ai-mode/`), never straight to
-  Ollama — that is what makes the whole application share one Plan → Act → Observe → Adapt loop.
-- Ground the prompt in real facts from **your own** database microservice, declare guardrails in
-  `output_schema`, and always supply a `fallback`.
-- Link the shared theme (`/shared/css/theme.css`) so the integrated UI stays consistent.
-- Your feature must be reachable from the unified home page (`shared/index.html`).
-- Work on a branch, open a Pull Request, and stay inside `student-2/`.
+Use three terminals from the project root:
+
+```bash
+mvn -pl database-api spring-boot:run
+mvn -pl backend spring-boot:run
+mvn -pl frontend spring-boot:run
+```
+
+The database service automatically seeds ten orders when its database is empty.
+
+## Build and test
+
+```bash
+mvn clean verify
+```
+
+## Main APIs
+
+```text
+GET    http://localhost:5202/api/orders
+GET    http://localhost:5202/api/orders/{id}
+POST   http://localhost:5202/api/orders
+PUT    http://localhost:5202/api/orders/{id}
+PATCH  http://localhost:5202/api/orders/{id}/status
+DELETE http://localhost:5202/api/orders/{id}
+
+GET    http://localhost:5202/api/orders/{orderId}/lines
+POST   http://localhost:5202/api/orders/{orderId}/lines
+PUT    http://localhost:5202/api/orders/{orderId}/lines/{lineId}
+DELETE http://localhost:5202/api/orders/{orderId}/lines/{lineId}
+
+POST   http://localhost:5202/api/orders/stock-check
+POST   http://localhost:5202/api/orders/{id}/ai/delay-email
+POST   http://localhost:5202/api/orders/ai/customer-summary
+```
+
+Example create request:
+
+```json
+{
+  "customerEmail": "customer@example.com",
+  "status": "pending",
+  "lines": [
+    {
+      "sku": "SKU-001",
+      "quantity": 2,
+      "unitPrice": 19.95
+    }
+  ]
+}
+```
+
+## Integration replacement points
+
+- `backend/.../service/ProductService.java`
+  - `ProductInfo getProductBySku(String sku)`
+- `backend/.../service/StockService.java`
+  - `StockCheckResult checkStock(List<StockItemRequest> items)`
+  - `StockUpdateResult deductStock(String orderNumber, List<StockItemRequest> items)`
+
+The business services call only these methods, so replacing the fixed return values does not require changes to controllers or order persistence.

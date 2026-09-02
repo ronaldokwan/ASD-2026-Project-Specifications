@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${order.orderNumber}">Order details</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+<header class="site-header compact">
+    <div>
+        <a class="back-link" th:href="@{/orders}">← All orders</a>
+        <span class="eyebrow">Order details</span>
+        <h1 th:text="${order.orderNumber}">ORD-001</h1>
+        <p th:text="${order.customerEmail}">customer@example.com</p>
+    </div>
+    <div class="header-actions">
+        <a class="button secondary" th:href="@{/orders/{id}/edit(id=${order.id})}">Edit order</a>
+        <form method="post" th:action="@{/orders/{id}/delete(id=${order.id})}"
+              onsubmit="return confirm('Delete this order and all of its lines?')">
+            <button class="button danger" type="submit">Delete</button>
+        </form>
+    </div>
+</header>
+
+<main class="page-shell">
+    <div class="notice success" th:if="${param.created}">Order created and stock update completed.</div>
+    <div class="notice success" th:if="${param.updated}">Order updated.</div>
+
+    <section class="stats-grid">
+        <article class="stat-card"><span>Status</span><strong class="badge" th:classappend="${order.status}" th:text="${order.status}">pending</strong></article>
+        <article class="stat-card"><span>Total quantity</span><strong th:text="${order.totalQuantity}">0</strong></article>
+        <article class="stat-card"><span>Order total</span><strong th:text="|$${#numbers.formatDecimal(order.orderTotal, 1, 2)}|">$0.00</strong></article>
+        <article class="stat-card"><span>Ordered</span><strong th:text="${#temporals.format(order.orderedAt, 'dd MMM yyyy, HH:mm')}">Date</strong></article>
+    </section>
+
+    <section class="panel table-panel">
+        <div class="section-heading"><div><span class="eyebrow">Products</span><h2>Order lines</h2></div></div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>SKU</th><th>Product</th><th>Quantity</th><th>Unit price</th><th>Line total</th></tr></thead>
+                <tbody>
+                <tr th:each="line : ${order.lines}">
+                    <td class="strong" th:text="${line.sku}">SKU</td>
+                    <td th:text="${line.productName}">Product</td>
+                    <td th:text="${line.quantity}">1</td>
+                    <td th:text="|$${#numbers.formatDecimal(line.unitPrice, 1, 2)}|">$0.00</td>
+                    <td class="strong" th:text="|$${#numbers.formatDecimal(line.lineTotal, 1, 2)}|">$0.00</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="two-panel-grid">
+        <article class="panel">
+            <span class="eyebrow">Workflow</span>
+            <h2>Update status</h2>
+            <form class="inline-form" method="post" th:action="@{/orders/{id}/status(id=${order.id})}">
+                <select name="status">
+                    <option value="pending" th:selected="${order.status == 'pending'}">Pending</option>
+                    <option value="shipped" th:selected="${order.status == 'shipped'}">Shipped</option>
+                    <option value="delivered" th:selected="${order.status == 'delivered'}">Delivered</option>
+                </select>
+                <button class="button primary" type="submit">Update</button>
+            </form>
+        </article>
+        <article class="panel ai-panel">
+            <span class="eyebrow">AI assistant</span>
+            <h2>Shipping-delay email</h2>
+            <button class="button dark" type="button"
+                    th:attr="hx-post=@{/orders/{id}/ai/delay-email(id=${order.id})}"
+                    hx-target="#ai-result">Generate draft</button>
+            <div id="ai-result" class="ai-result muted">The generated email will appear here.</div>
+        </article>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:5203}
+
+spring:
+  application:
+    name: student2-database-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:sqlite:orders.db}
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      connection-init-sql: PRAGMA foreign_keys=ON
+  sql:
+    init:
+      mode: always
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
