@@ -22,7 +22,7 @@ docker compose up --build
 
 Open <http://localhost:5201/orders>.
 
-The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product and stock methods currently return fixed development values. Their method bodies can be replaced with Student 1 and Student 3 HTTP calls later.
+The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product details are loaded from Student 1's catalogue API; if that service is unavailable or the SKU is not found, the order service falls back to the raw SKU. Stock methods still return fixed development values until Student 3's API is ready.
 
 ## Run locally
 
@@ -82,8 +82,10 @@ Example create request:
 
 - `backend/.../service/ProductService.java`
   - `ProductInfo getProductBySku(String sku)`
+  - Calls `GET /api/products?sku={sku}` on Student 1 and reads the `{ "count": ..., "products": [...] }` response.
+  - Configure the base URL with `PRODUCT_API_URL` (team Compose uses `http://student-1-backend:8001`).
 - `backend/.../service/StockService.java`
   - `StockCheckResult checkStock(List<StockItemRequest> items)`
   - `StockUpdateResult deductStock(String orderNumber, List<StockItemRequest> items)`
 
-The business services call only these methods, so replacing the fixed return values does not require changes to controllers or order persistence.
+The stock integration is isolated behind these methods, so replacing its fixed return values does not require changes to controllers or order persistence.

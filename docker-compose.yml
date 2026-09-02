@@ -170,6 +170,7 @@ services:
     environment:
       SERVER_PORT: "5202"
       DATABASE_API_URL: http://student2-db:5203
+      PRODUCT_API_URL: http://student-1-backend:8001
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
     ports:

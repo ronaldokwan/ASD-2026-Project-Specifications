@@ -1,5 +1,6 @@
 package com.smartshop.orders.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
@@ -80,7 +81,9 @@ public final class OrderModels {
         BigDecimal lineTotal
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record ProductInfo(String sku, String name, BigDecimal price) {}
+    public record ProductSearchResponse(int count, List<ProductInfo> products) {}
     public record StockItemRequest(String sku, int quantity) {}
     public record StockCheckResult(boolean sufficient, String message) {}
     public record StockUpdateResult(boolean success, String message) {}
