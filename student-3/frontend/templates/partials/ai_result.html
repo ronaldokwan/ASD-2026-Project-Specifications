@@ -1,0 +1,27 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% else %}
+  <div class="alert {{ 'info' if outcome.fallback_used else 'ok' }}">
+    {{ 'A deterministic fallback was used.' if outcome.fallback_used else 'AI suggestion ready.' }}
+  </div>
+  <div class="field"><label>Suggested reward</label><p class="ai-output">{{ result.reward }}</p></div>
+  <div class="field"><label>Reason</label><p class="ai-output">{{ result.reason }}</p></div>
+  <p class="muted">This suggestion is not stored or automatically applied.</p>
+  <details class="trace-details">
+    <summary>Technical agent trace <span class="muted">({{ outcome.trace|length }} steps)</span></summary>
+    <div class="trace">
+      {% for step in outcome.trace %}
+        <div class="trace-step {{ step.status if step.status in ['failed', 'fallback'] else '' }}">
+          <span class="step-name">{{ step.step }}</span>
+          {% if step.attempt %}<span class="muted"> · attempt {{ step.attempt }}</span>{% endif %}
+          <div>{{ step.detail }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% if outcome.grounding %}
+    <details><summary class="muted">Stored customer facts used by AI</summary>
+      <table>{% for key, value in outcome.grounding.items() %}<tr><td>{{ key }}</td><td>{{ value }}</td></tr>{% endfor %}</table>
+    </details>
+  {% endif %}
+{% endif %}

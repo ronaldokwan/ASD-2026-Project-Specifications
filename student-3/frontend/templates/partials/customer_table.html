@@ -1,0 +1,45 @@
+<div class="card" id="customer-table" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <div class="table-head">
+    <h2>{{ customers|length }} customer{{ '' if customers|length == 1 else 's' }}</h2>
+    {% if search %}<a class="muted" href="/">clear search</a>{% endif %}
+  </div>
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% elif not customers %}
+    <p class="muted">No customers match the current search.</p>
+  {% else %}
+    <div class="table-scroll" tabindex="0" aria-label="Customer records">
+      <table class="customer-table">
+        <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Tier</th><th scope="col">Joined</th><th scope="col">Actions</th></tr></thead>
+        <tbody>
+        {% for customer in customers %}
+          <tr>
+            <td class="customer-name" data-label="Name"><strong>{{ customer.name }}</strong><div class="muted">#{{ customer.id }}</div></td>
+            <td class="customer-email" data-label="Email">{{ customer.email }}</td>
+            <td data-label="Tier"><span class="badge {{ customer.loyalty_tier|lower }}">{{ customer.loyalty_tier }}</span></td>
+            <td class="customer-date" data-label="Joined">{{ customer.joined_at }}</td>
+            <td class="actions" data-label="Actions"><div class="customer-actions">
+              <button class="btn secondary compact" hx-get="/customers/{{ customer.id }}"
+                      hx-target="#customer-detail" hx-disabled-elt="this"
+                      aria-label="View {{ customer.name }}">View</button>
+              <button class="btn secondary compact" hx-get="/partials/form/{{ customer.id }}"
+                      hx-target="#customer-form" hx-swap="outerHTML" hx-disabled-elt="this"
+                      aria-label="Edit {{ customer.name }}">Edit</button>
+              <button class="btn ai compact" hx-post="/customers/{{ customer.id }}/ai-reward"
+                      hx-target="#ai-panel" hx-indicator="#ai-indicator-{{ customer.id }}"
+                      hx-disabled-elt="this" aria-label="Suggest reward for {{ customer.name }}">
+                Reward
+              </button>
+              <span id="ai-indicator-{{ customer.id }}" class="htmx-indicator muted">Thinking…</span>
+              <button class="btn danger-outline compact" hx-post="/customers/{{ customer.id }}/delete"
+                      hx-target="#alerts"
+                      hx-disabled-elt="this" aria-label="Delete {{ customer.name }}"
+                      hx-confirm="Delete customer {{ customer.name }}? This cannot be undone.">Delete</button>
+            </div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
