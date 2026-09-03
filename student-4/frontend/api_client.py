@@ -1,0 +1,98 @@
+"""HTTP client for the Student 4 backend/API microservice.
+
+The frontend microservice holds no business logic and no database access - it
+renders HTML and calls the API, which is what makes the three services
+independently deployable.
+"""
+
+import os
+
+import requests
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://student-4-backend:8004").rstrip("/")
+TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
+AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
+
+
+class ApiError(Exception):
+    """Carries a human-readable message for display in the UI."""
+
+    def __init__(self, message, status=502, details=None):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+        self.details = details or []
+
+
+def _call(method, path, timeout=None, **kwargs):
+    """Call the backend API and convert transport or JSON errors into ApiError."""
+    url = "{}{}".format(BACKEND_URL, path)
+    try:
+        response = requests.request(method, url, timeout=timeout or TIMEOUT, **kwargs)
+    except requests.RequestException as exc:
+        raise ApiError("Inventory and Stock API is unreachable ({}).".format(exc), 503) from exc
+
+    try:
+        body = response.json() if response.content else {}
+    except ValueError:
+        raise ApiError("The API returned an unreadable response.", response.status_code)
+
+    if response.status_code >= 400:
+        raise ApiError(
+            body.get("error", "Request failed with status {}".format(response.status_code)),
+            response.status_code,
+            body.get("details") or body.get("detail"),
+        )
+    return body
+
+
+def list_stock(**filters):
+    """Fetch stock rows, dropping empty filters from the query string."""
+    params = {key: value for key, value in filters.items() if value}
+    return _call("GET", "/api/stock", params=params).get("stock", [])
+
+
+def get_stock(stock_id):
+    """Fetch one stock item for the edit form."""
+    return _call("GET", "/api/stock/{}".format(stock_id))
+
+
+def create_stock(payload):
+    """Submit a new stock item to the backend API."""
+    return _call("POST", "/api/stock", json=payload)
+
+
+def update_stock(stock_id, payload):
+    """Submit changes made in the inventory edit form."""
+    return _call("PUT", "/api/stock/{}".format(stock_id), json=payload)
+
+
+def delete_stock(stock_id):
+    """Request deletion of a stock item."""
+    return _call("DELETE", "/api/stock/{}".format(stock_id))
+
+
+def list_categories():
+    """Derive category choices from stock records because no categories endpoint exists."""
+    try:
+        return _call("GET", "/api/stock").get("stock", [])
+    except ApiError:
+        return []
+
+
+def generate_recommendation(category):
+    """Request AI-Mode's grounded restock advice through the backend API."""
+    return _call(
+        "POST",
+        "/api/stock/recommend",
+        timeout=AI_TIMEOUT,
+        json={"category": category},
+    )
+
+
+def backend_health():
+    """Return backend health data without raising when the service is unavailable."""
+    try:
+        return _call("GET", "/health")
+    except ApiError as exc:
+        return {"status": "unreachable", "error": exc.message}

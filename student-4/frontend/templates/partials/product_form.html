@@ -1,0 +1,96 @@
+{# Create / edit form. Posting targets #alerts; the table and this form come
+   back as out-of-band swaps, so the page never does a full reload. #}
+<form id="product-form"
+  {% if oob %}hx-swap-oob="true"{% endif %}
+  hx-post="{{ '/stock/' ~ product.id if product and product.id else '/stock' }}"
+      hx-target="#alerts"
+      hx-swap="innerHTML">
+
+  {% if errors %}
+    <div class="alert error">
+      <strong>Please fix the following:</strong>
+      <ul style="margin:6px 0 0 18px">
+        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if product and product.id %}
+    <div class="alert info">
+      Editing stock item #{{ product.id }}.
+      <button type="button" class="btn secondary" style="float:right;padding:2px 10px"
+              hx-get="/partials/form"
+              hx-target="#product-form"
+              hx-swap="outerHTML">Cancel</button>
+    </div>
+  {% endif %}
+
+  <div class="row">
+    <div class="field">
+      <label for="sku">SKU</label>
+      <input type="text" id="sku" name="sku" required maxlength="32"
+             placeholder="SKU-AUD-1004" value="{{ product.sku if product else '' }}">
+    </div>
+    <div class="field">
+      <label for="name">Item name</label>
+      <input type="text" id="name" name="name" required maxlength="120"
+             placeholder="Aurora Wireless Headphones" value="{{ product.name if product else '' }}">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="product-category">Category</label>
+      <input type="text" id="product-category" name="category" required list="category-options"
+             placeholder="Audio" value="{{ product.category if product else '' }}">
+      <datalist id="category-options">
+        {% for category in categories %}<option value="{{ category }}"></option>{% endfor %}
+      </datalist>
+    </div>
+    <div class="field">
+      <label for="location">Location</label>
+      <input type="text" id="location" name="location" required maxlength="80"
+             placeholder="Shelf A4" value="{{ product.location if product else '' }}">
+    </div>
+    <div class="field">
+      <label for="product-status">Stock level</label>
+      <select id="product-status" name="stock_level">
+        {% for status in statuses %}
+          <option value="{{ status }}"
+                  {% if product and product.stock_level == status %}selected{% elif not product and status == 'good' %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="quantity">Quantity</label>
+      <input type="number" id="quantity" name="quantity" required min="0" max="999999"
+             placeholder="42" value="{{ product.quantity if product and product.quantity is not none else '' }}">
+    </div>
+    <div class="field">
+      <label for="restock-threshold">Restock threshold</label>
+      <input type="number" id="restock-threshold" name="restock_threshold" required min="0" max="999999"
+             placeholder="25" value="{{ product.restock_threshold if product and product.restock_threshold is not none else '' }}">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">
+      {{ 'Save changes' if product and product.id else 'Create stock item' }}
+    </button>
+
+    <button type="button" class="btn ai"
+            hx-post="/ai/recommend"
+            hx-include="#product-form"
+            hx-target="#ai-panel"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-indicator">
+      Generate restock advice
+    </button>
+
+    <button type="reset" class="btn secondary">Clear</button>
+    <span id="ai-indicator" class="htmx-indicator muted">Asking the LLM…</span>
+  </div>
+</form>
