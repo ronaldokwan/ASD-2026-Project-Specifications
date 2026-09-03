@@ -173,6 +173,7 @@ services:
       PRODUCT_API_URL: http://student-1-backend:8001
       STOCK_API_URL: http://student-4-backend:8004
       OLLAMA_URL: http://ollama:11434
+      AI_MODE_URL: http://ai-mode:7000
       OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
     ports:
       - "8002:8002"

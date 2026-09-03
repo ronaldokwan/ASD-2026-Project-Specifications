@@ -27,6 +27,7 @@ services:
       PRODUCT_API_URL: ${PRODUCT_API_URL:-http://host.docker.internal:8001}
       STOCK_API_URL: ${STOCK_API_URL:-http://host.docker.internal:8004}
       OLLAMA_URL: http://ollama:11434
+      AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
       OLLAMA_MODEL: qwen2.5:3b
     ports:
       - "8002:8002"

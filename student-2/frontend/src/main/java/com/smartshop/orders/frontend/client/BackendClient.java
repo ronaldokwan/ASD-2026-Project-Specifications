@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -85,6 +86,11 @@ public class BackendClient {
         return restClient.post().uri("/api/orders/ai/customer-summary")
             .contentType(MediaType.APPLICATION_JSON).body(new CustomerSummaryRequest(email))
             .retrieve().body(AiResponse.class);
+    }
+
+    public Map<String, Object> health() {
+        return restClient.get().uri("/health")
+            .retrieve().body(new ParameterizedTypeReference<>() {});
     }
 
     private Optional<String> optionalText(String value) {
