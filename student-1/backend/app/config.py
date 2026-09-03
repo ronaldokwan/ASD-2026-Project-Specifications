@@ -27,6 +27,8 @@ class Config:
     # Business rules for the catalogue, enforced on every write and used as the
     # Observe guardrails for AI-generated values.
     VALID_STATUSES = ("active", "draft", "archived")
+    # Catalogue lands on the rows that changed most recently.
+    DEFAULT_SORT = "latest"
     VALID_CATEGORIES = ("Audio", "Computing", "Home", "Wearables")
     PRICE_MIN = 1.0
     PRICE_MAX = 9999.0

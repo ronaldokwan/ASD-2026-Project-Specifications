@@ -33,6 +33,16 @@ app.jinja_env.globals["DESCRIPTION_PREVIEW"] = DESCRIPTION_PREVIEW
 HOME_URL = os.getenv("HOME_URL", "http://localhost:3000")
 STATUSES = ("active", "draft", "archived")
 
+# The catalogue opens on the rows that changed most recently; the value must
+# match one of the keys the database microservice knows (db.SORT_COLUMNS).
+DEFAULT_SORT = "latest"
+SORT_OPTIONS = (
+    ("latest", "Recently updated"),
+    ("name", "Name (A to Z)"),
+    ("price_asc", "Price (low to high)"),
+    ("price_desc", "Price (high to low)"),
+)
+
 # The team's shared theme is mounted read-only by docker-compose; fall back to
 # the repository copy when the frontend is run directly on a laptop.
 SHARED_DIR = os.getenv("SHARED_DIR", "/app/shared")
@@ -45,6 +55,18 @@ if not os.path.isdir(SHARED_DIR):
 @app.get("/shared/<path:filename>")
 def shared_asset(filename):
     return send_from_directory(SHARED_DIR, filename)
+
+
+@app.template_filter("last_activity")
+def last_activity(product):
+    """The later of a product's ``updated_at`` / ``created_at`` stamps.
+
+    The Updated column reports recency, so a row created after its last edit
+    (or seeded with no edit at all) still shows when it actually last changed.
+    Both stamps are ``YYYY-MM-DD[ HH:MM:SS]``, which sorts correctly as text.
+    """
+    stamps = [str(product.get(key) or "") for key in ("updated_at", "created_at")]
+    return max(stamps)
 
 
 @app.template_filter("short_date")
@@ -64,7 +86,7 @@ def _filters():
         "search": request.args.get("search", "").strip(),
         "category": request.args.get("category", "").strip(),
         "status": request.args.get("status", "").strip(),
-        "sort": request.args.get("sort", "name").strip(),
+        "sort": request.args.get("sort", DEFAULT_SORT).strip(),
     }
 
 
@@ -123,6 +145,7 @@ def index():
         filters=filters,
         categories=_categories(),
         statuses=STATUSES,
+        sort_options=SORT_OPTIONS,
         error=error,
         home_url=HOME_URL,
     )

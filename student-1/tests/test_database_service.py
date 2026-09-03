@@ -85,6 +85,53 @@ def test_sort_by_price(database):
     assert prices == sorted(prices)
 
 
+def _stamped(database, sku, name, created_at, updated_at):
+    """Insert a row with exact timestamps.
+
+    Written straight to SQLite because the updated_at trigger fires on UPDATE
+    (not INSERT), so this is the only way to pin both stamps for a test.
+    """
+    with database.connect() as conn:
+        conn.execute(
+            "INSERT INTO products (sku, name, description, category, price, "
+            "status, created_at, updated_at) VALUES (?,?,'',?,?,?,?,?)",
+            (sku, name, "Audio", 10.0, "active", created_at, updated_at),
+        )
+
+
+def test_default_sort_ranks_by_the_latest_change(database):
+    """No ?sort= means the rows that changed most recently come first."""
+    _stamped(database, "SKU-TST-8001", "Old But Edited",
+             created_at="2030-01-01 00:00:00", updated_at="2030-03-01 00:00:00")
+    _stamped(database, "SKU-TST-8002", "New But Untouched",
+             created_at="2030-02-01 00:00:00", updated_at="2030-02-01 00:00:00")
+
+    assert [p["sku"] for p in database.list_products()][:2] == [
+        "SKU-TST-8001",
+        "SKU-TST-8002",
+    ]
+
+
+def test_default_sort_counts_creation_as_a_change(database):
+    """A row created after its last edit is ranked on created_at, not updated_at."""
+    _stamped(database, "SKU-TST-8003", "Created Later",
+             created_at="2030-04-01 00:00:00", updated_at="2029-01-01 00:00:00")
+
+    assert database.list_products()[0]["sku"] == "SKU-TST-8003"
+
+
+def test_name_sort_ignores_letter_case(database):
+    """Lower-case names interleave instead of being dumped after every capital."""
+    _stamped(database, "SKU-TST-8004", "apple Dock",
+             created_at="2026-01-01 00:00:00", updated_at="2026-01-01 00:00:00")
+    _stamped(database, "SKU-TST-8005", "Banana Stand",
+             created_at="2026-01-01 00:00:00", updated_at="2026-01-01 00:00:00")
+
+    names = [p["name"] for p in database.list_products(sort="name")]
+    assert names == sorted(names, key=str.lower)
+    assert names.index("apple Dock") < names.index("Banana Stand")
+
+
 def test_category_stats_ground_the_ai(database):
     stats = database.category_stats("Audio")
     assert stats["product_count"] >= 3

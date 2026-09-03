@@ -37,8 +37,9 @@ afterwards - out of band when the response's primary target is #alerts. #}
           <td>{{ product.category }}</td>
           <td class="num">${{ '%.2f'|format(product.price) }}</td>
           <td><span class="badge {{ product.status }}">{{ product.status }}</span></td>
-          <td class="timestamps" title="updated {{ product.updated_at }} UTC">{{
-            product.updated_at|short_date }}</td>
+          {# The later of the two stamps: when this row last changed at all. #}
+          <td class="timestamps" title="updated {{ product|last_activity }} UTC">{{
+            product|last_activity|short_date }}</td>
           <td class="description">
             {% if product.description and product.description|length > DESCRIPTION_PREVIEW %}
             {# <details> rather than JavaScript: it is keyboard

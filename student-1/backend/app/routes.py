@@ -69,7 +69,7 @@ def list_products():
         category=request.args.get("category"),
         status=request.args.get("status"),
         search=request.args.get("search"),
-        sort=request.args.get("sort", "name"),
+        sort=request.args.get("sort", Config.DEFAULT_SORT),
     )
     return jsonify({"count": len(products), "products": products})
 

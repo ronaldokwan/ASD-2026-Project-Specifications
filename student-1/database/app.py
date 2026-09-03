@@ -58,7 +58,7 @@ def list_products():
         status=request.args.get("status"),
         sku=request.args.get("sku"),
         search=request.args.get("search"),
-        sort=request.args.get("sort", "name"),
+        sort=request.args.get("sort", db.DEFAULT_SORT),
         limit=request.args.get("limit", 200),
     )
     return jsonify({"count": len(products), "products": products})
