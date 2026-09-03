@@ -8,6 +8,7 @@ talks to the backend/API microservice directly.
     GET  /partials/products         product table rows (filtered)
     GET  /partials/form             blank create form
     GET  /partials/form/<id>        edit form for one product
+    GET  /partials/sku-preview      SKU the chosen category would generate
     POST /products                  create
     POST /products/<id>             update
     POST /products/<id>/delete      delete
@@ -17,6 +18,7 @@ talks to the backend/API microservice directly.
 """
 
 import os
+from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
@@ -40,6 +42,17 @@ if not os.path.isdir(SHARED_DIR):
 @app.get("/shared/<path:filename>")
 def shared_asset(filename):
     return send_from_directory(SHARED_DIR, filename)
+
+
+@app.template_filter("short_date")
+def short_date(value):
+    if not value:
+        return "—"
+    try:
+        stamp = datetime.strptime(str(value)[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return str(value)
+    return "{} {} {}".format(stamp.day, stamp.strftime("%b"), stamp.year)
 
 
 # ------------------------------------------------------------------- helpers

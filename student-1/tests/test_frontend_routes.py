@@ -236,3 +236,45 @@ def test_disclosure_keeps_a_control_to_collapse_again(frontend, fake_api, monkey
     assert ".description-more[open] summary::after" in css  # relabelled
     assert ".description-more[open] summary {" in css  # reordered
     assert ".description-more[open] summary { display: none" not in css
+
+
+# ------------------------------------------------------- created/updated column
+def test_table_has_an_updated_column(frontend, fake_api):
+    html = frontend.get("/partials/products").get_data(as_text=True)
+    assert "<th>Updated</th>" in html
+    assert 'class="timestamps"' in html
+
+
+def test_updated_shows_a_plain_date_with_the_stamp_in_the_tooltip(
+    frontend, fake_api, monkeypatch
+):
+    fake_api["products"][0]["created_at"] = "2026-09-01 14:28:36"
+    fake_api["products"][0]["updated_at"] = "2026-09-03 10:53:49"
+    monkeypatch.setattr(api_client, "list_products", lambda **kw: fake_api["products"])
+
+    html = frontend.get("/partials/products").get_data(as_text=True)
+    assert ">3 Sep 2026</td>" in html  # date only
+    assert 'title="updated 2026-09-03 10:53:49 UTC"' in html
+
+
+def test_unedited_product_shows_the_same_plain_date(frontend, fake_api, monkeypatch):
+    """Never-edited rows read exactly like edited ones -- no special casing."""
+    stamp = "2026-09-01 14:28:36"
+    fake_api["products"][0]["created_at"] = stamp
+    fake_api["products"][0]["updated_at"] = stamp
+    monkeypatch.setattr(api_client, "list_products", lambda **kw: fake_api["products"])
+
+    html = frontend.get("/partials/products").get_data(as_text=True)
+    assert ">1 Sep 2026</td>" in html
+    assert "never edited" not in html
+    assert "created" not in html
+
+
+def test_short_date_passes_through_anything_unparseable():
+    """A malformed stamp must not take the whole table down."""
+    from conftest import frontend_service
+
+    assert frontend_service.short_date("2026-09-03 10:53:49") == "3 Sep 2026"
+    assert frontend_service.short_date("not a date") == "not a date"
+    assert frontend_service.short_date("") == "—"
+    assert frontend_service.short_date(None) == "—"

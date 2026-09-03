@@ -101,3 +101,8 @@ input[readonly]:focus {
 .description-more:not([open]) .description-full {
   display: none;
 }
+
+td.timestamps {
+  white-space: nowrap;
+  font-size: 13px;
+}

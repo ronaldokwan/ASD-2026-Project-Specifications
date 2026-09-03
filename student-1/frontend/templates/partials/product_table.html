@@ -21,6 +21,7 @@ afterwards - out of band when the response's primary target is #alerts. #}
           <th>Category</th>
           <th class="num">Price</th>
           <th>Status</th>
+          <th>Updated</th>
           <th>Description</th>
           <th></th>
         </tr>
@@ -31,13 +32,13 @@ afterwards - out of band when the response's primary target is #alerts. #}
           <td><code>{{ product.sku }}</code></td>
           <td>
             <strong>{{ product.name }}</strong>
-            <div class="muted" style="font-size:12px">
-              #{{ product.id }} &middot; updated {{ product.updated_at }}
-            </div>
+            <div class="muted" style="font-size:12px">#{{ product.id }}</div>
           </td>
           <td>{{ product.category }}</td>
           <td class="num">${{ '%.2f'|format(product.price) }}</td>
           <td><span class="badge {{ product.status }}">{{ product.status }}</span></td>
+          <td class="timestamps" title="updated {{ product.updated_at }} UTC">{{
+            product.updated_at|short_date }}</td>
           <td class="description">
             {% if product.description and product.description|length > DESCRIPTION_PREVIEW %}
             {# <details> rather than JavaScript: it is keyboard
