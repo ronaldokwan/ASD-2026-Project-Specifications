@@ -1,0 +1,4 @@
+{# Feedback banner swapped into #alerts after every create / update / delete. #}
+<div class="alert {{ level }}" data-auto-dismiss="{{ 'true' if level == 'ok' else 'false' }}">
+  {{ message }}
+</div>

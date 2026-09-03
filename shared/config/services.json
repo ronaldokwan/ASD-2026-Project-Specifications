@@ -45,7 +45,7 @@
       "owner": "Jonathan Czesler",
       "feature": "Inventory and Stock",
       "description": "Warehouse stock levels with low-stock alerts and AI restocking advice.",
-      "status": "pending",
+      "status": "ready",
       "frontend": "http://localhost:3004",
       "backend": "http://localhost:8004",
       "database": "http://localhost:9004"

@@ -1,6 +1,6 @@
 # Student 4 — Jonathan Czesler — Inventory and Stock
 
-Status: **skeleton only — not implemented.**
+Status: **implemented.**
 
 Monitor warehouse inventory and keep stock at optimal levels, with AI restocking advice.
 
@@ -29,16 +29,16 @@ cp -r student-1/tests     student-4/tests
 
 Then work through this checklist:
 
-- [ ] `database/schema.sql` + `database/seed.sql` — your tables, 10+ seed records
-- [ ] `database/db.py` / `database/app.py` — your queries, ports `9004`, `DB_PATH=/data/stock.db`
-- [ ] `backend/app/validation.py` — your business rules
-- [ ] `backend/app/routes.py` — your endpoints, port `8004`
-- [ ] `backend/app/ai_agent.py` — your AI task: Read warehouse stock levels and recommend what to reorder and in what quantity.
-- [ ] `frontend/` templates — your screens, port `3004`, keep `/shared/css/theme.css`
-- [ ] `tests/` — adapt the fixtures; keep every downstream hop stubbed so CI needs no Docker
-- [ ] `docker-compose.yml` — uncomment and renumber your three services (root of the repo)
-- [ ] `shared/config/services.json` — change your feature's `status` to `"ready"`
-- [ ] `.github/workflows/student-4.yml` — copy the steps from `student-1.yml`
+- [x] `database/schema.sql` + `database/seed.sql` — stock table and 10+ seed records
+- [x] `database/db.py` / `database/app.py` — stock queries, port `9004`, `DB_PATH=/data/stock.db`
+- [x] `backend/app/validation.py` — inventory business rules
+- [x] `backend/app/routes.py` — stock CRUD and restock endpoints on port `8004`
+- [x] `backend/app/ai_agent.py` — grounded AI restocking recommendations
+- [x] `frontend/` templates — inventory screens on port `3004`, using `/shared/css/theme.css`
+- [x] `tests/` — adapted stock fixtures with downstream hops stubbed
+- [x] `docker-compose.yml` — Student 4 database, backend, and frontend services
+- [x] `shared/config/services.json` — Student 4 marked `"ready"`
+- [x] `.github/workflows/student-4.yml` — test, build, and smoke-test workflow
 
 ## Rules that apply to every feature
 

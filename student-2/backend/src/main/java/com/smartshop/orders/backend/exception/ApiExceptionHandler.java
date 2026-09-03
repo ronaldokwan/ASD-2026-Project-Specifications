@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -13,6 +14,22 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(ResponseStatusException.class)
+    ResponseEntity<Map<String, Object>> responseStatus(ResponseStatusException exception) {
+        int statusCode = exception.getStatusCode().value();
+        HttpStatus status = HttpStatus.resolve(statusCode);
+        String reason = exception.getReason() == null
+            ? "The request could not be completed"
+            : exception.getReason();
+
+        return ResponseEntity.status(exception.getStatusCode()).body(Map.of(
+            "timestamp", Instant.now().toString(),
+            "status", statusCode,
+            "error", status == null ? "Request failed" : status.getReasonPhrase(),
+            "message", reason
+        ));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException exception) {

@@ -171,6 +171,7 @@ services:
       SERVER_PORT: "5202"
       DATABASE_API_URL: http://student2-db:5203
       PRODUCT_API_URL: http://student-1-backend:8001
+      STOCK_API_URL: http://student-4-backend:8004
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
     ports:
@@ -215,6 +216,65 @@ services:
 
   # =================== STUDENT 4 - Jonathan Czesler ========================
   # Feature: Inventory and Stock. Ports 3004 / 8004 / 9004
+
+  student-4-db:
+    build: ./student-4/database
+    container_name: asd-student-4-db
+    environment:
+      DB_PATH: /data/stock.db
+      SERVICE_PORT: "9004"
+    ports:
+      - "9004:9004"
+    volumes:
+      - student-4-data:/data
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:9004/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  student-4-backend:
+    build: ./student-4/backend
+    container_name: asd-student-4-backend
+    environment:
+      <<: *ai-env
+      DATABASE_URL: http://student-4-db:9004
+      SERVICE_PORT: "8004"
+    ports:
+      - "8004:8004"
+    depends_on:
+      student-4-db:
+        condition: service_healthy
+      ai-mode:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  student-4-frontend:
+    build: ./student-4/frontend
+    container_name: asd-student-4-frontend
+    environment:
+      BACKEND_URL: http://student-4-backend:8004
+      HOME_URL: http://localhost:3000
+      SERVICE_PORT: "3004"
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      student-4-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
 
   # =================== STUDENT 5 - Alexander McGuinn =======================
   # Feature: Reviews and Ratings
@@ -290,5 +350,5 @@ volumes:
   student-1-data:
   student2-orders-data:
   # student-3-data:
-  # student-4-data:
+  student-4-data:
   student-5-data:

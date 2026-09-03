@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% endif %}
+
+  <!-- Alerts raised by create / update / delete are swapped in here -->
+  <div id="alerts"></div>
+
+  <div class="layout">
+
+    <!-- ============================ LEFT: create / edit + AI ============ -->
+    <section>
+      <div class="card">
+        <h2>Add or edit stock</h2>
+        <p class="hint">
+          Record inventory, set stock thresholds, and ask the AI for restock guidance by category.
+        </p>
+        {% include "partials/product_form.html" %}
+      </div>
+
+      <div class="card">
+        <h2>AI assistant</h2>
+        <p class="hint">
+          Runs the team's <strong>Plan &rarr; Act &rarr; Observe &rarr; Adapt</strong> loop
+          through the shared AI-Mode service and an approved open-source LLM.
+        </p>
+        <div id="ai-panel">
+          <p class="muted">
+            No recommendation yet. Choose a category above, then press
+            <em>Generate restock advice</em>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ RIGHT: stock list =================== -->
+    <section>
+      <div class="card">
+        <h2>Stock Inventory</h2>
+        <p class="hint">Filter stock levels, then read, edit or delete any item.</p>
+
+        <form id="filters"
+              hx-get="/partials/products"
+              hx-target="#product-table"
+              hx-swap="outerHTML"
+              hx-trigger="submit, change from:#category, change from:#stock_level, change from:#sort,
+                          keyup changed delay:350ms from:#search">
+          <div class="row">
+            <div class="field">
+              <label for="search">Search</label>
+              <input type="search" id="search" name="search" value="{{ filters.search }}"
+                     placeholder="name, SKU or location">
+            </div>
+            <div class="field">
+              <label for="category">Category</label>
+              <select id="category" name="category">
+                <option value="">All categories</option>
+                {% for category in categories %}
+                  <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
+                    {{ category }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="stock_level">Stock status</label>
+              <select id="stock_level" name="stock_level">
+                <option value="">Any status</option>
+                {% for status in statuses %}
+                  <option value="{{ status }}" {% if filters.stock_level == status %}selected{% endif %}>
+                    {{ status }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="sort">Sort by</label>
+              <select id="sort" name="sort">
+                <option value="name"       {% if filters.sort == 'name' %}selected{% endif %}>Name</option>
+                <option value="qty_asc"    {% if filters.sort == 'qty_asc' %}selected{% endif %}>Qty (low to high)</option>
+                <option value="qty_desc"   {% if filters.sort == 'qty_desc' %}selected{% endif %}>Qty (high to low)</option>
+                <option value="last_restocked" {% if filters.sort == 'last_restocked' %}selected{% endif %}>Recently restocked</option>
+              </select>
+            </div>
+          </div>
+          <span class="htmx-indicator muted">Loading…</span>
+        </form>
+      </div>
+
+      {% include "partials/product_table.html" %}
+    </section>
+
+  </div>
+{% endblock %}
