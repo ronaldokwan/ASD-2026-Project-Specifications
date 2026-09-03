@@ -278,3 +278,22 @@ def test_short_date_passes_through_anything_unparseable():
     assert frontend_service.short_date("not a date") == "not a date"
     assert frontend_service.short_date("") == "—"
     assert frontend_service.short_date(None) == "—"
+
+
+def test_description_limit_lives_in_python_not_the_template():
+    from conftest import frontend_service
+
+    template = io.open(
+        os.path.join(
+            os.path.dirname(CSS_PATH),
+            "..",
+            "..",
+            "templates",
+            "partials",
+            "product_table.html",
+        ),
+        encoding="utf-8",
+    ).read()
+    assert "set DESCRIPTION_PREVIEW" not in template
+    assert "DESCRIPTION_PREVIEW" in template  # still used
+    assert frontend_service.app.jinja_env.globals["DESCRIPTION_PREVIEW"] == 110

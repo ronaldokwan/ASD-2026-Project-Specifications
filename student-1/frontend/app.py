@@ -27,6 +27,9 @@ from api_client import ApiError
 
 app = Flask(__name__)
 
+DESCRIPTION_PREVIEW = 110
+app.jinja_env.globals["DESCRIPTION_PREVIEW"] = DESCRIPTION_PREVIEW
+
 HOME_URL = os.getenv("HOME_URL", "http://localhost:3000")
 STATUSES = ("active", "draft", "archived")
 
