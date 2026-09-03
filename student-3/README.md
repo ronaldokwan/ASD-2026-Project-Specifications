@@ -1,51 +1,64 @@
-# Student 3 — Vishvak Ananthakrishnan Rameshkumar — Customer Account and Access Management
+# Student 3 — Customer Account Management
 
-Status: **skeleton only — not implemented.**
+Status: **implemented for Release 0.**
 
-Let customers register, log in and manage their profiles, and let administrators manage accounts.
+Provides staff-facing customer record management: list and search customers, add/view/edit/delete
+records, manually select Bronze/Silver/Gold loyalty tiers, and request a grounded AI reward
+suggestion. Release 0 intentionally has no signup, login, passwords, roles, sessions, access
+restrictions, email sending, order integration, or automatic reward application.
 
-## What to build
+## Services
 
-| Microservice  | Folder      | Port | Stack                                |
-| ------------- | ----------- | ---- | ------------------------------------ |
-| Frontend      | `frontend/` | 3003 | Flask + HTMX + the shared CSS theme  |
-| Backend / API | `backend/`  | 8003 | Flask REST API                       |
-| Database      | `database/` | 9003 | SQLite behind a small Flask data API |
+| Service | Folder | Port | Stack |
+|---|---|---:|---|
+| Frontend | `frontend/` | 3003 | Flask, Jinja, HTMX, shared CSS |
+| Backend/API | `backend/` | 8003 | Flask REST API |
+| Database API | `database/` | 9003 | Flask API over SQLite |
 
-- **Frontend functions:** Signup, login and logout; view, edit and delete profile; admin customer list and search; add, edit and delete accounts; generate an AI loyalty-reward suggestion.
-- **Backend/API functions:** Authentication, customer CRUD and search APIs, password hashing, role-based access, database API communication, and AI loyalty-reward suggestions.
-- **Database tables:** `customers (id, name, email, password_hash, phone, address, role, loyalty_tier, joined_at)` — seed **at least 10 records**.
-
-## Use Student 1 as the reference implementation
-
-`student-1/` is a complete, working example of exactly this structure. The fastest route:
-
-```bash
-cp -r student-1/database  student-3/database
-cp -r student-1/backend   student-3/backend
-cp -r student-1/frontend  student-3/frontend
-cp -r student-1/tests     student-3/tests
+```text
+browser -> frontend:3003 -> backend:8003 -> database:9003 -> SQLite
+                              |
+                              +-> ai-mode:7000 -> Ollama -> LLM
 ```
 
-Then work through this checklist:
+Only the database service opens `/data/customers.db`. The other services communicate over HTTP.
 
-- [ ] `database/schema.sql` + `database/seed.sql` — your tables, 10+ seed records
-- [ ] `database/db.py` / `database/app.py` — your queries, ports `9003`, `DB_PATH=/data/customers.db`
-- [ ] `backend/app/validation.py` — your business rules
-- [ ] `backend/app/routes.py` — your endpoints, port `8003`
-- [ ] `backend/app/ai_agent.py` — your AI task: Suggest a loyalty reward, grounded in the customer's tier and history.
-- [ ] `frontend/` templates — your screens, port `3003`, keep `/shared/css/theme.css`
-- [ ] `tests/` — adapt the fixtures; keep every downstream hop stubbed so CI needs no Docker
-- [ ] `docker-compose.yml` — uncomment and renumber your three services (root of the repo)
-- [ ] `shared/config/services.json` — change your feature's `status` to `"ready"`
-- [ ] `.github/workflows/student-3.yml` — copy the steps from `student-1.yml`
+## API
 
-## Rules that apply to every feature
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Backend and dependency health |
+| GET | `/api/customers` | List customers; optional `?search=` matches name/email |
+| POST | `/api/customers` | Create a customer |
+| GET | `/api/customers/<id>` | Read one customer |
+| PUT | `/api/customers/<id>` | Partially update a customer |
+| DELETE | `/api/customers/<id>` | Delete a customer |
+| POST | `/api/customers/<id>/ai-reward` | Generate a non-persistent loyalty reward suggestion |
 
-- All AI calls go through the shared AI-Mode service (`ai-services/ai-mode/`), never straight to
-  Ollama — that is what makes the whole application share one Plan → Act → Observe → Adapt loop.
-- Ground the prompt in real facts from **your own** database microservice, declare guardrails in
-  `output_schema`, and always supply a `fallback`.
-- Link the shared theme (`/shared/css/theme.css`) so the integrated UI stays consistent.
-- Your feature must be reachable from the unified home page (`shared/index.html`).
-- Work on a branch, open a Pull Request, and stay inside `student-3/`.
+## Data and validation
+
+`customers(id, name, email, phone, address, loyalty_tier, joined_at)`
+
+- Email is normalized to lowercase and uniquely indexed case-insensitively.
+- Loyalty tier is restricted to `Bronze`, `Silver`, or `Gold` and is manually selected.
+- Joining dates use ISO `YYYY-MM-DD` format.
+- Phone and address are optional.
+- Twelve fictional `.example.test` customers are seeded on an empty database.
+
+## AI reward workflow
+
+The backend retrieves the selected customer and sends only their stored name, loyalty tier, and
+joining date to shared AI-Mode. The output schema contains two validated strings: `reward` and
+`reason`. Transport failures and exhausted AI retries return a deterministic tier-based fallback.
+Suggestions are displayed with the workflow trace and are never stored, applied, or emailed.
+
+## Run and test
+
+From the repository root:
+
+```bash
+docker compose up --build student-3-db student-3-backend student-3-frontend
+pytest student-3/tests -v
+```
+
+Open <http://localhost:3003>.

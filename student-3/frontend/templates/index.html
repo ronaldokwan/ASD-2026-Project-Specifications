@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+  <div id="alerts"></div>
+
+  <div class="customer-layout">
+    <section class="customer-workspace" aria-label="Customer workspace">
+      <div class="card form-card">
+        {% include "partials/customer_form.html" %}
+      </div>
+      <div class="card">
+        <h2>Customer details</h2>
+        <div id="customer-detail" class="muted result-panel" tabindex="-1" aria-live="polite">
+          Select View beside a customer.
+        </div>
+      </div>
+      <div class="card">
+        <h2>AI loyalty reward</h2>
+        <p class="hint">Suggestions use the stored name, tier, and joining date and are never saved.</p>
+        <div id="ai-panel" class="muted result-panel" tabindex="-1" aria-live="polite">
+          Select Reward beside a customer.
+        </div>
+      </div>
+    </section>
+
+    <section class="customer-list" aria-label="Customer list">
+      <div class="card search-card">
+        <h2>Customers</h2>
+        <form class="search-form" hx-get="/partials/customers" hx-target="#customer-table" hx-swap="outerHTML"
+              hx-trigger="submit, keyup changed delay:350ms from:#search">
+          <div class="search-controls">
+            <div class="field search-field">
+              <label for="search">Search by name or email</label>
+              <input id="search" type="search" name="search" value="{{ search }}"
+                     placeholder="Customer name or email">
+            </div>
+            <button class="btn secondary search-button" type="submit">Search</button>
+          </div>
+          <span class="htmx-indicator muted">Loading customers…</span>
+        </form>
+      </div>
+      {% include "partials/customer_table.html" %}
+    </section>
+  </div>
+{% endblock %}

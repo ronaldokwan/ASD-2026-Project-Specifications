@@ -1,0 +1,10 @@
+<div class="customer-detail">
+  <h3>{{ customer.name }}</h3>
+  <dl>
+    <dt>Email</dt><dd>{{ customer.email }}</dd>
+    <dt>Phone</dt><dd>{{ customer.phone or '—' }}</dd>
+    <dt>Address</dt><dd>{{ customer.address or '—' }}</dd>
+    <dt>Loyalty tier</dt><dd>{{ customer.loyalty_tier }}</dd>
+    <dt>Joined</dt><dd>{{ customer.joined_at }}</dd>
+  </dl>
+</div>

@@ -6,7 +6,7 @@
   },
   "shared": {
     "home": "http://localhost:3000",
-    "aiMode": "http://localhost:7000",
+    "aiMode": "http://localhost:7001",
     "ollama": "http://localhost:11434"
   },
   "features": [
@@ -33,9 +33,9 @@
     {
       "student": 3,
       "owner": "Vishvak Ananthakrishnan Rameshkumar",
-      "feature": "Customer Account and Access Management",
-      "description": "Customer registration, login and profiles, with AI loyalty-reward suggestions.",
-      "status": "pending",
+      "feature": "Customer Account Management",
+      "description": "Manage customer records and loyalty tiers, with AI reward suggestions.",
+      "status": "ready",
       "frontend": "http://localhost:3003",
       "backend": "http://localhost:8003",
       "database": "http://localhost:9003"

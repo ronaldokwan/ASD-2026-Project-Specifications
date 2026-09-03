@@ -1,0 +1,67 @@
+<form id="customer-form"
+      class="customer-form"
+      {% if oob %}hx-swap-oob="true"{% endif %}
+      hx-post="{{ '/customers/' ~ customer.id if customer and customer.id else '/customers' }}"
+      hx-target="#alerts" hx-swap="innerHTML">
+  <h2>{{ 'Edit customer' if customer and customer.id else 'Add a customer' }}</h2>
+  <p class="hint">
+    {{ 'Update the selected customer record.' if customer and customer.id else
+       'Enter contact information and select a loyalty tier.' }}
+  </p>
+  {% if errors %}
+    <div class="alert error">
+      <strong>Please fix the following:</strong>
+      <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+  {% if customer and customer.id %}
+    <div class="alert info">Editing selected customer.</div>
+  {% endif %}
+  <div class="field">
+    <label for="name">Name</label>
+    <input id="name" name="name" required maxlength="120"
+           value="{{ customer.name if customer else '' }}">
+  </div>
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required maxlength="254"
+           value="{{ customer.email if customer else '' }}">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label for="phone">Phone <span class="muted">(optional)</span></label>
+      <input id="phone" name="phone" maxlength="40"
+             value="{{ customer.phone if customer and customer.phone else '' }}">
+    </div>
+    <div class="field">
+      <label for="joined-at">Joining date</label>
+      <input id="joined-at" name="joined_at" type="date" required
+             value="{{ customer.joined_at if customer else '' }}">
+    </div>
+  </div>
+  <div class="field">
+    <label for="address">Address <span class="muted">(optional)</span></label>
+    <textarea id="address" name="address" maxlength="500">{{ customer.address if customer and customer.address else '' }}</textarea>
+  </div>
+  <div class="field">
+    <label for="loyalty-tier">Loyalty tier</label>
+    <select id="loyalty-tier" name="loyalty_tier">
+      {% for tier in tiers %}
+        <option value="{{ tier }}" {% if customer and customer.loyalty_tier == tier %}selected{% endif %}>
+          {{ tier }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-actions">
+    <button class="btn" type="submit">{{ 'Save changes' if customer and customer.id else 'Add customer' }}</button>
+    {% if customer and customer.id %}
+      <button type="button" class="btn secondary"
+              hx-get="/partials/form" hx-target="#customer-form" hx-swap="outerHTML">
+        Cancel editing
+      </button>
+    {% else %}
+      <button class="btn secondary" type="reset">Clear form</button>
+    {% endif %}
+  </div>
+</form>

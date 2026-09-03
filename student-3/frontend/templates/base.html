@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Customer Account Management{% endblock %} &middot; ASD 2026 Group 40</title>
+  <link rel="stylesheet" href="/shared/css/theme.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/customers.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>
+  <script src="{{ url_for('static', filename='js/customers.js') }}" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-identity">
+      <h1>Customer Account Management</h1>
+      <span class="subtitle">Student 3 &middot; Vishvak Ananthakrishnan Rameshkumar</span>
+    </div>
+    <nav class="app-nav" aria-label="Application">
+      <a href="{{ home_url }}">&larr; All features</a>
+      <a href="/health" target="_blank" rel="noopener">Health</a>
+    </nav>
+  </header>
+  <main class="container">{% block content %}{% endblock %}</main>
+  <footer class="container muted" style="padding-bottom:32px">
+    Customer records only &middot; no authentication, passwords, or automatic rewards
+  </footer>
+</body>
+</html>
