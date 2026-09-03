@@ -2,21 +2,23 @@
 
 Endpoints registered in the Project Group Registration Form:
 
-    GET    /api/products              list + filter (?sku= ?category= ?status= ?search= ?sort=)
-    POST   /api/products              create
-    GET    /api/products/<id>         read one
-    PUT    /api/products/<id>         update
-    DELETE /api/products/<id>         delete
-    POST   /api/products/ai           AI description + price suggestion
-
-Plus supporting endpoints: GET /health, GET /api/categories.
+    GET    /health
+    GET    /products?category=&status=&sku=&search=&sort=
+    GET    /products/<id>
+    POST   /products
+    PUT    /products/<id>
+    DELETE /products/<id>
+    GET    /categories
+    GET    /next-sku?category=            preview the next generated SKU
+    GET    /stats/category/<category>     facts used to ground the AI
+    POST   /admin/reseed                  reset to the 12 seed records
 """
 
 from flask import Blueprint, jsonify, request
 
 from . import ai_agent, db_client
 from .config import Config
-from .validation import ValidationError, clean_product
+from .validation import ValidationError, canonical_category, clean_product
 
 api = Blueprint("api", __name__)
 
@@ -44,7 +46,19 @@ def health():
 
 @api.get("/api/categories")
 def categories():
-    return jsonify({"categories": db_client.list_categories()})
+    """Categories in use (with counts), plus the closed set writes accept.
+
+    ``categories`` is unchanged and still data-driven, so existing consumers
+    keep working. ``valid_categories`` is additive: a category with no products
+    yet appears there but not in ``categories``, which is what the create form
+    needs in order to offer it at all.
+    """
+    return jsonify(
+        {
+            "categories": db_client.list_categories(),
+            "valid_categories": list(Config.VALID_CATEGORIES),
+        }
+    )
 
 
 # ---------------------------------------------------------------------- CRUD
@@ -58,6 +72,21 @@ def list_products():
         sort=request.args.get("sort", "name"),
     )
     return jsonify({"count": len(products), "products": products})
+
+
+@api.get("/api/products/next-sku")
+def next_sku():
+    """The SKU a create would assign for ?category=, for form previews.
+
+    Declared before the /<int:product_id> route for readability; the int
+    converter would not match "next-sku" in any case.
+    """
+    category = canonical_category(request.args.get("category", ""))
+    if category is None:
+        raise ValidationError(
+            ["category must be one of {}".format(", ".join(Config.VALID_CATEGORIES))]
+        )
+    return jsonify({"category": category, "sku": db_client.next_sku(category)})
 
 
 @api.get("/api/products/<int:product_id>")
@@ -95,8 +124,11 @@ def generate_product_copy():
     errors = []
     if len(name) < 2:
         errors.append("name is required (at least 2 characters)")
-    if len(category) < 2:
-        errors.append("category is required (at least 2 characters)")
+    category = canonical_category(category) if category else None
+    if category is None:
+        errors.append(
+            "category must be one of {}".format(", ".join(Config.VALID_CATEGORIES))
+        )
     if errors:
         raise ValidationError(errors)
 
@@ -122,7 +154,10 @@ def handle_conflict(exc):
 
 @api.app_errorhandler(db_client.DatabaseError)
 def handle_database_error(exc):
-    return jsonify({"error": "database microservice unavailable", "detail": str(exc)}), 503
+    return (
+        jsonify({"error": "database microservice unavailable", "detail": str(exc)}),
+        503,
+    )
 
 
 @api.app_errorhandler(ai_agent.AIServiceError)

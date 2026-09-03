@@ -6,6 +6,7 @@ deployable.
 """
 
 import os
+import re
 import sqlite3
 import threading
 
@@ -16,6 +17,9 @@ SEED_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seed.sql")
 _write_lock = threading.Lock()
 
 COLUMNS = ("sku", "name", "description", "category", "price", "status")
+
+SKU_PREFIX = "SKU"
+_SKU_BLOCK_BASE = {"AUD": 1000, "COM": 2000, "HOM": 3000, "WEA": 4000}
 
 
 class NotFound(Exception):
@@ -134,11 +138,34 @@ def category_stats(category):
     return stats
 
 
+def _next_sku(conn, category):
+    code = re.sub(r"[^A-Z0-9]", "", str(category or "").upper())[:3] or "GEN"
+    rows = conn.execute(
+        "SELECT sku FROM products WHERE sku LIKE ?",
+        ("{}-{}-%".format(SKU_PREFIX, code),),
+    ).fetchall()
+
+    highest = _SKU_BLOCK_BASE.get(code, 0)
+    for row in rows:
+        tail = row["sku"].rsplit("-", 1)[-1]
+        if tail.isdigit():
+            highest = max(highest, int(tail))
+    return "{}-{}-{:04d}".format(SKU_PREFIX, code, highest + 1)
+
+
+def next_sku(category):
+    with connect() as conn:
+        return _next_sku(conn, category)
+
+
 # -------------------------------------------------------------------- WRITE
 def create_product(data):
-    values = [data.get(column) for column in COLUMNS]
     sql = "INSERT INTO products (sku, name, description, category, price, status) VALUES (?,?,?,?,?,?)"
     with _write_lock, connect() as conn:
+        record = dict(data)
+        if not str(record.get("sku") or "").strip():
+            record["sku"] = _next_sku(conn, record.get("category"))
+        values = [record.get(column) for column in COLUMNS]
         try:
             cursor = conn.execute(sql, values)
         except sqlite3.IntegrityError as exc:

@@ -11,6 +11,7 @@ from colliding in ``sys.modules``.
 
 import importlib.util
 import os
+import re
 import sys
 import tempfile
 
@@ -112,9 +113,11 @@ def fake_db(monkeypatch):
             return self.rows[product_id]
 
         def create_product(self, payload):
-            if any(p["sku"] == payload["sku"] for p in self.rows.values()):
-                raise backend_db.Conflict("sku already exists")
             row = dict(payload)
+            if not str(row.get("sku") or "").strip():
+                row["sku"] = self._next_sku(row.get("category"))
+            if any(p["sku"] == row["sku"] for p in self.rows.values()):
+                raise backend_db.Conflict("sku already exists")
             row["id"] = self.next_id
             row.setdefault("description", "")
             row.setdefault("status", "active")
@@ -122,6 +125,16 @@ def fake_db(monkeypatch):
             self.rows[self.next_id] = row
             self.next_id += 1
             return row
+
+        def _next_sku(self, category):
+            """Mirror of db._next_sku so the fake assigns SKUs the same way."""
+            code = re.sub(r"[^A-Z0-9]", "", str(category or "").upper())[:3] or "GEN"
+            highest = {"AUD": 1000, "COM": 2000, "HOM": 3000, "WEA": 4000}.get(code, 0)
+            for product in self.rows.values():
+                head, _, tail = product["sku"].rpartition("-")
+                if head == "SKU-{}".format(code) and tail.isdigit():
+                    highest = max(highest, int(tail))
+            return "SKU-{}-{:04d}".format(code, highest + 1)
 
         def update_product(self, product_id, payload):
             row = self.get_product(product_id)
@@ -153,12 +166,15 @@ def fake_db(monkeypatch):
                 "sample": [{"name": p["name"], "price": p["price"]} for p in items],
             }
 
+        def next_sku(self, category):
+            return self._next_sku(category)
+
         def health(self):
             return {"service": "student-1-db", "status": "ok", "products": len(self.rows)}
 
     fake = FakeDatabase()
     for name in ("list_products", "get_product", "create_product", "update_product",
-                 "delete_product", "list_categories", "category_stats", "health"):
+                 "delete_product", "list_categories", "next_sku", "category_stats", "health"):
         monkeypatch.setattr(backend_db, name, getattr(fake, name))
     # ai_agent imported db_client as a module, so patching the module is enough.
     return fake
@@ -191,6 +207,10 @@ def fake_api(monkeypatch):
     monkeypatch.setattr(frontend_api, "list_products", lambda **kw: state["products"])
     monkeypatch.setattr(frontend_api, "list_categories",
                         lambda: [{"category": "Audio"}, {"category": "Home"}])
+    monkeypatch.setattr(frontend_api, "valid_categories",
+                        lambda: ["Audio", "Computing", "Home", "Wearables"])
+    monkeypatch.setattr(frontend_api, "next_sku",
+                        lambda category: "SKU-{}-0007".format(category[:3].upper()))
     monkeypatch.setattr(frontend_api, "get_product", lambda pid: state["products"][0])
 
     def create(payload):

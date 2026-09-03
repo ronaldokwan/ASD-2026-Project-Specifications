@@ -7,8 +7,11 @@
   gap: 20px;
   align-items: start;
 }
+
 @media (max-width: 1000px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .table-head {
@@ -40,6 +43,66 @@ td.description {
   margin: 0;
 }
 
-#ai-panel .trace { max-height: 340px; overflow-y: auto; }
+#ai-panel .trace {
+  max-height: 340px;
+  overflow-y: auto;
+}
 
-details summary { cursor: pointer; }
+details summary {
+  cursor: pointer;
+}
+
+/* Server-assigned fields (the SKU) read as informational rather than editable,
+   while staying selectable so the value can be copied. */
+input[readonly] {
+  color: var(--text-muted);
+  background: var(--surface-alt);
+  cursor: default;
+}
+
+input[readonly]:focus {
+  outline: none;
+  border-color: var(--border);
+}
+
+.description-more summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.description-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.description-more summary::after {
+  content: " Read more";
+  color: var(--brand);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.description-more[open] summary::after {
+  content: "Show less";
+}
+
+.description-more[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.description-more[open] summary {
+  order: 2;
+}
+
+.description-more[open] .description-preview {
+  display: none;
+}
+
+.description-more:not([open]) .description-full {
+  display: none;
+}
+
+td.timestamps {
+  white-space: nowrap;
+  font-size: 13px;
+}

@@ -1,0 +1,2 @@
+<input type="text" id="sku" maxlength="32" readonly {% if product and product.id %}name="sku" {% endif %}
+   tabindex="{{ '0' if sku_value else '-1' }}" placeholder="Choose a category first" value="{{ sku_value or '' }}">

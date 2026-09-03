@@ -75,6 +75,10 @@ def list_categories():
     return _request("GET", "/categories").get("categories", [])
 
 
+def next_sku(category):
+    return _request("GET", "/next-sku", params={"category": category}).get("sku")
+
+
 def category_stats(category):
     return _request("GET", "/stats/category/{}".format(category))
 

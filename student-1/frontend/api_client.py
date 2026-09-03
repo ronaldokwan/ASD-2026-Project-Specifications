@@ -70,6 +70,16 @@ def list_categories():
     return _call("GET", "/api/categories").get("categories", [])
 
 
+def next_sku(category):
+    """Preview the SKU a create would assign for ``category``."""
+    return _call("GET", "/api/products/next-sku", params={"category": category}).get("sku")
+
+
+def valid_categories():
+    """The closed set of categories the API accepts on a write."""
+    return _call("GET", "/api/categories").get("valid_categories", [])
+
+
 def generate_copy(name, category, keywords=""):
     return _call(
         "POST",
