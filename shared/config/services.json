@@ -55,7 +55,7 @@
       "owner": "Alexander McGuinn",
       "feature": "Reviews and Ratings",
       "description": "Product reviews and star ratings, with AI pros/cons review summaries.",
-      "status": "pending",
+      "status": "ready",
       "frontend": "http://localhost:3005",
       "backend": "http://localhost:8005",
       "database": "http://localhost:9005"

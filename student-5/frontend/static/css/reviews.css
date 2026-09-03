@@ -1,0 +1,75 @@
+/* Reviews and Ratings (Student 5) - feature-specific styling.
+   The team theme in /shared/css/theme.css provides everything else. */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.table-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stars {
+  color: #d9a441;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.review-body {
+  margin: 8px 0;
+}
+
+.review-meta {
+  font-size: 12px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.ai-output {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.ai-output.pros { border-left: 3px solid #3a9d5d; }
+.ai-output.cons { border-left: 3px solid #c0483a; }
+
+#ai-panel .trace { max-height: 340px; overflow-y: auto; }
+
+details summary { cursor: pointer; }

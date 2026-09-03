@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% endif %}
+
+  <!-- Alerts raised by create / update / delete are swapped in here -->
+  <div id="alerts"></div>
+
+  <div class="layout">
+
+    <!-- ============================ LEFT: write a review + AI =========== -->
+    <section>
+      <div class="card">
+        <h2>Write a review</h2>
+        <p class="hint">
+          Pick a product, choose a star rating and share your experience with it.
+        </p>
+        {% include "partials/review_form.html" %}
+      </div>
+
+      <div class="card">
+        <h2>AI summary</h2>
+        <p class="hint">
+          Runs the team's <strong>Plan &rarr; Act &rarr; Observe &rarr; Adapt</strong> loop
+          through the shared AI-Mode service and an approved open-source LLM to turn a
+          product's reviews into a summary, pros and cons.
+        </p>
+        <div id="ai-panel">
+          <p class="muted">
+            No summary yet. Choose a product in the form above, then press
+            <em>Summarise reviews with AI</em>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ RIGHT: reviews ======================= -->
+    <section>
+      <div class="card">
+        <h2>Reviews</h2>
+        <p class="hint">Filter the reviews, then read or moderate any of them.</p>
+
+        <form id="filters"
+              hx-get="/partials/reviews"
+              hx-target="#review-table"
+              hx-swap="outerHTML"
+              hx-trigger="submit, change from:#filter-product, change from:#filter-rating,
+                          change from:#filter-sort">
+          <div class="row">
+            <div class="field">
+              <label for="filter-product">Product</label>
+              <select id="filter-product" name="product_sku">
+                <option value="">All products</option>
+                {% for product in products %}
+                  <option value="{{ product.sku }}" {% if filters.product_sku == product.sku %}selected{% endif %}>
+                    {{ product.name }} ({{ product.sku }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="filter-rating">Rating</label>
+              <select id="filter-rating" name="rating">
+                <option value="">Any rating</option>
+                {% for star in range(5, 0, -1) %}
+                  <option value="{{ star }}" {% if filters.rating == star|string %}selected{% endif %}>
+                    {{ star }} star{{ '' if star == 1 else 's' }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field">
+              <label for="filter-sort">Sort by</label>
+              <select id="filter-sort" name="sort">
+                <option value="newest"      {% if filters.sort == 'newest' %}selected{% endif %}>Newest first</option>
+                <option value="oldest"      {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest first</option>
+                <option value="rating_desc" {% if filters.sort == 'rating_desc' %}selected{% endif %}>Highest rated</option>
+                <option value="rating_asc"  {% if filters.sort == 'rating_asc' %}selected{% endif %}>Lowest rated</option>
+              </select>
+            </div>
+          </div>
+          <span class="htmx-indicator muted">Loading…</span>
+        </form>
+      </div>
+
+      {% include "partials/review_table.html" %}
+    </section>
+
+  </div>
+{% endblock %}
