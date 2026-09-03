@@ -8,8 +8,12 @@ spring:
 services:
   database-api-url: ${DATABASE_API_URL:http://localhost:5203}
   product-api-url: ${PRODUCT_API_URL:http://localhost:8001}
+  stock-api-url: ${STOCK_API_URL:http://localhost:8004}
   ollama-url: ${OLLAMA_URL:http://localhost:11434}
   ollama-model: ${OLLAMA_MODEL:qwen2.5:3b}
+
+app:
+  seed-orders: ${SEED_ORDERS:true}
 
 management:
   endpoints:
