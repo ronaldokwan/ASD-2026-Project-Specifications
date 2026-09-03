@@ -55,7 +55,8 @@ def test_create_product(backend, fake_db):
 
 
 @pytest.mark.parametrize("payload, expected_error", [
-    ({"name": "No SKU", "category": "Audio", "price": 10}, "sku is required"),
+    ({"sku": "SKU-1", "name": "Bad category", "category": "Sporting Goods", "price": 10},
+     "category must be one of"),
     ({"sku": "SKU-1", "category": "Audio", "price": 10}, "name is required"),
     ({"sku": "SKU-1", "name": "No price", "category": "Audio"}, "price is required"),
     ({"sku": "SKU-1", "name": "Bad price", "category": "Audio", "price": "abc"},
@@ -182,3 +183,79 @@ def test_clean_product_normalises_values():
 def test_clean_product_partial_requires_a_field():
     with pytest.raises(ValidationError):
         clean_product({}, partial=True)
+
+
+# ------------------------------------------------- generated SKUs + categories
+def test_create_without_sku_generates_one_for_the_category(backend, fake_db):
+    """Omitting the SKU continues the category's existing numbering."""
+    response = backend.post("/api/products", json={
+        "name": "Nimbus Earbuds", "category": "Audio", "price": 79.00,
+    })
+    assert response.status_code == 201
+    # The fake starts with SKU-AUD-1001, so the next Audio SKU is 1002.
+    assert response.get_json()["sku"] == "SKU-AUD-1002"
+
+
+def test_generated_sku_uses_the_category_block_when_empty(backend, fake_db):
+    """A category with no products yet starts at its own block, not 0001."""
+    response = backend.post("/api/products", json={
+        "name": "Trail Watch", "category": "Wearables", "price": 149.00,
+    })
+    assert response.status_code == 201
+    assert response.get_json()["sku"] == "SKU-WEA-4001"
+
+
+def test_supplied_sku_is_still_honoured(backend, fake_db):
+    """Supplier- or ERP-assigned SKUs must survive; generation is a fallback."""
+    response = backend.post("/api/products", json={
+        "sku": "vendor-99", "name": "Third Party", "category": "Home", "price": 25.00,
+    })
+    assert response.status_code == 201
+    assert response.get_json()["sku"] == "VENDOR-99"
+
+
+def test_category_is_normalised_to_the_configured_spelling(backend, fake_db):
+    """Casing is fixed on write so category_stats() sees one grouping key."""
+    response = backend.post("/api/products", json={
+        "name": "Desk Lamp", "category": "home", "price": 30.00,
+    })
+    assert response.status_code == 201
+    assert response.get_json()["category"] == "Home"
+
+
+def test_categories_endpoint_exposes_the_closed_set(backend, fake_db):
+    body = backend.get("/api/categories").get_json()
+    assert "categories" in body                      # unchanged for consumers
+    assert body["valid_categories"] == ["Audio", "Computing", "Home", "Wearables"]
+
+
+def test_next_sku_previews_without_creating(backend, fake_db):
+    """The preview must not consume the number it reports."""
+    before = len(fake_db.rows)
+    body = backend.get("/api/products/next-sku?category=Audio").get_json()
+    assert body["sku"] == "SKU-AUD-1002"
+    assert len(fake_db.rows) == before
+
+    # ...and the create that follows is assigned exactly what was previewed.
+    created = backend.post("/api/products", json={
+        "name": "Nimbus Earbuds", "category": "Audio", "price": 79.00,
+    }).get_json()
+    assert created["sku"] == body["sku"]
+
+
+def test_next_sku_normalises_the_category(backend, fake_db):
+    body = backend.get("/api/products/next-sku?category=home").get_json()
+    assert body["category"] == "Home"
+    assert body["sku"] == "SKU-HOM-3002"
+
+
+def test_next_sku_rejects_an_unknown_category(backend, fake_db):
+    response = backend.get("/api/products/next-sku?category=Sporting+Goods")
+    assert response.status_code == 400
+    assert any("category must be one of" in detail
+               for detail in response.get_json()["details"])
+
+
+def test_next_sku_does_not_shadow_the_numeric_product_route(backend, fake_db):
+    """/api/products/next-sku must not be parsed as a product id."""
+    assert backend.get("/api/products/1").get_json()["id"] == 1

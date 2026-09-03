@@ -10,6 +10,7 @@ Student 1 backend/API microservice is expected to call it.
     PUT    /products/<id>
     DELETE /products/<id>
     GET    /categories
+    GET    /next-sku?category=            preview the next generated SKU
     GET    /stats/category/<category>     facts used to ground the AI
     POST   /admin/reseed                  reset to the 12 seed records
 """
@@ -23,7 +24,9 @@ import db
 app = Flask(__name__)
 
 SEEDED_COUNT = db.init_db()
-app.logger.info("Product Catalogue database ready at %s (%s rows)", db.DB_PATH, SEEDED_COUNT)
+app.logger.info(
+    "Product Catalogue database ready at %s (%s rows)", db.DB_PATH, SEEDED_COUNT
+)
 
 
 @app.get("/health")
@@ -31,16 +34,21 @@ def health():
     try:
         rows = db.count_products()
     except Exception as exc:  # pragma: no cover - only on a corrupt volume
-        return jsonify({"service": "student-1-db", "status": "error", "error": str(exc)}), 503
-    return jsonify({
-        "service": "student-1-db",
-        "student": 1,
-        "owner": "Ronaldo Kwan",
-        "feature": "Product Catalogue",
-        "status": "ok",
-        "db_path": db.DB_PATH,
-        "products": rows,
-    })
+        return (
+            jsonify({"service": "student-1-db", "status": "error", "error": str(exc)}),
+            503,
+        )
+    return jsonify(
+        {
+            "service": "student-1-db",
+            "student": 1,
+            "owner": "Ronaldo Kwan",
+            "feature": "Product Catalogue",
+            "status": "ok",
+            "db_path": db.DB_PATH,
+            "products": rows,
+        }
+    )
 
 
 @app.get("/products")
@@ -91,6 +99,11 @@ def delete_product(product_id):
     except db.NotFound as exc:
         return jsonify({"error": str(exc)}), 404
     return jsonify({"deleted": product_id})
+
+
+@app.get("/next-sku")
+def next_sku():
+    return jsonify({"sku": db.next_sku(request.args.get("category"))})
 
 
 @app.get("/categories")

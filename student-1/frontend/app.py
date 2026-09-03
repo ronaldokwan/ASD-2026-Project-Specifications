@@ -54,6 +54,9 @@ def _filters():
 
 def _categories():
     try:
+        categories = api_client.valid_categories()
+        if categories:
+            return categories
         return [row["category"] for row in api_client.list_categories()]
     except ApiError:
         return []
@@ -117,6 +120,24 @@ def partial_products():
         return _alert(exc.message, "error"), exc.status
 
 
+def _sku_preview(category):
+    if not category:
+        return ""
+    try:
+        return api_client.next_sku(category) or ""
+    except ApiError:
+        return ""
+
+
+@app.get("/partials/sku-preview")
+def partial_sku_preview():
+    return render_template(
+        "partials/sku_field.html",
+        product=None,
+        sku_value=_sku_preview(request.args.get("category", "").strip()),
+    )
+
+
 @app.get("/partials/form")
 def partial_new_form():
     return render_template(
@@ -124,6 +145,7 @@ def partial_new_form():
         product=None,
         categories=_categories(),
         statuses=STATUSES,
+        sku_value="",
     )
 
 
@@ -138,6 +160,7 @@ def partial_edit_form(product_id):
         product=product,
         categories=_categories(),
         statuses=STATUSES,
+        sku_value=product.get("sku", ""),
     )
 
 
@@ -186,6 +209,12 @@ def _validation_response(exc, payload, product_id=None):
     product = dict(payload)
     if product_id:
         product["id"] = product_id
+
+    sku_value = payload.get("sku") or (
+        product.get("sku", "")
+        if product_id
+        else _sku_preview(payload.get("category", ""))
+    )
     form = render_template(
         "partials/product_form.html",
         product=product,
@@ -193,6 +222,7 @@ def _validation_response(exc, payload, product_id=None):
         statuses=STATUSES,
         errors=exc.details or [exc.message],
         oob=True,
+        sku_value=sku_value,
     )
     return _alert(exc.message, "error") + form, 200
 
@@ -204,6 +234,7 @@ def _blank_form_oob():
         categories=_categories(),
         statuses=STATUSES,
         oob=True,
+        sku_value="",
     )
 
 

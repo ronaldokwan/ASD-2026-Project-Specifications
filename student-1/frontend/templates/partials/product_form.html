@@ -27,9 +27,8 @@
 
   <div class="row">
     <div class="field">
-      <label for="sku">SKU</label>
-      <input type="text" id="sku" name="sku" required maxlength="32"
-             placeholder="SKU-AUD-1004" value="{{ product.sku if product else '' }}">
+      <label for="sku">SKU <span class="muted">(assigned automatically)</span></label>
+      {% include "partials/sku_field.html" %}
     </div>
     <div class="field">
       <label for="name">Product name</label>
@@ -41,11 +40,18 @@
   <div class="row">
     <div class="field">
       <label for="product-category">Category</label>
-      <input type="text" id="product-category" name="category" required list="category-options"
-             placeholder="Audio" value="{{ product.category if product else '' }}">
-      <datalist id="category-options">
-        {% for category in categories %}<option value="{{ category }}"></option>{% endfor %}
-      </datalist>
+      {# Changing the category re-previews the SKU it would generate. #}
+      <select id="product-category" name="category" required
+              hx-get="/partials/sku-preview"
+              hx-trigger="change"
+              hx-target="#sku"
+              hx-swap="outerHTML">
+        {% if not product %}<option value="" disabled selected>Choose a category</option>{% endif %}
+        {% for category in categories %}
+          <option value="{{ category }}"
+                  {% if product and product.category == category %}selected{% endif %}>{{ category }}</option>
+        {% endfor %}
+      </select>
     </div>
     <div class="field">
       <label for="price">Price (AUD)</label>
