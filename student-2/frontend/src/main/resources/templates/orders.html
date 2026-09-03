@@ -3,21 +3,28 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SmartShop Orders</title>
+    <title>Customer Orders · ASD 2026 Group 40</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
-<header class="site-header">
-    <div>
-        <span class="eyebrow">SmartShop · Student 2</span>
-        <h1>Customer orders</h1>
-        <p>Manage purchases, check stock and prepare customer communications.</p>
-    </div>
-    <a class="button primary" th:href="@{/orders/new}">Create order</a>
+<header class="app-header">
+    <h1>Customer Orders</h1>
+    <span class="subtitle">Student 2 · Jinying Li</span>
+    <span class="spacer"></span>
+    <a href="http://localhost:3000">← All features</a>
+    <a href="/health" target="_blank" rel="noopener">Health</a>
 </header>
 
-<main class="page-shell">
+<main class="container">
+    <div class="page-heading">
+        <div>
+            <h2>Manage customer orders</h2>
+            <p>Create purchases, check stock and prepare customer communications.</p>
+        </div>
+        <a class="button primary" th:href="@{/orders/new}">Create order</a>
+    </div>
     <div class="notice success" th:if="${param.deleted}">Order deleted.</div>
 
     <section class="panel filter-panel">
@@ -58,5 +65,9 @@
         <div id="summary-result" class="ai-result muted">The generated summary will appear here.</div>
     </section>
 </main>
+<footer class="container muted" style="padding-bottom:32px">
+    ASD 2026 · Canvas Group 40 · Agentic AI Retail Application ·
+    frontend → backend/API → AI-Mode → Ollama → LLM
+</footer>
 </body>
 </html>

@@ -11,6 +11,14 @@ from .config import Config
 SKU_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9\-_]{2,31}$")
 
 
+def canonical_category(value):
+    candidate = str(value).strip().casefold()
+    for category in Config.VALID_CATEGORIES:
+        if category.casefold() == candidate:
+            return category
+    return None
+
+
 class ValidationError(Exception):
     def __init__(self, errors):
         super().__init__("; ".join(errors))
@@ -32,15 +40,14 @@ def clean_product(payload, partial=False):
     def present(field):
         return field in payload and payload[field] not in (None, "")
 
-    # --- sku ---------------------------------------------------------------
     if present("sku"):
         sku = str(payload["sku"]).strip().upper()
         if not SKU_PATTERN.match(sku):
-            errors.append("sku must be 3-32 characters: letters, digits, hyphen or underscore")
+            errors.append(
+                "sku must be 3-32 characters: letters, digits, hyphen or underscore"
+            )
         else:
             cleaned["sku"] = sku
-    elif not partial:
-        errors.append("sku is required")
 
     # --- name --------------------------------------------------------------
     if present("name"):
@@ -54,9 +61,11 @@ def clean_product(payload, partial=False):
 
     # --- category ----------------------------------------------------------
     if present("category"):
-        category = str(payload["category"]).strip()
-        if not 2 <= len(category) <= 60:
-            errors.append("category must be between 2 and 60 characters")
+        category = canonical_category(payload["category"])
+        if category is None:
+            errors.append(
+                "category must be one of {}".format(", ".join(Config.VALID_CATEGORIES))
+            )
         else:
             cleaned["category"] = category
     elif not partial:
@@ -65,13 +74,18 @@ def clean_product(payload, partial=False):
     # --- price -------------------------------------------------------------
     if present("price"):
         try:
-            price = float(str(payload["price"]).replace("$", "").replace(",", "").strip())
+            price = float(
+                str(payload["price"]).replace("$", "").replace(",", "").strip()
+            )
         except (TypeError, ValueError):
             errors.append("price must be a number")
         else:
             if not Config.PRICE_MIN <= price <= Config.PRICE_MAX:
-                errors.append("price must be between {} and {}".format(
-                    Config.PRICE_MIN, Config.PRICE_MAX))
+                errors.append(
+                    "price must be between {} and {}".format(
+                        Config.PRICE_MIN, Config.PRICE_MAX
+                    )
+                )
             else:
                 cleaned["price"] = round(price, 2)
     elif not partial:
@@ -91,7 +105,9 @@ def clean_product(payload, partial=False):
     if present("status"):
         status = str(payload["status"]).strip().lower()
         if status not in Config.VALID_STATUSES:
-            errors.append("status must be one of {}".format(", ".join(Config.VALID_STATUSES)))
+            errors.append(
+                "status must be one of {}".format(", ".join(Config.VALID_STATUSES))
+            )
         else:
             cleaned["status"] = status
     elif not partial:

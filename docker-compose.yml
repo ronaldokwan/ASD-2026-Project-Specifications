@@ -139,7 +139,7 @@ services:
     restart: unless-stopped
 
   # =================== STUDENT 2 - Jinying Li ==============================
-  # Feature: Customer Orders. Ports 5201 / 5202 / 5203.
+  # Feature: Customer Orders. Ports 3002 / 8002 / 9002.
 
   student2-db:
     build:
@@ -147,16 +147,16 @@ services:
       dockerfile: database-api/Dockerfile
     container_name: asd-student2-db
     environment:
-      SERVER_PORT: "5203"
+      SERVER_PORT: "9002"
       DATABASE_URL: jdbc:sqlite:/data/orders.db
     ports:
-      - "5203:5203"
+      - "9002:9002"
     volumes:
       - student2-orders-data:/data
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5203/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -168,20 +168,22 @@ services:
       dockerfile: backend/Dockerfile
     container_name: asd-student2-api
     environment:
-      SERVER_PORT: "5202"
-      DATABASE_API_URL: http://student2-db:5203
+      SERVER_PORT: "8002"
+      DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: http://student-1-backend:8001
+      STOCK_API_URL: http://student-4-backend:8004
       OLLAMA_URL: http://ollama:11434
+      AI_MODE_URL: http://ai-mode:7000
       OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
     ports:
-      - "5202:5202"
+      - "8002:8002"
     depends_on:
       student2-db:
         condition: service_healthy
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5202/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -193,17 +195,19 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: asd-student2-frontend
     environment:
-      SERVER_PORT: "5201"
-      BACKEND_URL: http://student2-api:5202
+      SERVER_PORT: "3002"
+      BACKEND_URL: http://student2-api:8002
     ports:
-      - "5201:5201"
+      - "3002:3002"
+    volumes:
+      - ./shared:/app/shared:ro
     depends_on:
       student2-api:
         condition: service_healthy
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5201/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:3002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -340,7 +344,69 @@ services:
     restart: unless-stopped
 
   # =================== STUDENT 5 - Alexander McGuinn =======================
-  # Feature: Reviews and Ratings. Ports 3005 / 8005 / 9005
+  # Feature: Reviews and Ratings
+
+  student-5-db:
+    build: ./student-5/database
+    container_name: asd-student-5-db
+    environment:
+      DB_PATH: /data/reviews.db
+      SERVICE_PORT: "9005"
+    ports:
+      - "9005:9005"
+    volumes:
+      - student-5-data:/data
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:9005/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  student-5-backend:
+    build: ./student-5/backend
+    container_name: asd-student-5-backend
+    environment:
+      <<: *ai-env
+      DATABASE_URL: http://student-5-db:9005
+      CATALOGUE_URL: http://student-1-backend:8001
+      SERVICE_PORT: "8005"
+    ports:
+      - "8005:8005"
+    depends_on:
+      student-5-db:
+        condition: service_healthy
+      ai-mode:
+        condition: service_started
+      student-1-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8005/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  student-5-frontend:
+    build: ./student-5/frontend
+    container_name: asd-student-5-frontend
+    environment:
+      BACKEND_URL: http://student-5-backend:8005
+      HOME_URL: http://localhost:3000
+      SERVICE_PORT: "3005"
+    ports:
+      - "3005:3005"
+    volumes:
+      - ./shared:/app/shared:ro
+    depends_on:
+      student-5-backend:
+        condition: service_started
+    networks: [asd-net]
+    restart: unless-stopped
 
 networks:
   asd-net:
@@ -352,4 +418,4 @@ volumes:
   student2-orders-data:
   student-3-data:
   student-4-data:
-  # student-5-data:
+  student-5-data:

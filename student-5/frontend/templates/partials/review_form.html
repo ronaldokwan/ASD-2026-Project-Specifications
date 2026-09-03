@@ -1,0 +1,84 @@
+{# Create / edit form. Posting targets #alerts; the table and this form come
+   back as out-of-band swaps, so the page never does a full reload. #}
+<form id="review-form"
+      {% if oob %}hx-swap-oob="true"{% endif %}
+      hx-post="{{ '/reviews/' ~ review.review_id if review and review.review_id else '/reviews' }}"
+      hx-target="#alerts"
+      hx-swap="innerHTML">
+
+  {% if errors %}
+    <div class="alert error">
+      <strong>Please fix the following:</strong>
+      <ul style="margin:6px 0 0 18px">
+        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if review and review.review_id %}
+    <div class="alert info">
+      Editing review #{{ review.review_id[:8] }}.
+      <button type="button" class="btn secondary" style="float:right;padding:2px 10px"
+              hx-get="/partials/form"
+              hx-target="#review-form"
+              hx-swap="outerHTML">Cancel</button>
+    </div>
+  {% endif %}
+
+  <div class="row">
+    <div class="field">
+      <label for="product_sku">Product</label>
+      <select id="product_sku" name="product_sku" required>
+        <option value="">Choose a product&hellip;</option>
+        {% for product in products %}
+          <option value="{{ product.sku }}"
+                  {% if review and review.product_sku == product.sku %}selected{% endif %}>
+            {{ product.name }} ({{ product.sku }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="rating">Rating</label>
+      <select id="rating" name="rating" required>
+        {% for star in range(5, 0, -1) %}
+          <option value="{{ star }}"
+                  {% if review and review.rating|string == star|string %}selected{% endif %}>
+            {{ star }} star{{ '' if star == 1 else 's' }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="user_id">Your reviewer ID</label>
+    <input type="text" id="user_id" name="user_id" required maxlength="64"
+           placeholder="e.g. a customer ID or username"
+           value="{{ review.user_id if review else '' }}">
+  </div>
+
+  <div class="field">
+    <label for="review">Review</label>
+    <textarea id="review" name="review" required maxlength="1000"
+              placeholder="What did you think of this product?">{{ review.review if review else '' }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">
+      {{ 'Save changes' if review and review.review_id else 'Submit review' }}
+    </button>
+
+    <button type="button" class="btn ai"
+            hx-post="/ai/summary"
+            hx-include="#review-form"
+            hx-target="#ai-panel"
+            hx-swap="innerHTML"
+            hx-indicator="#ai-indicator">
+      Summarise reviews with AI
+    </button>
+
+    <button type="reset" class="btn secondary">Clear</button>
+    <span id="ai-indicator" class="htmx-indicator muted">Asking the LLM…</span>
+  </div>
+</form>

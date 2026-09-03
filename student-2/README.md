@@ -6,11 +6,11 @@ Java/Spring Boot implementation of the SmartShop Customer Orders feature.
 
 | Service | Local port | Responsibility |
 | --- | ---: | --- |
-| `frontend` | 5201 | Thymeleaf and HTMX pages |
-| `backend` | 5202 | Order business API, product/stock coordination, AI |
-| `database-api` | 5203 | SQLite ownership and internal CRUD API |
+| `frontend` | 3002 | Thymeleaf and HTMX pages |
+| `backend` | 8002 | Order business API, product/stock coordination, AI |
+| `database-api` | 9002 | SQLite ownership and internal CRUD API |
 
-SQLite is embedded inside `database-api`; port 5203 belongs to the Spring Boot API, not to SQLite. The SQLite file is persisted in the Docker volume `student2-orders-data`.
+SQLite is embedded inside `database-api`; port 9002 belongs to the Spring Boot API, not to SQLite. The SQLite file is persisted in the Docker volume `student2-orders-data`.
 
 ## Run with Docker
 
@@ -20,7 +20,7 @@ From this directory:
 docker compose up --build
 ```
 
-Open <http://localhost:5201/orders>.
+Open <http://localhost:3002/orders>.
 
 The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product details are loaded from Student 1's catalogue API; if that service is unavailable or the SKU is not found, the order service falls back to the raw SKU. Stock methods still return fixed development values until Student 3's API is ready.
 
@@ -47,24 +47,24 @@ mvn clean verify
 ## Main APIs
 
 ```text
-GET    http://localhost:5202/api/orders
-GET    http://localhost:5202/api/orders/{id}
-POST   http://localhost:5202/api/orders
-PUT    http://localhost:5202/api/orders/{id}
-PATCH  http://localhost:5202/api/orders/{id}/status
-DELETE http://localhost:5202/api/orders/{id}
+GET    http://localhost:8002/api/orders
+GET    http://localhost:8002/api/orders/{id}
+POST   http://localhost:8002/api/orders
+PUT    http://localhost:8002/api/orders/{id}
+PATCH  http://localhost:8002/api/orders/{id}/status
+DELETE http://localhost:8002/api/orders/{id}
 
-GET    http://localhost:5202/api/orders/{orderId}/lines
-POST   http://localhost:5202/api/orders/{orderId}/lines
-PUT    http://localhost:5202/api/orders/{orderId}/lines/{lineId}
-DELETE http://localhost:5202/api/orders/{orderId}/lines/{lineId}
+GET    http://localhost:8002/api/orders/{orderId}/lines
+POST   http://localhost:8002/api/orders/{orderId}/lines
+PUT    http://localhost:8002/api/orders/{orderId}/lines/{lineId}
+DELETE http://localhost:8002/api/orders/{orderId}/lines/{lineId}
 
-POST   http://localhost:5202/api/orders/stock-check
-POST   http://localhost:5202/api/orders/{id}/ai/delay-email
-POST   http://localhost:5202/api/orders/ai/customer-summary
+POST   http://localhost:8002/api/orders/stock-check
+POST   http://localhost:8002/api/orders/{id}/ai/delay-email
+POST   http://localhost:8002/api/orders/ai/customer-summary
 
-GET    http://localhost:5202/api/catalog/products
-GET    http://localhost:5202/api/catalog/products?sku=SKU-AUD-1001
+GET    http://localhost:8002/api/catalog/products
+GET    http://localhost:8002/api/catalog/products?sku=SKU-AUD-1001
 ```
 
 Example create request:

@@ -1,14 +1,17 @@
 server:
-  port: ${SERVER_PORT:5201}
+  port: ${SERVER_PORT:3002}
 
 spring:
   application:
     name: student2-frontend
   thymeleaf:
     cache: false
+  web:
+    resources:
+      static-locations: classpath:/static/,file:/app/shared/
 
 services:
-  backend-url: ${BACKEND_URL:http://localhost:5202}
+  backend-url: ${BACKEND_URL:http://localhost:8002}
 
 management:
   endpoints:

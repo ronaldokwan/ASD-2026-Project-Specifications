@@ -1,5 +1,6 @@
 package com.smartshop.orders.frontend.client;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.smartshop.orders.frontend.dto.FrontendModels.AiResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.CustomerSummaryRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
@@ -11,8 +12,10 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -40,15 +43,23 @@ public class BackendClient {
     }
 
     public OrderResponse create(OrderRequest request) {
-        return restClient.post().uri("/api/orders")
-            .contentType(MediaType.APPLICATION_JSON).body(request)
-            .retrieve().body(OrderResponse.class);
+        try {
+            return restClient.post().uri("/api/orders")
+                .contentType(MediaType.APPLICATION_JSON).body(request)
+                .retrieve().body(OrderResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw translate(exception);
+        }
     }
 
     public OrderResponse update(long id, OrderRequest request) {
-        return restClient.put().uri("/api/orders/{id}", id)
-            .contentType(MediaType.APPLICATION_JSON).body(request)
-            .retrieve().body(OrderResponse.class);
+        try {
+            return restClient.put().uri("/api/orders/{id}", id)
+                .contentType(MediaType.APPLICATION_JSON).body(request)
+                .retrieve().body(OrderResponse.class);
+        } catch (RestClientResponseException exception) {
+            throw translate(exception);
+        }
     }
 
     public OrderResponse updateStatus(long id, String status) {
@@ -77,7 +88,27 @@ public class BackendClient {
             .retrieve().body(AiResponse.class);
     }
 
+    public Map<String, Object> health() {
+        return restClient.get().uri("/health")
+            .retrieve().body(new ParameterizedTypeReference<>() {});
+    }
+
     private Optional<String> optionalText(String value) {
         return value == null || value.isBlank() ? Optional.empty() : Optional.of(value);
     }
+
+    private IllegalStateException translate(RestClientResponseException exception) {
+        try {
+            ErrorResponse response = exception.getResponseBodyAs(ErrorResponse.class);
+            if (response != null && response.message() != null && !response.message().isBlank()) {
+                return new IllegalStateException(response.message(), exception);
+            }
+        } catch (RuntimeException ignored) {
+            // Fall through to the safe message when a downstream response is not valid JSON.
+        }
+        return new IllegalStateException("The order request could not be completed", exception);
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ErrorResponse(String message) {}
 }

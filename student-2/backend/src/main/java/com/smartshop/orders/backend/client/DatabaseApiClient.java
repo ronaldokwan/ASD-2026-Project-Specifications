@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class DatabaseApiClient {
@@ -123,6 +124,15 @@ public class DatabaseApiClient {
         try {
             restClient.delete().uri("/internal/orders/{orderId}/lines/{lineId}", orderId, lineId)
                 .retrieve().toBodilessEntity();
+        } catch (RestClientResponseException exception) {
+            throw translate(exception);
+        }
+    }
+
+    public Map<String, Object> health() {
+        try {
+            return restClient.get().uri("/health")
+                .retrieve().body(new ParameterizedTypeReference<>() {});
         } catch (RestClientResponseException exception) {
             throw translate(exception);
         }

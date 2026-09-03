@@ -41,7 +41,7 @@ jobs:
         run: |
           docker compose up -d
           for attempt in $(seq 1 30); do
-            if curl --fail --silent http://localhost:5201/actuator/health >/dev/null; then
+            if curl --fail --silent http://localhost:3002/actuator/health >/dev/null; then
               exit 0
             fi
             sleep 2

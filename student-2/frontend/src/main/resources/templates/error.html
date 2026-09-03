@@ -3,11 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SmartShop · Request failed</title>
+    <title>Request failed · Customer Orders</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
-<main class="page-shell narrow error-page">
+<header class="app-header">
+    <h1>Customer Orders</h1>
+    <span class="subtitle">Student 2 · Jinying Li</span>
+    <span class="spacer"></span>
+    <a href="http://localhost:3000">← All features</a>
+    <a href="/health" target="_blank" rel="noopener">Health</a>
+</header>
+<main class="container error-page">
     <section class="panel">
         <span class="eyebrow">Something went wrong</span>
         <h1>We could not complete that request.</h1>
@@ -15,5 +23,8 @@
         <a class="button primary" th:href="@{/orders}">Return to orders</a>
     </section>
 </main>
+<footer class="container muted" style="padding-bottom:32px">
+    ASD 2026 · Canvas Group 40 · Agentic AI Retail Application
+</footer>
 </body>
 </html>

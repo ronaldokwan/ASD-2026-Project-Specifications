@@ -4,14 +4,14 @@ services:
       context: .
       dockerfile: database-api/Dockerfile
     environment:
-      SERVER_PORT: 5203
+      SERVER_PORT: 9002
       DATABASE_URL: jdbc:sqlite:/data/orders.db
     ports:
-      - "5203:5203"
+      - "9002:9002"
     volumes:
       - student2-orders-data:/data
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5203/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -22,18 +22,20 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      SERVER_PORT: 5202
-      DATABASE_API_URL: http://student2-db:5203
+      SERVER_PORT: 8002
+      DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: ${PRODUCT_API_URL:-http://host.docker.internal:8001}
+      STOCK_API_URL: ${STOCK_API_URL:-http://host.docker.internal:8004}
       OLLAMA_URL: http://ollama:11434
+      AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
       OLLAMA_MODEL: qwen2.5:3b
     ports:
-      - "5202:5202"
+      - "8002:8002"
     depends_on:
       student2-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5202/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -44,15 +46,17 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     environment:
-      SERVER_PORT: 5201
-      BACKEND_URL: http://student2-api:5202
+      SERVER_PORT: 3002
+      BACKEND_URL: http://student2-api:8002
     ports:
-      - "5201:5201"
+      - "3002:3002"
+    volumes:
+      - ../shared:/app/shared:ro
     depends_on:
       student2-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5201/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:3002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20

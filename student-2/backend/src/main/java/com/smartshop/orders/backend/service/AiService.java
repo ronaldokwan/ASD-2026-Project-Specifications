@@ -13,14 +13,17 @@ import java.util.Map;
 public class AiService {
 
     private final RestClient ollamaClient;
+    private final RestClient aiModeClient;
     private final String model;
 
     public AiService(
         RestClient.Builder builder,
         @Value("${services.ollama-url}") String ollamaUrl,
+        @Value("${services.ai-mode-url}") String aiModeUrl,
         @Value("${services.ollama-model}") String model
     ) {
         this.ollamaClient = builder.baseUrl(ollamaUrl).build();
+        this.aiModeClient = builder.clone().baseUrl(aiModeUrl).build();
         this.model = model;
     }
 
@@ -38,6 +41,19 @@ public class AiService {
             // The order feature stays demonstrable while the shared Ollama service is unavailable.
         }
         return new AiResponse(fallback, false);
+    }
+
+    public Map<String, Object> health() {
+        try {
+            Map<String, Object> response = aiModeClient.get().uri("/health")
+                .retrieve().body(new org.springframework.core.ParameterizedTypeReference<>() {});
+            return response == null ? Map.of("status", "unreachable") : response;
+        } catch (RuntimeException exception) {
+            return Map.of(
+                "status", "unreachable",
+                "error", exception.getMessage() == null ? "AI-Mode health check failed" : exception.getMessage()
+            );
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
