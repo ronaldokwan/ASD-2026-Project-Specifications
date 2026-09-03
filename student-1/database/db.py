@@ -18,6 +18,19 @@ _write_lock = threading.Lock()
 
 COLUMNS = ("sku", "name", "description", "category", "price", "status")
 
+# A row's recency is the later of its two stamps, so a product created after it
+# was last edited still sorts (and displays) by when it actually last changed.
+LAST_ACTIVITY = "MAX(datetime(updated_at), datetime(created_at))"
+
+SORT_COLUMNS = {
+    # NOCASE so "apple" and "Apple" interleave instead of every capital first.
+    "name": "name COLLATE NOCASE ASC, id ASC",
+    "price_asc": "price ASC",
+    "price_desc": "price DESC",
+    "latest": LAST_ACTIVITY + " DESC, id DESC",
+}
+DEFAULT_SORT = "latest"
+
 SKU_PREFIX = "SKU"
 _SKU_BLOCK_BASE = {"AUD": 1000, "COM": 2000, "HOM": 3000, "WEA": 4000}
 
@@ -66,7 +79,7 @@ def init_db(force_reseed=False):
 
 # --------------------------------------------------------------------- READ
 def list_products(
-    category=None, status=None, sku=None, search=None, sort="name", limit=200
+    category=None, status=None, sku=None, search=None, sort=DEFAULT_SORT, limit=200
 ):
     sql = "SELECT * FROM products WHERE 1 = 1"
     params = []
@@ -85,13 +98,7 @@ def list_products(
         term = "%{}%".format(search)
         params.extend([term, term, term])
 
-    sort_columns = {
-        "name": "name ASC",
-        "price_asc": "price ASC",
-        "price_desc": "price DESC",
-        "newest": "datetime(created_at) DESC, id DESC",
-    }
-    sql += " ORDER BY " + sort_columns.get(sort, sort_columns["name"])
+    sql += " ORDER BY " + SORT_COLUMNS.get(sort, SORT_COLUMNS[DEFAULT_SORT])
     sql += " LIMIT ?"
     params.append(int(limit))
 

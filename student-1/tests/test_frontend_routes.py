@@ -270,6 +270,50 @@ def test_unedited_product_shows_the_same_plain_date(frontend, fake_api, monkeypa
     assert "created" not in html
 
 
+def test_updated_column_uses_the_creation_stamp_when_it_is_the_later_one(
+    frontend, fake_api, monkeypatch
+):
+    """The column reports recency, so whichever stamp is newer is the one shown."""
+    fake_api["products"][0]["created_at"] = "2026-09-05 08:00:00"
+    fake_api["products"][0]["updated_at"] = "2026-09-01 14:28:36"
+    monkeypatch.setattr(api_client, "list_products", lambda **kw: fake_api["products"])
+
+    html = frontend.get("/partials/products").get_data(as_text=True)
+    assert ">5 Sep 2026</td>" in html
+    assert 'title="updated 2026-09-05 08:00:00 UTC"' in html
+
+
+def test_last_activity_survives_a_missing_stamp():
+    from conftest import frontend_service
+
+    assert frontend_service.last_activity(
+        {"created_at": "2026-09-01 14:28:36", "updated_at": None}
+    ) == "2026-09-01 14:28:36"
+    assert frontend_service.last_activity({}) == ""
+
+
+# ------------------------------------------------------------------ sorting
+def test_catalogue_defaults_to_the_most_recently_changed(
+    frontend, fake_api, monkeypatch
+):
+    seen = {}
+
+    def spy(**filters):
+        seen.update(filters)
+        return fake_api["products"]
+
+    monkeypatch.setattr(api_client, "list_products", spy)
+
+    frontend.get("/partials/products")
+    assert seen["sort"] == "latest"
+
+
+def test_sort_dropdown_offers_the_default_and_a_name_option(frontend, fake_api):
+    html = frontend.get("/").get_data(as_text=True)
+    assert '<option value="latest" selected>' in html
+    assert '<option value="name" ' in html
+
+
 def test_short_date_passes_through_anything_unparseable():
     """A malformed stamp must not take the whole table down."""
     from conftest import frontend_service
