@@ -49,6 +49,8 @@ services:
       BACKEND_URL: http://student2-api:8002
     ports:
       - "3002:3002"
+    volumes:
+      - ../shared:/app/shared:ro
     depends_on:
       student2-api:
         condition: service_healthy

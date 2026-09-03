@@ -3,19 +3,27 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${editing ? 'Edit order' : 'Create order'}">Order</title>
+    <title th:text="|${editing ? 'Edit order' : 'Create order'} · Customer Orders|">Order</title>
+    <link rel="stylesheet" th:href="@{/css/theme.css}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
-<header class="site-header compact">
-    <div>
-        <a class="back-link" th:href="@{/orders}">← All orders</a>
-        <h1 th:text="${editing ? 'Edit order' : 'Create an order'}">Create an order</h1>
-        <p>One order can contain multiple product lines.</p>
-    </div>
+<header class="app-header">
+    <h1>Customer Orders</h1>
+    <span class="subtitle">Student 2 · Jinying Li</span>
+    <span class="spacer"></span>
+    <a href="http://localhost:3000">← All features</a>
+    <a href="/actuator/health" target="_blank" rel="noopener">Health</a>
 </header>
 
-<main class="page-shell narrow">
+<main class="container">
+    <a class="back-link" th:href="@{/orders}">← All orders</a>
+    <div class="page-heading">
+        <div>
+            <h2 th:text="${editing ? 'Edit order' : 'Create an order'}">Create an order</h2>
+            <p>One order can contain multiple product lines.</p>
+        </div>
+    </div>
     <div class="notice error" th:if="${error}" th:text="${error}"></div>
     <form class="panel order-form" method="post"
           th:action="${editing ? '/orders/' + orderId : '/orders'}">
@@ -173,5 +181,9 @@
     updateProductAvailability();
     calculate();
 </script>
+<footer class="container muted" style="padding-bottom:32px">
+    ASD 2026 · Canvas Group 40 · Agentic AI Retail Application ·
+    frontend → backend/API → AI-Mode → Ollama → LLM
+</footer>
 </body>
 </html>
