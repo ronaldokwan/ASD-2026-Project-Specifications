@@ -22,11 +22,13 @@ import db
 app = Flask(__name__)
 
 SEEDED_COUNT = db.init_db()
+# Initialise once at service startup so a new database has demonstration records.
 app.logger.info("Inventory and Stock database ready at %s (%s rows)", db.DB_PATH, SEEDED_COUNT)
 
 
 @app.get("/health")
 def health():
+    """Confirm that the SQLite store is accessible and report its record count."""
     try:
         rows = db.count_stock()
     except Exception as exc:  # pragma: no cover - only on a corrupt volume
@@ -44,6 +46,7 @@ def health():
 
 @app.get("/stock")
 def list_stock():
+    """Expose filtered inventory reads to the backend microservice."""
     stock = db.list_stock(
         category=request.args.get("category"),
         stock_level=request.args.get("stock_level"),
@@ -64,6 +67,7 @@ def list_low_stock():
 
 @app.get("/stock/<int:stock_id>")
 def get_stock(stock_id):
+    """Return a stock record by id or an API-friendly not-found response."""
     try:
         return jsonify(db.get_stock(stock_id))
     except db.NotFound as exc:
@@ -72,6 +76,7 @@ def get_stock(stock_id):
 
 @app.post("/stock")
 def create_stock():
+    """Persist a stock record received from the backend API."""
     payload = request.get_json(silent=True) or {}
     try:
         return jsonify(db.create_stock(payload)), 201
@@ -81,6 +86,7 @@ def create_stock():
 
 @app.put("/stock/<int:stock_id>")
 def update_stock(stock_id):
+    """Update an existing stock record with the supplied JSON fields."""
     payload = request.get_json(silent=True) or {}
     try:
         return jsonify(db.update_stock(stock_id, payload))
@@ -92,6 +98,7 @@ def update_stock(stock_id):
 
 @app.delete("/stock/<int:stock_id>")
 def delete_stock(stock_id):
+    """Delete a record after converting an absent id into a 404 response."""
     try:
         db.delete_stock(stock_id)
     except db.NotFound as exc:

@@ -27,6 +27,7 @@ class Conflict(Exception):
 
 
 def connect():
+    """Open a SQLite connection that returns rows accessible by column name."""
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -64,6 +65,7 @@ def init_db(force_reseed=False):
 def list_stock(
     category=None, stock_level=None, sku=None, search=None, sort="name", limit=200
 ):
+    """Return filtered inventory records using only the supported sort columns."""
     sql = "SELECT * FROM stock WHERE 1 = 1"
     params = []
 
@@ -103,6 +105,7 @@ def list_low_stock(limit=200):
 
 
 def get_stock(stock_id):
+    """Return one stock item or raise NotFound when its id is not present."""
     with connect() as conn:
         row = conn.execute(
             "SELECT * FROM stock WHERE id = ?", (stock_id,)
@@ -114,6 +117,7 @@ def get_stock(stock_id):
 
 # -------------------------------------------------------------------- WRITE
 def create_stock(data):
+    """Insert a complete stock record and return the database-generated record."""
     values = [data.get(column) for column in COLUMNS]
     sql = "INSERT INTO stock (sku, name, quantity, category, location, restock_threshold, stock_level) VALUES (?,?,?,?,?,?,?)"
     with _write_lock, connect() as conn:
@@ -126,6 +130,7 @@ def create_stock(data):
 
 
 def update_stock(stock_id, data):
+    """Merge supplied fields with the stored record, then persist the full row."""
     existing = get_stock(stock_id)  # raises NotFound
     merged = {column: data.get(column, existing[column]) for column in COLUMNS}
 
@@ -142,6 +147,7 @@ def update_stock(stock_id, data):
 
 
 def delete_stock(stock_id):
+    """Confirm an item exists before deleting it from the inventory."""
     get_stock(stock_id)  # raises NotFound
     with _write_lock, connect() as conn:
         conn.execute("DELETE FROM stock WHERE id = ?", (stock_id,))
@@ -149,5 +155,6 @@ def delete_stock(stock_id):
 
 
 def count_stock():
+    """Return the number of inventory records for startup and health reporting."""
     with connect() as conn:
         return conn.execute("SELECT COUNT(*) AS n FROM stock").fetchone()["n"]

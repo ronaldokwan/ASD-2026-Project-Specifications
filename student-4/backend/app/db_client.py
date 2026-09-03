@@ -23,6 +23,7 @@ class Conflict(Exception):
 
 
 def _request(method, path, **kwargs):
+    """Send one request to the database service and translate HTTP failures."""
     url = "{}{}".format(Config.DATABASE_URL, path)
     try:
         response = requests.request(method, url, timeout=Config.DATABASE_TIMEOUT, **kwargs)
@@ -43,6 +44,7 @@ def _request(method, path, **kwargs):
 
 
 def _error_of(response):
+    """Extract a useful downstream error whether its response is JSON or text."""
     try:
         return response.json().get("error", response.text)
     except ValueError:
@@ -51,30 +53,37 @@ def _error_of(response):
 
 # ---------------------------------------------------------------- inventory
 def list_stock(**filters):
+    """Return stock records matching the supplied optional filters."""
     params = {key: value for key, value in filters.items() if value}
     return _request("GET", "/stock", params=params).get("stock", [])
 
 
 def list_low_stock(**filters):
+    """Return items whose current quantity is at or below their threshold."""
     params = {key: value for key, value in filters.items() if value}
     return _request("GET", "/stock/low", params=params).get("low_stock", [])
 
 
 def get_stock(stock_id):
+    """Fetch one stock item, raising NotFound when it is absent."""
     return _request("GET", "/stock/{}".format(stock_id))
 
 
 def create_stock(payload):
+    """Create a stock item through the database microservice."""
     return _request("POST", "/stock", json=payload)
 
 
 def update_stock(stock_id, payload):
+    """Apply a partial update to an existing stock item."""
     return _request("PUT", "/stock/{}".format(stock_id), json=payload)
 
 
 def delete_stock(stock_id):
+    """Remove a stock item through the database microservice."""
     return _request("DELETE", "/stock/{}".format(stock_id))
 
 
 def health():
+    """Retrieve the database service health report."""
     return _request("GET", "/health")

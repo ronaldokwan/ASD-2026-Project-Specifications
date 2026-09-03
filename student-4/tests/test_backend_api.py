@@ -6,6 +6,7 @@ from app import ai_agent, db_client
 from app.validation import ValidationError, clean_stock
 
 
+# Health responses identify the Student 4 feature and surface dependency state.
 def test_health_reports_the_feature(backend, fake_db, monkeypatch):
     monkeypatch.setattr(ai_agent, "ai_mode_health", lambda: {"status": "ok"})
     body = backend.get("/health").get_json()
@@ -14,6 +15,7 @@ def test_health_reports_the_feature(backend, fake_db, monkeypatch):
     assert body["status"] == "ok"
 
 
+# Read routes provide both the complete inventory and the low-stock subset.
 def test_list_stock_and_low_stock(backend, fake_db):
     stock = backend.get("/api/stock").get_json()
     low = backend.get("/api/stock/low").get_json()
@@ -23,10 +25,12 @@ def test_list_stock_and_low_stock(backend, fake_db):
     assert low["low_stock"][0]["stock_level"] == "low"
 
 
+# Missing ids must be represented as HTTP 404 rather than an internal error.
 def test_get_missing_stock_returns_404(backend, fake_db):
     assert backend.get("/api/stock/404").status_code == 404
 
 
+# Create requests are normalised before passing to the database service.
 def test_create_stock_normalises_values(backend, fake_db):
     response = backend.post("/api/stock", json={
         "sku": " sku-new-1 ", "name": "New Widget", "category": "Audio",
@@ -38,6 +42,7 @@ def test_create_stock_normalises_values(backend, fake_db):
     assert response.get_json()["quantity"] == 12
 
 
+# Invalid payloads should return useful API validation details to the frontend.
 @pytest.mark.parametrize("payload, expected_error", [
     ({"name": "No SKU"}, "sku is required"),
     ({"sku": "SKU-1", "name": "Name", "category": "Audio", "location": "A1", "quantity": "x", "restock_threshold": 5}, "quantity must be an integer"),
@@ -49,6 +54,7 @@ def test_create_rejects_invalid_stock(backend, fake_db, payload, expected_error)
     assert any(expected_error in detail for detail in response.get_json()["details"])
 
 
+# Updates preserve the REST contract and deletes make records unavailable.
 def test_partial_update_and_delete(backend, fake_db):
     updated = backend.put("/api/stock/1", json={"quantity": 50}).get_json()
     assert updated["quantity"] == 50
@@ -56,6 +62,7 @@ def test_partial_update_and_delete(backend, fake_db):
     assert backend.get("/api/stock/1").status_code == 404
 
 
+# The AI endpoint returns the agent workflow trace for the interface to display.
 def test_restock_recommendation_returns_trace(backend, fake_db, monkeypatch):
     monkeypatch.setattr(ai_agent, "recommend_restocking", lambda category: {
         "ok": True, "result": {"recommendations": []}, "trace": [{"step": "Plan"}],
@@ -65,10 +72,12 @@ def test_restock_recommendation_returns_trace(backend, fake_db, monkeypatch):
     assert body["trace"][0]["step"] == "Plan"
 
 
+# A recommendation cannot be grounded without a category.
 def test_recommendation_requires_category(backend, fake_db):
     assert backend.post("/api/stock/recommend", json={}).status_code == 400
 
 
+# A partial update must change at least one recognised field.
 def test_clean_stock_partial_requires_a_field():
     with pytest.raises(ValidationError):
         clean_stock({}, partial=True)

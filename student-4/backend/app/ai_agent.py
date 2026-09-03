@@ -158,6 +158,7 @@ def recommend_restocking(category):
 
 
 def ai_mode_health():
+    """Check AI-Mode without allowing its failure to break backend health checks."""
     try:
         response = requests.get("{}/health".format(Config.AI_MODE_URL), timeout=5)
         return response.json()

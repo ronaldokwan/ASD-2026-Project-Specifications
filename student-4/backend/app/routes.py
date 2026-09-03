@@ -25,6 +25,7 @@ api = Blueprint("api", __name__)
 # --------------------------------------------------------------------- meta
 @api.get("/health")
 def health():
+    """Report this service's health and its database and AI dependencies."""
     try:
         database = db_client.health()
         database_ok = True
@@ -45,6 +46,7 @@ def health():
 
 @api.get("/api/stock")
 def list_stock():
+    """List stock records and pass permitted query filters downstream."""
     stock = db_client.list_stock(
         sku=request.args.get("sku"),
         category=request.args.get("category"),
@@ -64,23 +66,27 @@ def list_low_stock():
 
 @api.get("/api/stock/<int:stock_id>")
 def get_stock(stock_id):
+    """Return one stock record by its internal identifier."""
     return jsonify(db_client.get_stock(stock_id))
 
 
 @api.post("/api/stock")
 def create_stock():
+    """Validate a complete stock payload and create the record."""
     payload = clean_stock(request.get_json(silent=True) or {})
     return jsonify(db_client.create_stock(payload)), 201
 
 
 @api.put("/api/stock/<int:stock_id>")
 def update_stock(stock_id):
+    """Validate only supplied fields and update the matching record."""
     payload = clean_stock(request.get_json(silent=True) or {}, partial=True)
     return jsonify(db_client.update_stock(stock_id, payload))
 
 
 @api.delete("/api/stock/<int:stock_id>")
 def delete_stock(stock_id):
+    """Delete a stock record and return its identifier for client updates."""
     db_client.delete_stock(stock_id)
     return jsonify({"deleted": stock_id})
 
@@ -105,26 +111,31 @@ def recommend_restocking():
 # ----------------------------------------------------------- error handlers
 @api.app_errorhandler(ValidationError)
 def handle_validation_error(exc):
+    """Return business-rule failures in a consistent JSON shape."""
     return jsonify({"error": "validation failed", "details": exc.errors}), 400
 
 
 @api.app_errorhandler(db_client.NotFound)
 def handle_not_found(exc):
+    """Map missing database records to HTTP 404."""
     return jsonify({"error": str(exc)}), 404
 
 
 @api.app_errorhandler(db_client.Conflict)
 def handle_conflict(exc):
+    """Map duplicate SKU writes to HTTP 409."""
     return jsonify({"error": "sku already exists", "detail": str(exc)}), 409
 
 
 @api.app_errorhandler(db_client.DatabaseError)
 def handle_database_error(exc):
+    """Prevent database transport failures from becoming unhandled 500 errors."""
     return jsonify({"error": "database microservice unavailable", "detail": str(exc)}), 503
 
 
 @api.app_errorhandler(ai_agent.AIServiceError)
 def handle_ai_error(exc):
+    """Report a shared AI-Mode outage to API consumers."""
     return jsonify({"error": "AI-Mode service unavailable", "detail": str(exc)}), 503
 
 

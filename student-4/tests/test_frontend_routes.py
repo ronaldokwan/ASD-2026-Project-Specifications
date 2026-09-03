@@ -7,6 +7,7 @@ HTML and the HTMX wiring rather than the API itself.
 import api_client
 
 
+# The page shell includes the stock dashboard, shared theme, form, and AI region.
 def test_index_renders_inventory_dashboard(frontend, fake_api):
     html = frontend.get("/").get_data(as_text=True)
     assert "Stock Inventory" in html
@@ -16,12 +17,14 @@ def test_index_renders_inventory_dashboard(frontend, fake_api):
     assert 'id="ai-panel"' in html
 
 
+# HTMX table refreshes return fragments rather than a complete HTML document.
 def test_stock_partial_is_a_fragment(frontend, fake_api):
     html = frontend.get("/partials/products?category=Audio").get_data(as_text=True)
     assert "<html" not in html
     assert 'id="product-table"' in html
 
 
+# Successful writes update the alert, table, and form without a full page reload.
 def test_create_returns_alert_plus_out_of_band_swaps(frontend, fake_api):
     html = frontend.post("/stock", data={
         "sku": "SKU-NEW-1",
@@ -38,6 +41,7 @@ def test_create_returns_alert_plus_out_of_band_swaps(frontend, fake_api):
     assert 'hx-swap-oob="true"' in html
 
 
+# API validation details are returned in the form the user submitted.
 def test_validation_errors_are_shown_in_the_form(frontend, fake_api, monkeypatch):
     def boom(_payload):
         raise api_client.ApiError("validation failed", 400, ["quantity is required"])
@@ -55,6 +59,7 @@ def test_validation_errors_are_shown_in_the_form(frontend, fake_api, monkeypatch
     assert 'class="alert error"' in html
 
 
+# Selecting Edit fetches the item and configures the form for an update request.
 def test_edit_form_is_prefilled(frontend, fake_api):
     html = frontend.get("/partials/form/1").get_data(as_text=True)
     assert "Aurora Wireless Headphones" in html
@@ -63,17 +68,20 @@ def test_edit_form_is_prefilled(frontend, fake_api):
     assert "location" in html
 
 
+# Deleting through HTMX calls the stock API and returns a confirmation fragment.
 def test_delete_reports_success(frontend, fake_api):
     html = frontend.post("/stock/1/delete").get_data(as_text=True)
     assert fake_api["deleted"] == [1]
     assert "deleted" in html
 
 
+# AI restock advice requires a category to ground its recommendation.
 def test_ai_panel_requires_name_and_category(frontend, fake_api):
     html = frontend.post("/ai/recommend", data={"category": ""}).get_data(as_text=True)
     assert "Enter a category" in html
 
 
+# The UI renders AI recommendations and the Plan/Act/Observe/Adapt trace.
 def test_ai_panel_renders_restock_recommendation(frontend, fake_api, monkeypatch):
     monkeypatch.setattr(api_client, "generate_recommendation", lambda category: {
         "ok": True,
@@ -101,6 +109,7 @@ def test_ai_panel_renders_restock_recommendation(frontend, fake_api, monkeypatch
     assert "data-apply-ai" in html
 
 
+# A backend outage is visible to the user rather than breaking page rendering.
 def test_backend_outage_is_reported_on_the_page(frontend, monkeypatch):
     def boom(**_kwargs):
         raise api_client.ApiError("Inventory and Stock API is unreachable.", 503)

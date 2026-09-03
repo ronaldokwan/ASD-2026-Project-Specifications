@@ -39,11 +39,13 @@ if not os.path.isdir(SHARED_DIR):
 
 @app.get("/shared/<path:filename>")
 def shared_asset(filename):
+    """Serve the shared read-only assets when the app runs outside Docker."""
     return send_from_directory(SHARED_DIR, filename)
 
 
 # ------------------------------------------------------------------- helpers
 def _filters():
+    """Read and normalise the query parameters accepted by the stock table."""
     return {
         "search": request.args.get("search", "").strip(),
         "category": request.args.get("category", "").strip(),
@@ -53,6 +55,7 @@ def _filters():
 
 
 def _categories():
+    """Build an ordered, de-duplicated category list for form and filter controls."""
     try:
         categories = []
         for row in api_client.list_stock():
@@ -65,6 +68,7 @@ def _categories():
 
 
 def _form_payload(form):
+    """Convert browser form data into the stock API's JSON field names."""
     return {
         "sku": form.get("sku", "").strip(),
         "name": form.get("name", "").strip(),
@@ -77,6 +81,7 @@ def _form_payload(form):
 
 
 def _alert(message, level="ok"):
+    """Render a reusable HTMX feedback banner."""
     return render_template("partials/alert.html", message=message, level=level)
 
 
@@ -92,6 +97,7 @@ def _table(oob=False):
 # --------------------------------------------------------------------- pages
 @app.get("/")
 def index():
+    """Render the full inventory page, including any initial backend error."""
     filters = _filters()
     error = None
     stock = []
@@ -114,6 +120,7 @@ def index():
 
 @app.get("/partials/products")
 def partial_products():
+    """Return only the filtered table fragment for an HTMX swap."""
     try:
         return _table()
     except ApiError as exc:
@@ -122,6 +129,7 @@ def partial_products():
 
 @app.get("/partials/form")
 def partial_new_form():
+    """Return an empty stock form when editing is cancelled."""
     return render_template(
         "partials/product_form.html",
         product=None,
@@ -132,6 +140,7 @@ def partial_new_form():
 
 @app.get("/partials/form/<int:stock_id>")
 def partial_edit_form(stock_id):
+    """Fetch an item and render its values in the reusable stock form."""
     try:
         item = api_client.get_stock(stock_id)
     except ApiError as exc:
@@ -147,6 +156,7 @@ def partial_edit_form(stock_id):
 # ---------------------------------------------------------------------- CRUD
 @app.post("/stock")
 def create_stock():
+    """Create an item, then refresh the table and form with HTMX OOB swaps."""
     payload = _form_payload(request.form)
     try:
         item = api_client.create_stock(payload)
@@ -162,6 +172,7 @@ def create_stock():
 
 @app.post("/stock/<int:stock_id>")
 def update_stock(stock_id):
+    """Save an edited item, then refresh the table and reset the form."""
     payload = _form_payload(request.form)
     try:
         item = api_client.update_stock(stock_id, payload)
@@ -187,6 +198,7 @@ def update_product(product_id):
 
 @app.post("/stock/<int:stock_id>/delete")
 def delete_stock(stock_id):
+    """Delete an item and return the updated stock table fragment."""
     try:
         api_client.delete_stock(stock_id)
     except ApiError as exc:
@@ -200,6 +212,7 @@ def delete_product(product_id):
 
 
 def _validation_response(exc, payload, stock_id=None):
+    """Re-render the submitted form alongside validation details from the API."""
     """Re-render the form with the API's validation messages attached."""
     item = dict(payload)
     if stock_id:
@@ -216,6 +229,7 @@ def _validation_response(exc, payload, stock_id=None):
 
 
 def _blank_form_oob():
+    """Render a blank form marked for an out-of-band HTMX replacement."""
     return render_template(
         "partials/product_form.html",
         product=None,
@@ -257,6 +271,7 @@ def ai_suggest():
 # -------------------------------------------------------------------- health
 @app.get("/health")
 def health():
+    """Report frontend health and include the backend's health status."""
     downstream = api_client.backend_health()
     healthy = downstream.get("status") == "ok"
     return jsonify(

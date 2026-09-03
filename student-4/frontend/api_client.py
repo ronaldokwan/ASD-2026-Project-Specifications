@@ -25,6 +25,7 @@ class ApiError(Exception):
 
 
 def _call(method, path, timeout=None, **kwargs):
+    """Call the backend API and convert transport or JSON errors into ApiError."""
     url = "{}{}".format(BACKEND_URL, path)
     try:
         response = requests.request(method, url, timeout=timeout or TIMEOUT, **kwargs)
@@ -46,27 +47,33 @@ def _call(method, path, timeout=None, **kwargs):
 
 
 def list_stock(**filters):
+    """Fetch stock rows, dropping empty filters from the query string."""
     params = {key: value for key, value in filters.items() if value}
     return _call("GET", "/api/stock", params=params).get("stock", [])
 
 
 def get_stock(stock_id):
+    """Fetch one stock item for the edit form."""
     return _call("GET", "/api/stock/{}".format(stock_id))
 
 
 def create_stock(payload):
+    """Submit a new stock item to the backend API."""
     return _call("POST", "/api/stock", json=payload)
 
 
 def update_stock(stock_id, payload):
+    """Submit changes made in the inventory edit form."""
     return _call("PUT", "/api/stock/{}".format(stock_id), json=payload)
 
 
 def delete_stock(stock_id):
+    """Request deletion of a stock item."""
     return _call("DELETE", "/api/stock/{}".format(stock_id))
 
 
 def list_categories():
+    """Derive category choices from stock records because no categories endpoint exists."""
     try:
         return _call("GET", "/api/stock").get("stock", [])
     except ApiError:
@@ -74,6 +81,7 @@ def list_categories():
 
 
 def generate_recommendation(category):
+    """Request AI-Mode's grounded restock advice through the backend API."""
     return _call(
         "POST",
         "/api/stock/recommend",
@@ -83,6 +91,7 @@ def generate_recommendation(category):
 
 
 def backend_health():
+    """Return backend health data without raising when the service is unavailable."""
     try:
         return _call("GET", "/health")
     except ApiError as exc:
