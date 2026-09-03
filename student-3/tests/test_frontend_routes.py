@@ -19,6 +19,7 @@ def test_index_renders_customers_and_shared_design(frontend, fake_api):
     assert "Add a customer" in html
     assert "Actions" in html
     assert 'aria-label="Suggest reward for Avery Brooks"' in html
+    assert ">#1<" not in html
 
 
 def test_search_partial(frontend, fake_api, monkeypatch):
@@ -43,6 +44,7 @@ def test_customer_detail(frontend, fake_api):
     html = frontend.get("/customers/1").get_data(as_text=True)
     assert "avery@example.test" in html
     assert "Sydney NSW" in html
+    assert "Customer ID" not in html
 
 
 def test_create_returns_oob_updates(frontend, fake_api):
@@ -57,6 +59,8 @@ def test_edit_form_and_update(frontend, fake_api):
     assert "Edit customer" in form
     assert "Save changes" in form
     assert "Cancel editing" in form
+    assert "Editing selected customer." in form
+    assert "Editing customer #1" not in form
     assert 'hx-post="/customers/1"' in form
     updated = frontend.post("/customers/1", data=form_data(name="Updated Customer"))
     assert "Updated Customer" in updated.get_data(as_text=True)
@@ -65,7 +69,8 @@ def test_edit_form_and_update(frontend, fake_api):
 def test_delete_action(frontend, fake_api):
     html = frontend.post("/customers/1/delete").get_data(as_text=True)
     assert fake_api["deleted"] == [1]
-    assert "deleted" in html
+    assert "Customer deleted." in html
+    assert "Customer #1" not in html
 
 
 def test_validation_error_is_safely_rendered(frontend, fake_api, monkeypatch):

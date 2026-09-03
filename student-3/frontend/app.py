@@ -141,7 +141,7 @@ def delete_customer(customer_id):
         api_client.delete_customer(customer_id)
     except ApiError as exc:
         return _alert(exc.message, "error"), exc.status
-    return _alert("Customer #{} deleted.".format(customer_id)) + _table(oob=True)
+    return _alert("Customer deleted.") + _table(oob=True)
 
 
 @app.post("/customers/<int:customer_id>/ai-reward")

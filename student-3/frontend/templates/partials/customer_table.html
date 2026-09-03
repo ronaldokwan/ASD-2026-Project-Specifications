@@ -14,7 +14,7 @@
         <tbody>
         {% for customer in customers %}
           <tr>
-            <td class="customer-name" data-label="Name"><strong>{{ customer.name }}</strong><div class="muted">#{{ customer.id }}</div></td>
+            <td class="customer-name" data-label="Name"><strong>{{ customer.name }}</strong></td>
             <td class="customer-email" data-label="Email">{{ customer.email }}</td>
             <td data-label="Tier"><span class="badge {{ customer.loyalty_tier|lower }}">{{ customer.loyalty_tier }}</span></td>
             <td class="customer-date" data-label="Joined">{{ customer.joined_at }}</td>
