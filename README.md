@@ -17,7 +17,7 @@ Docker, and delivered incrementally across Releases 0, 1 and 2.
 | --- | ----------------------------------- | ------------------------------------ | --------------- |
 | 1   | Ronaldo Kwan                        | Product Catalogue                    | **Implemented** |
 | 2   | Jinying Li                          | Customer Orders                      | Skeleton only   |
-| 3   | Vishvak Ananthakrishnan Rameshkumar | Customer Account & Access Management | Skeleton only   |
+| 3   | Vishvak Ananthakrishnan Rameshkumar | Customer Account Management          | **Implemented** |
 | 4   | Jonathan Czesler                    | Inventory and Stock                  | Skeleton only   |
 | 5   | Alexander McGuinn                   | Reviews and Ratings                  | Skeleton only   |
 
@@ -46,7 +46,7 @@ Each student owns **three microservices** (frontend, backend/API, database) plus
 | -------------------------- | ---------------------- | --------- |
 | Unified home page          | http://localhost:3000  | Team      |
 | Ollama runtime             | http://localhost:11434 | Team      |
-| AI-Mode service            | http://localhost:7000  | Team      |
+| AI-Mode service            | http://localhost:7001  | Team      |
 | Product Catalogue frontend | http://localhost:3001  | Student 1 |
 | Product Catalogue API      | http://localhost:8001  | Student 1 |
 | Product Catalogue database | http://localhost:9001  | Student 1 |
