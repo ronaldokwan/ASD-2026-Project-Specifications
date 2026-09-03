@@ -82,6 +82,13 @@ jobs:
             sleep 2
           done
           echo "database microservice did not become healthy"; exit 1
+      - name: Wait for the backend api
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:8004/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "backend microservice did not become healthy"; exit 1
       - name: Smoke test the CRUD path through the API
         run: |
           set -e
