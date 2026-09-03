@@ -27,12 +27,12 @@ class BackendClientTests {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        backendClient = new BackendClient(builder, "http://student2-api:5202");
+        backendClient = new BackendClient(builder, "http://student2-api:8002");
     }
 
     @Test
     void exposesTheBackendBusinessMessageForTheOrderForm() {
-        server.expect(once(), requestTo("http://student2-api:5202/api/orders"))
+        server.expect(once(), requestTo("http://student2-api:8002/api/orders"))
             .andRespond(withStatus(HttpStatus.CONFLICT).body("""
                 {
                   "timestamp": "2026-09-03T00:00:00Z",

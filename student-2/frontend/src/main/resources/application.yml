@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:5201}
+  port: ${SERVER_PORT:3002}
 
 spring:
   application:
@@ -8,7 +8,7 @@ spring:
     cache: false
 
 services:
-  backend-url: ${BACKEND_URL:http://localhost:5202}
+  backend-url: ${BACKEND_URL:http://localhost:8002}
 
 management:
   endpoints:

@@ -11,5 +11,5 @@ FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=build /workspace/frontend/target/frontend-*.jar app.jar
-EXPOSE 5201
+EXPOSE 3002
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

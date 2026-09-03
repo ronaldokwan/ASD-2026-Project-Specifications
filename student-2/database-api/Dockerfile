@@ -11,5 +11,5 @@ FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=build /workspace/database-api/target/database-api-*.jar app.jar
-EXPOSE 5203
+EXPOSE 9002
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

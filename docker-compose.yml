@@ -139,7 +139,7 @@ services:
     restart: unless-stopped
 
   # =================== STUDENT 2 - Jinying Li ==============================
-  # Feature: Customer Orders. Ports 5201 / 5202 / 5203.
+  # Feature: Customer Orders. Ports 3002 / 8002 / 9002.
 
   student2-db:
     build:
@@ -147,16 +147,16 @@ services:
       dockerfile: database-api/Dockerfile
     container_name: asd-student2-db
     environment:
-      SERVER_PORT: "5203"
+      SERVER_PORT: "9002"
       DATABASE_URL: jdbc:sqlite:/data/orders.db
     ports:
-      - "5203:5203"
+      - "9002:9002"
     volumes:
       - student2-orders-data:/data
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5203/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:9002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -168,21 +168,21 @@ services:
       dockerfile: backend/Dockerfile
     container_name: asd-student2-api
     environment:
-      SERVER_PORT: "5202"
-      DATABASE_API_URL: http://student2-db:5203
+      SERVER_PORT: "8002"
+      DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: http://student-1-backend:8001
       STOCK_API_URL: http://student-4-backend:8004
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
     ports:
-      - "5202:5202"
+      - "8002:8002"
     depends_on:
       student2-db:
         condition: service_healthy
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5202/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -194,17 +194,17 @@ services:
       dockerfile: frontend/Dockerfile
     container_name: asd-student2-frontend
     environment:
-      SERVER_PORT: "5201"
-      BACKEND_URL: http://student2-api:5202
+      SERVER_PORT: "3002"
+      BACKEND_URL: http://student2-api:8002
     ports:
-      - "5201:5201"
+      - "3002:3002"
     depends_on:
       student2-api:
         condition: service_healthy
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:5201/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:3002/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 20

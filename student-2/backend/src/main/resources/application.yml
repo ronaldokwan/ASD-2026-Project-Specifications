@@ -1,12 +1,12 @@
 server:
-  port: ${SERVER_PORT:5202}
+  port: ${SERVER_PORT:8002}
 
 spring:
   application:
     name: student2-backend
 
 services:
-  database-api-url: ${DATABASE_API_URL:http://localhost:5203}
+  database-api-url: ${DATABASE_API_URL:http://localhost:9002}
   product-api-url: ${PRODUCT_API_URL:http://localhost:8001}
   stock-api-url: ${STOCK_API_URL:http://localhost:8004}
   ollama-url: ${OLLAMA_URL:http://localhost:11434}
