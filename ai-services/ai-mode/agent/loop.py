@@ -34,8 +34,6 @@ class AgentRequest:
     context: dict = field(default_factory=dict)  # grounding facts from the DB
     output_schema: dict = field(default_factory=dict)
     fallback: dict = field(default_factory=dict)  # deterministic safety net
-    # "chat" (default, Release 0 behaviour) | "mcp_validation" | "rag_validation"
-    mode: str = "chat"
 
     @classmethod
     def from_json(cls, payload):
@@ -56,7 +54,6 @@ class AgentRequest:
             context=payload.get("context") or {},
             output_schema=payload["output_schema"],
             fallback=payload.get("fallback") or {},
-            mode=payload.get("mode", "chat"),
         )
 
 
@@ -165,7 +162,6 @@ class AgenticLoop:
                 )
                 return {
                     "ok": True,
-                    "mode": request.mode,
                     "result": result,
                     "attempts": attempt,
                     "fallback_used": False,
@@ -201,7 +197,6 @@ class AgenticLoop:
         )
         return {
             "ok": bool(request.fallback),
-            "mode": request.mode,
             "result": request.fallback,
             "attempts": self.max_attempts,
             "fallback_used": True,

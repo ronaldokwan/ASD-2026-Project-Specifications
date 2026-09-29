@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "asd-group40-shared": {
-      "command": "python",
-      "args": ["server.py"]
-    }
-  }
-}

@@ -8,14 +8,6 @@ echo "== Shared AI-Mode (agentic loop) =="
 python -m pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
 
 echo
-echo "== Shared MCP server =="
-python -m pytest ai-services/mcp-server/tests -v --junitxml=reports/mcp-server-tests.xml
-
-echo
-echo "== Shared RAG server =="
-python -m pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
-
-echo
 echo "== Student 1 - Product Catalogue =="
 python -m pytest student-1/tests -v --junitxml=reports/student-1-tests.xml
 

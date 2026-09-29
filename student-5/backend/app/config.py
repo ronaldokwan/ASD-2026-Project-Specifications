@@ -24,17 +24,9 @@ class Config:
     CATALOGUE_TIMEOUT = int(os.getenv("CATALOGUE_TIMEOUT", "5"))
 
     # Shared AI-Mode service (Plan -> Act -> Observe -> Adapt over Ollama).
-    AI_MODE_URL = os.getenv("AI_MODE_URL", "http://host.docker.internal:7001").rstrip("/")
+    AI_MODE_URL = os.getenv("AI_MODE_URL", "http://ai-mode:7000").rstrip("/")
     AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
     LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:0.5b")
-
-    # Release 1: shared MCP server (moderation tool) and shared RAG server
-    # (grounded Q&A over review text). Neither is containerised - see
-    # ai-services/README.md and scripts/run-ai-services.sh.
-    MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://host.docker.internal:7002").rstrip("/")
-    RAG_SERVER_URL = os.getenv("RAG_SERVER_URL", "http://host.docker.internal:7003").rstrip("/")
-    MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
-    RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
 
     PORT = int(os.getenv("SERVICE_PORT", "8005"))
 

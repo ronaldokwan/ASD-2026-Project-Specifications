@@ -16,12 +16,7 @@ sys.path.insert(0, SERVICE_ROOT)
 
 from agent.loop import AgenticLoop, AgentRequest  # noqa: E402
 from agent.ollama_client import OllamaError  # noqa: E402
-from agent.validators import (  # noqa: E402
-    MCP_VALIDATION_SCHEMA,
-    RAG_VALIDATION_SCHEMA,
-    parse_json,
-    validate,
-)
+from agent.validators import parse_json, validate  # noqa: E402
 
 
 class StubClient:
@@ -133,48 +128,3 @@ def test_request_requires_task_and_schema():
         AgentRequest.from_json({"output_schema": SCHEMA})
     with pytest.raises(ValueError):
         AgentRequest.from_json({"task": "do something"})
-
-
-def test_request_mode_defaults_to_chat():
-    assert make_request().mode == "chat"
-    assert make_request(mode="rag_validation").mode == "rag_validation"
-
-
-# --------------------------------------------------------- validation modes
-def make_validation_request(mode, schema, fallback, context):
-    return AgentRequest(
-        goal="{}_validation".format(mode),
-        task="Check the subject below.",
-        context=context,
-        output_schema=schema,
-        fallback=fallback,
-        mode="{}_validation".format(mode),
-    )
-
-
-def test_mcp_validation_mode_runs_through_the_same_loop():
-    client = StubClient(['{"valid": "true", "notes": "matches the request.", "confidence": "high"}'])
-    request = make_validation_request(
-        "mcp", MCP_VALIDATION_SCHEMA,
-        {"valid": "true", "notes": "unchecked", "confidence": "low"},
-        {"tool_name": "check_review_quality", "arguments": {}, "result": {"flagged": False}},
-    )
-    outcome = AgenticLoop(client=client, max_attempts=2).run(request)
-
-    assert outcome["ok"] is True
-    assert outcome["mode"] == "mcp_validation"
-    assert outcome["result"]["valid"] == "true"
-
-
-def test_rag_validation_mode_falls_back_when_the_model_is_unreachable():
-    client = StubClient([OllamaError("connection refused")])
-    request = make_validation_request(
-        "rag", RAG_VALIDATION_SCHEMA,
-        {"grounded": "true", "unsupported_claims": "none", "confidence_ok": "true", "notes": "unchecked"},
-        {"query": "Is the battery good?", "answer": "Reviewers like the battery life.", "sources": []},
-    )
-    outcome = AgenticLoop(client=client, max_attempts=2).run(request)
-
-    assert outcome["fallback_used"] is True
-    assert outcome["mode"] == "rag_validation"
-    assert outcome["result"]["grounded"] == "true"

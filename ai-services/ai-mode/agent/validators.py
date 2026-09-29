@@ -8,29 +8,6 @@ Adapt step can re-prompt with specific, actionable corrections.
 import json
 import re
 
-# Canned Observe schemas for the two Release 1 validation modes (see
-# app.py: POST /agent/validate). Both ask the model to check somebody else's
-# already-produced output (an MCP tool result, or a RAG answer + citations)
-# rather than to generate anything new.
-MCP_VALIDATION_SCHEMA = {
-    "valid": {"type": "enum", "values": ["true", "false"]},
-    "notes": {
-        "type": "string", "min_words": 1, "max_words": 60,
-        "hint": "why the tool result does or doesn't look right",
-    },
-    "confidence": {"type": "enum", "values": ["high", "medium", "low"]},
-}
-
-RAG_VALIDATION_SCHEMA = {
-    "grounded": {"type": "enum", "values": ["true", "false"]},
-    "unsupported_claims": {
-        "type": "string", "min_words": 1, "max_words": 60,
-        "hint": "claims the answer makes that the sources do not support, or 'none'",
-    },
-    "confidence_ok": {"type": "enum", "values": ["true", "false"]},
-    "notes": {"type": "string", "min_words": 1, "max_words": 60},
-}
-
 
 def parse_json(raw):
     """Best-effort JSON parse of an LLM response.

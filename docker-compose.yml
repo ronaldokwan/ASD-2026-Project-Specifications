@@ -4,25 +4,11 @@
 
 name: asd2026-group40
 
-# Release 1: AI-Mode, the shared MCP server and the shared RAG server all run
-# as native host processes (see scripts/run-ai-services.sh) - they are
-# explicitly NOT containerised. Only Ollama stays in this Compose file, since
-# it isn't named alongside them in the brief and every teammate already has
-# it here for the model-pull automation below. Containers reach all three
-# host-native services through the Docker-provided host.docker.internal
-# alias (extra_hosts on each backend makes this resolve on Linux CI runners
-# too, not just Docker Desktop).
 x-ai-env: &ai-env
   OLLAMA_URL: http://ollama:11434
   LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
   LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
-  AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
-  MCP_SERVER_URL: ${MCP_SERVER_URL:-http://host.docker.internal:7002}
-  RAG_SERVER_URL: ${RAG_SERVER_URL:-http://host.docker.internal:7003}
-
-x-extra-hosts: &host-gateway
-  extra_hosts:
-    - "host.docker.internal:host-gateway"
+  AI_MODE_URL: http://ai-mode:7000
 
 services:
 
@@ -70,9 +56,25 @@ services:
     networks: [asd-net]
     restart: "no"
 
-  # AI-Mode, the shared MCP server and the shared RAG server are NOT run by
-  # Compose in Release 1 - start them natively with
-  # `bash scripts/run-ai-services.sh` (they need Ollama, above, already up).
+  ai-mode:
+    build: ./ai-services/ai-mode
+    container_name: asd-ai-mode
+    environment:
+      <<: *ai-env
+      AI_MODE_MAX_ADAPT_ATTEMPTS: ${AI_MODE_MAX_ADAPT_ATTEMPTS:-2}
+    ports:
+      - "7001:7000"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks: [asd-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:7000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # =================== STUDENT 1 - Ronaldo Kwan ============================
   # Feature: Product Catalogue
@@ -373,10 +375,11 @@ services:
       SERVICE_PORT: "8005"
     ports:
       - "8005:8005"
-    <<: *host-gateway
     depends_on:
       student-5-db:
         condition: service_healthy
+      ai-mode:
+        condition: service_started
       student-1-backend:
         condition: service_started
     networks: [asd-net]

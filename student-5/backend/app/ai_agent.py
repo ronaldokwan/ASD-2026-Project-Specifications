@@ -129,21 +129,7 @@ def summarise_reviews(product_sku, product_name=None):
         "fallback": fallback,
     }
 
-    outcome = _call_ai_mode("/agent/run", payload)
-
-    # If AI-Mode itself failed, still hand the UI something usable.
-    if not outcome.get("result"):
-        outcome["result"] = fallback
-        outcome["fallback_used"] = True
-
-    outcome["grounding"] = context
-    return outcome
-
-
-# ------------------------------------------------------- Release 1: MCP/RAG
-def _call_ai_mode(path, payload):
-    """POST to AI-Mode and return its JSON body, or raise AIServiceError."""
-    url = "{}{}".format(Config.AI_MODE_URL, path)
+    url = "{}/agent/run".format(Config.AI_MODE_URL)
     try:
         response = requests.post(url, json=payload, timeout=Config.AI_TIMEOUT)
     except requests.RequestException as exc:
@@ -153,47 +139,17 @@ def _call_ai_mode(path, payload):
         raise AIServiceError("AI-Mode returned {} with no body".format(response.status_code))
 
     try:
-        return response.json()
+        outcome = response.json()
     except ValueError as exc:
         raise AIServiceError("AI-Mode returned a non-JSON response") from exc
 
+    # If AI-Mode itself failed, still hand the UI something usable.
+    if not outcome.get("result"):
+        outcome["result"] = fallback
+        outcome["fallback_used"] = True
 
-def validate_mcp_result(tool_name, arguments, result):
-    """Ask AI-Mode's MCP validation mode to double-check a tool result.
-
-    Never raises: if AI-Mode is unreachable, the caller still has the raw
-    tool result to show - this is a second opinion, not the primary answer.
-    """
-    try:
-        return _call_ai_mode("/agent/validate", {
-            "mode": "mcp",
-            "subject": {"tool_name": tool_name, "arguments": arguments, "result": result},
-        })
-    except AIServiceError as exc:
-        return {
-            "ok": False, "fallback_used": True,
-            "result": {"valid": "true", "notes": "AI-Mode unreachable: {}".format(exc), "confidence": "low"},
-        }
-
-
-def validate_rag_answer(query, answer, sources, claimed_confidence):
-    """Ask AI-Mode's RAG validation mode to double-check a grounded answer."""
-    try:
-        return _call_ai_mode("/agent/validate", {
-            "mode": "rag",
-            "subject": {
-                "query": query, "answer": answer, "sources": sources,
-                "claimed_confidence": claimed_confidence,
-            },
-        })
-    except AIServiceError as exc:
-        return {
-            "ok": False, "fallback_used": True,
-            "result": {
-                "grounded": "true", "unsupported_claims": "none", "confidence_ok": "true",
-                "notes": "AI-Mode unreachable: {}".format(exc),
-            },
-        }
+    outcome["grounding"] = context
+    return outcome
 
 
 def ai_mode_health():

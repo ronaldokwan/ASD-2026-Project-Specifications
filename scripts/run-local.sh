@@ -15,8 +15,5 @@ echo "Integrated application:"
 echo "  home page          http://localhost:3000"
 echo "  product catalogue  http://localhost:3001   (Student 1 - Ronaldo Kwan)"
 echo "  catalogue API      http://localhost:8001/api/products"
-echo
-echo "AI-Mode, the shared MCP server and the shared RAG server are not part of"
-echo "this stack (Release 1: they run natively) - start them separately with:"
-echo "  bash scripts/run-ai-services.sh"
+echo "  AI-Mode health     http://localhost:7000/health"
 docker compose ps
