@@ -13,6 +13,7 @@ HTTP front door student backends call over the network). See
 """
 
 import re
+from datetime import date
 
 _URL_PATTERN = re.compile(r"https?://|www\.", re.IGNORECASE)
 _SPAM_PHRASES = (
@@ -21,6 +22,7 @@ _SPAM_PHRASES = (
 )
 _POSITIVE_WORDS = ("great", "excellent", "love", "amazing", "perfect", "fantastic")
 _NEGATIVE_WORDS = ("terrible", "awful", "worst", "broken", "useless", "horrible")
+_LOYALTY_TIERS = ("Bronze", "Silver", "Gold")
 
 
 def check_review_quality(review_text, rating, existing_review_count=0, average_rating=None):
@@ -87,4 +89,71 @@ def check_review_quality(review_text, rating, existing_review_count=0, average_r
         "spam_score": spam_score,
         "duplicate_risk": duplicate_risk,
         "word_count": word_count,
+    }
+
+
+def check_customer_profile(
+    loyalty_tier, joined_at, has_phone, has_address, as_of_date
+):
+    """Validate a privacy-minimised Customer Account profile.
+
+    ``as_of_date`` is supplied by the caller so membership duration is
+    deterministic and can be audited. No customer name, email, phone value or
+    address value is accepted by this tool.
+    """
+    errors = []
+    warnings = []
+
+    tier_valid = loyalty_tier in _LOYALTY_TIERS
+    if not tier_valid:
+        errors.append(
+            "loyalty_tier must be one of {}".format(", ".join(_LOYALTY_TIERS))
+        )
+
+    joined_date = None
+    try:
+        joined_date = date.fromisoformat(str(joined_at))
+    except (TypeError, ValueError):
+        errors.append("joined_at must be an ISO date in YYYY-MM-DD format")
+
+    reference_date = None
+    try:
+        reference_date = date.fromisoformat(str(as_of_date))
+    except (TypeError, ValueError):
+        errors.append("as_of_date must be an ISO date in YYYY-MM-DD format")
+
+    membership_days = None
+    if joined_date is not None and reference_date is not None:
+        if joined_date > reference_date:
+            errors.append("joined_at cannot be in the future")
+        else:
+            membership_days = (reference_date - joined_date).days
+
+    missing_optional_fields = []
+    if not has_phone:
+        missing_optional_fields.append("phone")
+    if not has_address:
+        missing_optional_fields.append("address")
+    if missing_optional_fields:
+        warnings.append(
+            "Optional profile fields are missing: {}.".format(
+                ", ".join(missing_optional_fields)
+            )
+        )
+
+    if errors:
+        profile_status = "invalid"
+    elif missing_optional_fields:
+        profile_status = "incomplete"
+    else:
+        profile_status = "complete"
+
+    return {
+        "tool": "check_customer_profile",
+        "tier_valid": tier_valid,
+        "membership_days": membership_days,
+        "profile_status": profile_status,
+        "missing_optional_fields": missing_optional_fields,
+        "warnings": warnings,
+        "errors": errors,
     }
