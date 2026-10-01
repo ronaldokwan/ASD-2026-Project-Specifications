@@ -1,0 +1,97 @@
+{
+  "summary": "23/23 checks passed",
+  "checks": [
+    {
+      "check": "MCP server is healthy",
+      "passed": true
+    },
+    {
+      "check": "check_product_listing is registered",
+      "passed": true
+    },
+    {
+      "check": "tool returns a structured result",
+      "passed": true
+    },
+    {
+      "check": "tool boundary rejects out-of-contract arguments",
+      "passed": true
+    },
+    {
+      "check": "RAG server is healthy",
+      "passed": true
+    },
+    {
+      "check": "RAG direct: 'What price range is allowed for a catalogue product?' -> ok",
+      "passed": true
+    },
+    {
+      "check": "RAG direct: 'Who won the 2022 football world cup final?' -> insufficient_context",
+      "passed": true
+    },
+    {
+      "check": "backend reaches the database, AI-Mode, MCP and RAG",
+      "passed": true
+    },
+    {
+      "check": "catalogue products indexed into the shared RAG corpus",
+      "passed": true
+    },
+    {
+      "check": "backend MCP check returns the tool result",
+      "passed": true
+    },
+    {
+      "check": "backend RAG grounded answer: 'Which headphones have active noise cancelling?'",
+      "passed": true
+    },
+    {
+      "check": "backend RAG grounded answer: 'What price range is allowed for a catalogue product?'",
+      "passed": true
+    },
+    {
+      "check": "backend RAG insufficient-context response",
+      "passed": true
+    },
+    {
+      "check": "agentic loop MCP validation mode",
+      "passed": true
+    },
+    {
+      "check": "agentic loop RAG validation mode: 'Which headphones have active noise cancelling?'",
+      "passed": true
+    },
+    {
+      "check": "agentic loop RAG validation mode: 'What price range is allowed for a catalogue product?'",
+      "passed": true
+    },
+    {
+      "check": "catalogue page shows the MCP and RAG panels",
+      "passed": true
+    },
+    {
+      "check": "frontend renders the MCP tool result",
+      "passed": true
+    },
+    {
+      "check": "frontend renders a grounded answer with citations and confidence",
+      "passed": true
+    },
+    {
+      "check": "frontend renders the insufficient-context state",
+      "passed": true
+    },
+    {
+      "check": "catalogue lists products",
+      "passed": true
+    },
+    {
+      "check": "CRUD create -> update -> delete",
+      "passed": true
+    },
+    {
+      "check": "AI-Mode copy suggestion (Plan -> Act -> Observe -> Adapt)",
+      "passed": true
+    }
+  ]
+}

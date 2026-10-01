@@ -155,6 +155,25 @@ def ai_reward(customer_id):
     )
 
 
+@app.post("/customers/<int:customer_id>/mcp-profile")
+def mcp_profile(customer_id):
+    try:
+        result = api_client.check_customer_profile(customer_id)
+    except ApiError as exc:
+        return render_template("partials/mcp_result.html", error=exc.message), exc.status
+    return render_template("partials/mcp_result.html", result=result)
+
+
+@app.post("/loyalty-benefits/ask")
+def ask_loyalty_benefits():
+    question = request.form.get("question", "").strip()
+    try:
+        result = api_client.ask_loyalty_benefits(question)
+    except ApiError as exc:
+        return render_template("partials/rag_result.html", error=exc.message), exc.status
+    return render_template("partials/rag_result.html", result=result)
+
+
 def _validation_response(exc, payload, customer_id=None):
     customer = dict(payload)
     if customer_id:

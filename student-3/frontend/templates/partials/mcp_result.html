@@ -1,0 +1,22 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% else %}
+  <div class="alert {{ 'error' if result.profile_status == 'invalid' else 'ok' }}">
+    Profile check {{ result.profile_status }}.
+  </div>
+  <dl class="result-list">
+    <dt>Profile status</dt><dd>{{ result.profile_status|title }}</dd>
+    <dt>Tier valid</dt><dd>{{ 'Yes' if result.tier_valid else 'No' }}</dd>
+    <dt>Membership duration</dt>
+    <dd>{{ result.membership_days ~ ' days' if result.membership_days is not none else 'Unavailable' }}</dd>
+    <dt>Missing optional fields</dt>
+    <dd>{{ result.missing_optional_fields|join(', ') if result.missing_optional_fields else 'None' }}</dd>
+  </dl>
+  {% if result.warnings %}
+    <div class="alert info"><strong>Warnings</strong><ul>{% for item in result.warnings %}<li>{{ item }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  {% if result.errors %}
+    <div class="alert error"><strong>Validation errors</strong><ul>{% for item in result.errors %}<li>{{ item }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <p class="muted">This result is not stored or automatically applied.</p>
+{% endif %}

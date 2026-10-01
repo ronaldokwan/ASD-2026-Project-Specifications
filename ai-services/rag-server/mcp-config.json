@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "asd-group40-shared-rag": {
+      "command": "python",
+      "args": ["server.py"]
+    }
+  }
+}

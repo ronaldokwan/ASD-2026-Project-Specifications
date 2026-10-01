@@ -19,7 +19,7 @@
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
-    if (["customer-detail", "ai-panel", "customer-form"].indexOf(event.target.id) !== -1) {
+    if (["customer-detail", "ai-panel", "mcp-panel", "rag-panel", "customer-form"].indexOf(event.target.id) !== -1) {
       revealPanel(event.target);
     }
 

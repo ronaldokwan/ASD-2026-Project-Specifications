@@ -1,0 +1,9 @@
+{
+  "answer": "",
+  "confidence": "insufficient",
+  "message": "Insufficient relevant context was found.",
+  "question": "Who won the 2022 football world cup final?",
+  "sources": [],
+  "status": "insufficient_context",
+  "round_trip_ms": 14
+}

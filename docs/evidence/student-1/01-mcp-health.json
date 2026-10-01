@@ -1,0 +1,12 @@
+{
+  "service": "mcp-server",
+  "status": "ok",
+  "protocol": "MCP Streamable HTTP",
+  "endpoint": "/mcp",
+  "tools": [
+    "review_quality_check",
+    "check_review_quality",
+    "check_customer_profile",
+    "check_product_listing"
+  ]
+}
