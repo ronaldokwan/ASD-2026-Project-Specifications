@@ -6,9 +6,7 @@ two ways, exactly like `ai-services/mcp-server/`:
 
 * `server.py` - a real MCP server (stdio, via the official `mcp==2.2.0`
   SDK's `MCPServer`). Launch with `mcp-config.json` from any MCP-aware client.
-* `http_server.py` - a plain Flask HTTP front door on port **7003**. This is
-  the "shared non-containerised local RAG server" every student backend
-  actually calls over the network.
+* `http_server.py` - a Flask HTTP API on port **7003** for backend clients.
 
 ## upsert_documents
 
@@ -76,7 +74,6 @@ POST http://localhost:7003/rag/documents
 {"documents": [{"id": "review-r1", "text": "...", "metadata": {"feature": "reviews", "product_sku": "SKU-AUD-1001"}}]}
 ```
 
-Use a `metadata.feature` tag so `filters` can scope a query to your own
-content, and keep the corpus in sync on create/update/delete of the source
-record (best-effort - a RAG-server blip should never break the primary
-write), the same pattern Student 5's `backend/app/routes.py` uses.
+Use a `metadata.feature` tag so `filters` can scope a query to the relevant
+content. Keep the corpus in sync when source records change, but do not let an
+indexing failure block the primary write.

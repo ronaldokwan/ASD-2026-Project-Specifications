@@ -1,17 +1,7 @@
-"""Core RAG pipeline: corpus -> chunks -> vectors -> ChromaDB -> retrieve -> answer.
+"""Shared RAG pipeline for indexing, retrieval and grounded answers.
 
-Shared by every student feature. A feature's backend pushes its own domain
-text into the corpus (``upsert_documents`` / ``delete_document`` - e.g.
-Student 5 pushing review text as reviews are created/edited/deleted) and
-queries it (``answer_question``) - the same "shared, used by all student
-features" role the shared MCP server plays for tool calls.
-
-Embeddings are a deterministic hashing-based bag-of-words vector rather than
-a real semantic embedding model: it needs no extra Ollama model pull, is
-fully offline/reproducible, and is good enough for the short, keyword-heavy
-text (product reviews, FAQs) this corpus holds. ChromaDB stores and searches
-the vectors; Ollama (the same approved local LLM used by AI-Mode) generates
-the final grounded answer from the retrieved chunks.
+Documents are chunked and stored in ChromaDB with deterministic hash
+embeddings. Ollama generates answers from retrieved chunks only.
 """
 
 import hashlib
@@ -36,8 +26,7 @@ CHROMA_PATH = DATA_DIR / "chroma"
 COLLECTION_NAME = "asd_group40_shared_corpus"
 EMBED_VECTOR_SIZE = 256
 
-# Common words carry no retrieval signal and would otherwise dominate the
-# hashed vector purely by chance collisions - strip them before hashing.
+# Remove common terms before hashing so they do not dominate similarity.
 _STOPWORDS = frozenset((
     "a an the is are was were of to and or in on at for it this that how what "
     "does do i my with as be has have very so but not just"
@@ -72,14 +61,9 @@ def now_iso():
 
 
 def embed_texts(texts):
-    """Deterministic hashing-trick bag-of-words embedding (no model needed).
+    """Create deterministic normalized hashing-trick bag-of-words vectors.
 
-    Standard feature-hashing vectoriser (as used by e.g. scikit-learn's
-    HashingVectorizer): each token is hashed to one of EMBED_VECTOR_SIZE
-    buckets with a random sign, then the vector is L2-normalised. This keeps
-    cosine similarity close to real keyword overlap - unlike spreading every
-    hash byte across every dimension, which drowns genuine overlap in noise
-    once more than a couple of documents are indexed.
+    Each token hashes to one signed bucket, then the vector is L2-normalised.
     """
     vectors = []
     for text in texts:
@@ -361,7 +345,7 @@ def confidence_from_results(relevant_count):
 
 
 def _lexical_terms(text):
-    """Return normalized terms for deterministic collision-resistant matching."""
+    """Return normalized terms for deterministic lexical matching."""
     terms = set()
     for token in re.findall(r"[a-z0-9]+", (text or "").casefold()):
         if token in _STOPWORDS or len(token) < 2:

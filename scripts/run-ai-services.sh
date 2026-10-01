@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# Release 1: start AI-Mode, the shared MCP server and the shared RAG server as
-# native host processes (they are explicitly NOT containerised - see
-# docker-compose.yml). Ollama still comes from `docker compose up`; start that
-# first (scripts/run-local.sh) so these three can reach it at localhost:11434.
-#
-# Usage:   bash scripts/run-ai-services.sh
-# Stop:    Ctrl+C (all three are foregrounded and stopped via the trap below)
+# Start host AI-Mode, MCP and RAG services after Compose starts Ollama.
+# Usage: bash scripts/run-ai-services.sh
+# Stop: Ctrl+C stops all three services through the trap below.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"

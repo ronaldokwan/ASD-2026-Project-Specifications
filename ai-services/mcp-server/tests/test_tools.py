@@ -1,6 +1,6 @@
 """Unit tests for the shared MCP tools (pure functions, no network, no LLM).
 
-Run from the repository root:  pytest ai-services/mcp-server/tests -v
+Run from the repository root: pytest ai-services/mcp-server/tests -v
 """
 
 import os

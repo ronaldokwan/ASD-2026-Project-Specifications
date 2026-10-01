@@ -25,11 +25,8 @@ app = Flask(__name__)
 client = OllamaClient()
 loop = AgenticLoop(client=client)
 
-# Release 1: the two extra "validation modes" of the shared agentic loop. Each
-# builds an AgentRequest around the *subject* the caller supplies (an MCP tool
-# result, or a RAG answer + its sources) and runs it through the same
-# Plan -> Act -> Observe -> Adapt loop used for chat, so a validation verdict
-# gets the same guardrails/fallback safety net as every other AI-Mode answer.
+# Validation modes reuse the agentic loop with mode-specific schemas and
+# deterministic fallbacks for MCP tool results and RAG answers.
 _VALIDATION_MODES = {
     "mcp": {
         "goal": "mcp_validation",
@@ -119,11 +116,10 @@ def agent_run():
 
 @app.post("/agent/validate")
 def agent_validate():
-    """Release 1: MCP and RAG validation modes of the shared agentic loop.
+    """Validate an MCP tool result or a grounded RAG answer.
 
-    Body: {"mode": "mcp"|"rag", "subject": {...}}. ``subject`` is whatever the
-    caller wants double-checked - an MCP tool call + its result, or a RAG
-    query + answer + sources - and is handed to the model as context.
+    Body: {"mode": "mcp"|"rag", "subject": {...}}. ``subject`` contains an
+    MCP tool call and result, or a RAG query, answer and sources.
     """
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
