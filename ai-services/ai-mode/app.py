@@ -36,13 +36,15 @@ _VALIDATION_MODES = {
         "task": (
             "You are reviewing the result of a tool call made by a retail microservice. "
             "Check whether the structured result below is plausible, internally consistent, "
-            "and actually answers what the tool was asked to do. Do not invent new facts and "
-            "do not re-run the tool yourself."
+            "and actually answers what the tool was asked to do. When valid is true, notes "
+            "must not invent missing fields, warnings, errors, or failures. When valid is "
+            "false, notes must identify the actual contract problem or reported error. "
+            "Do not invent new facts and do not re-run the tool yourself."
         ),
         "schema": MCP_VALIDATION_SCHEMA,
         "fallback": {
-            "valid": "true",
-            "notes": "AI-Mode validation was unavailable; the tool result was returned unchecked.",
+            "valid": "false",
+            "notes": "The tool result was not validated because AI-Mode was unavailable.",
             "confidence": "low",
         },
     },
@@ -52,14 +54,22 @@ _VALIDATION_MODES = {
             "You are reviewing a grounded answer produced by a retrieval-augmented system. "
             "Check whether every claim in the answer is actually supported by the sources "
             "provided, and whether the claimed confidence category is justified by how many "
-            "sources support it. Do not invent new facts."
+            "sources support it. The verdict fields must agree: when grounded is true, "
+            "unsupported_claims must be exactly 'none'; when grounded is false, "
+            "unsupported_claims must identify the unsupported claim or contradiction. "
+            "Do not invent new facts."
         ),
         "schema": RAG_VALIDATION_SCHEMA,
         "fallback": {
-            "grounded": "true",
-            "unsupported_claims": "none",
-            "confidence_ok": "true",
-            "notes": "AI-Mode validation was unavailable; the RAG answer was returned unchecked.",
+            "grounded": "false",
+            "unsupported_claims": (
+                "Grounding could not be verified because validation was unavailable."
+            ),
+            "confidence_ok": "false",
+            "notes": (
+                "The answer is not confirmed as supported because AI-Mode validation "
+                "was unavailable."
+            ),
         },
     },
 }

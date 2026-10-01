@@ -16,7 +16,12 @@ import time
 from dataclasses import dataclass, field
 
 from .ollama_client import OllamaClient, OllamaError
-from .validators import parse_json, validate
+from .validators import (
+    parse_json,
+    validate,
+    validate_mcp_verdict,
+    validate_rag_verdict,
+)
 
 SYSTEM_PROMPT = (
     "You are the AI assistant inside a retail management application. "
@@ -106,7 +111,14 @@ class AgenticLoop:
             data = parse_json(raw)
         except (ValueError, TypeError) as exc:
             return {}, ["output was not valid JSON ({})".format(exc)]
-        return validate(data, request.output_schema)
+        result, violations = validate(data, request.output_schema)
+        if violations:
+            return result, violations
+        if request.mode == "mcp_validation":
+            return validate_mcp_verdict(result, request.context)
+        if request.mode == "rag_validation":
+            return validate_rag_verdict(result, request.context)
+        return result, []
 
     # ------------------------------------------------------------------- RUN
     def run(self, request):
