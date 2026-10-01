@@ -1,0 +1,33 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 1243,
+  "fallback_used": false,
+  "mode": "mcp_validation",
+  "model": "qwen2.5:0.5b",
+  "ok": true,
+  "result": {
+    "confidence": "high",
+    "notes": "The registered MCP tool returned a structured result with no reported errors. Reported warnings: price is 104.4% above the category average of 97.82.",
+    "valid": "true"
+  },
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'mcp_validation' with 3 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called qwen2.5:0.5b through the Ollama runtime.",
+      "raw_preview": "{\n  \"valid\": true,\n  \"notes\": \"The tool result is internally consistent and answers what the tool was asked to do.\",\n  \"confidence\": \"high\"\n}",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ],
+  "round_trip_ms": 3281
+}

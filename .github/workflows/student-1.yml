@@ -10,6 +10,8 @@ on:
     paths:
       - "student-1/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/mcp-server/**"
+      - "ai-services/rag-server/**"
       - "shared/**"
       - "docker-compose.yml"
       - ".github/workflows/student-1.yml"
@@ -17,6 +19,8 @@ on:
     paths:
       - "student-1/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/mcp-server/**"
+      - "ai-services/rag-server/**"
       - "shared/**"
       - "docker-compose.yml"
       - ".github/workflows/student-1.yml"
@@ -24,6 +28,9 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
+  AI_MODE_ENABLED: "false"
+  MCP_ENABLED: "false"
+  RAG_ENABLED: "false"
 
 jobs:
   # -------------------------------------------------------------------------
@@ -45,20 +52,31 @@ jobs:
           pip install -r student-1/backend/requirements.txt
           pip install -r student-1/frontend/requirements.txt
           pip install -r ai-services/ai-mode/requirements.txt
+          pip install -r ai-services/mcp-server/requirements.txt
+          pip install -r ai-services/rag-server/requirements.txt
           pip install flake8
 
       - name: Lint (syntax errors and undefined names fail the build)
         run: |
-          flake8 student-1 ai-services/ai-mode \
+          flake8 student-1 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
             --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 student-1 ai-services/ai-mode \
+          flake8 student-1 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
             --count --max-line-length=100 --exit-zero --statistics
 
-      - name: Student 1 microservice tests
+      - name: JavaScript syntax
+        run: node --check student-1/frontend/static/js/catalogue.js
+
+      - name: Student 1 microservice tests (incl. MCP and RAG integration)
         run: pytest student-1/tests -v --junitxml=reports/student-1-tests.xml
 
-      - name: Shared agentic loop tests (AI-Mode)
+      - name: Shared agentic loop tests (AI-Mode, incl. MCP and RAG validation modes)
         run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+
+      - name: Shared MCP server tests (incl. check_product_listing)
+        run: pytest ai-services/mcp-server/tests -v --junitxml=reports/mcp-server-tests.xml
+
+      - name: Shared RAG server tests (incl. catalogue knowledge)
+        run: pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
 
       - name: Upload test evidence for the technical report
         if: always()
@@ -77,6 +95,14 @@ jobs:
 
       - name: Validate the shared Docker Compose configuration
         run: docker compose config --quiet
+
+      - name: AI-Mode, MCP and RAG are not Docker Compose services
+        run: |
+          docker compose config --services | tee services.txt
+          if grep -E '^(ai-mode|mcp|mcp-server|rag|rag-server)$' services.txt; then
+            echo "::error::AI-Mode, MCP and RAG must run natively, not in Docker Compose"
+            exit 1
+          fi
 
       - name: Build the three Student 1 images
         run: |
@@ -137,6 +163,37 @@ jobs:
         run: |
           curl -fs http://localhost:3001/ | grep -q "Product Catalogue"
           curl -fs http://localhost:3001/partials/products | grep -q "product-table"
+          curl -fs http://localhost:3001/ | grep -q 'id="mcp-panel"'
+          curl -fs http://localhost:3001/ | grep -q 'hx-post="/catalogue/ask"'
+
+      - name: MCP and RAG are retained but disabled in CI
+        run: |
+          set -e
+          health=$(curl -fs http://localhost:8001/health)
+          echo "$health"
+          for key in ai_mode mcp_server rag_server; do
+            echo "$health" | python3 -c "import json, sys; \
+              assert json.load(sys.stdin)['$key'] == {'status': 'disabled'}, '$key'"
+          done
+
+          code=$(curl -s -o mcp.json -w '%{http_code}' -X POST \
+            http://localhost:8001/api/products/1/mcp-check \
+            -H 'Content-Type: application/json' -d '{}')
+          cat mcp.json
+          test "$code" = "503" && grep -q "MCP integration is disabled" mcp.json
+
+          code=$(curl -s -o rag.json -w '%{http_code}' -X POST \
+            http://localhost:8001/api/catalogue/ask \
+            -H 'Content-Type: application/json' \
+            -d '{"question":"Which headphones cancel noise?"}')
+          cat rag.json
+          test "$code" = "503" && grep -q "RAG integration is disabled" rag.json
+
+          # The Release 0 AI path still answers, from its deterministic fallback.
+          curl -fs -X POST http://localhost:8001/api/products/ai \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"CI Earbuds","category":"Audio"}' \
+            | grep -q '"fallback_used": *true'
 
       - name: Container logs (evidence on failure)
         if: always()

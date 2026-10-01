@@ -103,11 +103,17 @@ services:
       <<: *ai-env
       DATABASE_URL: http://student-1-db:9001
       SERVICE_PORT: "8001"
+      AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      RAG_ENABLED: ${RAG_ENABLED:-true}
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "8001:8001"
     depends_on:
       student-1-db:
         condition: service_healthy
+    <<: *host-gateway
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -124,6 +130,8 @@ services:
       BACKEND_URL: http://student-1-backend:8001
       HOME_URL: http://localhost:3000
       SERVICE_PORT: "3001"
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "3001:3001"
     volumes:

@@ -13,6 +13,8 @@ talks to the backend/API microservice directly.
     POST /products/<id>             update
     POST /products/<id>/delete      delete
     POST /ai/suggest                AI description + price suggestion
+    POST /products/<id>/mcp-check   Release 1: shared MCP listing check
+    POST /catalogue/ask             Release 1: grounded RAG answer
     GET  /health                    frontend liveness + downstream health
     GET  /shared/<path>             the team's shared CSS/JS (read-only volume)
 """
@@ -299,6 +301,34 @@ def ai_suggest():
     return render_template(
         "partials/ai_result.html", outcome=outcome, result=outcome.get("result", {})
     )
+
+
+@app.post("/products/<int:product_id>/mcp-check")
+def mcp_check(product_id):
+    """Shared MCP tool check_product_listing, through the backend/API."""
+    try:
+        outcome = api_client.check_listing(product_id)
+    except ApiError as exc:
+        return render_template("partials/mcp_result.html", error=exc.message)
+    return render_template(
+        "partials/mcp_result.html", outcome=outcome, result=outcome.get("result", {})
+    )
+
+
+@app.post("/catalogue/ask")
+def ask_catalogue():
+    """Grounded answer from the shared RAG server, through the backend/API."""
+    question = request.form.get("question", "").strip()
+    if len(question) < 5:
+        return render_template(
+            "partials/rag_result.html",
+            error="Ask a question about the catalogue (at least 5 characters).",
+        )
+    try:
+        outcome = api_client.ask_catalogue(question)
+    except ApiError as exc:
+        return render_template("partials/rag_result.html", error=exc.message)
+    return render_template("partials/rag_result.html", outcome=outcome)
 
 
 # -------------------------------------------------------------------- health
