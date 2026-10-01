@@ -7,6 +7,7 @@ Only commands that do more than wrap a single Docker call live here.
 | `run-local.sh` | Create `.env` if missing, build and start the stack, follow the model pull, print every URL |
 | `pull-model.sh` | Pull an approved LLM (defaults to `$LLM_MODEL`) into the running Ollama container |
 | `run-tests.sh` | Run every implemented pytest suite and write JUnit evidence to `reports/` for the technical report |
+| `run-ai-services.sh` | Start native AI-Mode (7001), genuine MCP Streamable HTTP (7002/mcp), and RAG (7003) |
 
 Run them from Git Bash on Windows: `bash scripts/run-local.sh`.
 
