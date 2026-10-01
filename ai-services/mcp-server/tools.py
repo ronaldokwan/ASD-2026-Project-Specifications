@@ -1,15 +1,8 @@
-"""MCP tools shared by every student feature.
+"""Pure functions exposed by the shared MCP server.
 
-Every tool here is a pure, deterministic function: no LLM call and no network
-call to another microservice. The caller (a student backend) is responsible
-for grounding the tool with real facts - the same "backend grounds, shared
-service acts" split used by ai-mode's AgentRequest.context - so a tool can be
-tested and reasoned about without any other service running.
-
-Add your own feature's tool to this module and register it with both
-``server.py`` (the real MCP/stdio server) and ``http_server.py`` (the plain
-HTTP front door student backends call over the network). See
-``tool-contracts.md`` for the contract of every tool below.
+Callers supply grounded inputs; these tools make no LLM or service calls.
+``server.py`` registers MCP tools and any required compatibility routes. See
+``tool-contracts.md`` for the tool contracts.
 """
 
 import re

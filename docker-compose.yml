@@ -1,17 +1,10 @@
-# ---------------------------------------------------------------------------
-# Run: docker compose up --build
-# ---------------------------------------------------------------------------
+# Run with: docker compose up --build
 
 name: asd2026-group40
 
-# Release 1: AI-Mode, the shared MCP server and the shared RAG server all run
-# as native host processes (see scripts/run-ai-services.sh) - they are
-# explicitly NOT containerised. Only Ollama stays in this Compose file, since
-# it isn't named alongside them in the brief and every teammate already has
-# it here for the model-pull automation below. Containers reach all three
-# host-native services through the Docker-provided host.docker.internal
-# alias. Backends that use native Release 1 services need the host-gateway
-# mapping for Linux as well as Docker Desktop.
+# AI-Mode, MCP and RAG run as host processes via scripts/run-ai-services.sh.
+# Containers reach them through host.docker.internal; the host-gateway mapping
+# also supports Linux. Ollama remains in Compose for model management.
 x-ai-env: &ai-env
   OLLAMA_URL: http://ollama:11434
   LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
@@ -70,9 +63,8 @@ services:
     networks: [asd-net]
     restart: "no"
 
-  # AI-Mode, the shared MCP server and the shared RAG server are NOT run by
-  # Compose in Release 1 - start them natively with
-  # `bash scripts/run-ai-services.sh` (they need Ollama, above, already up).
+  # Start the host AI services after Ollama is ready:
+  # bash scripts/run-ai-services.sh
 
   # =================== STUDENT 1 - Ronaldo Kwan ============================
   # Feature: Product Catalogue
@@ -135,7 +127,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./shared:/app/shared:ro 
+      - ./shared:/app/shared:ro
     depends_on:
       student-1-backend:
         condition: service_started

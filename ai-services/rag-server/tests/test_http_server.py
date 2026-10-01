@@ -4,7 +4,7 @@ The pipeline itself is monkeypatched here (it has its own dedicated tests in
 test_rag_pipeline.py) so this file only checks routing, validation and
 status codes.
 
-Run from the repository root:  pytest ai-services/rag-server/tests -v
+Run from the repository root: pytest ai-services/rag-server/tests -v
 """
 
 import os

@@ -11,8 +11,7 @@ Every tool is implemented once in `tools.py` as a pure, deterministic function
 * `mcp-config.json` selects stdio when an editor or other local MCP host starts
   `server.py` as a child process.
 
-Both front doors call the same function, so there is only one place tool
-behaviour can drift.
+The MCP and compatibility routes call the same functions in `tools.py`.
 
 ## check_review_quality
 
@@ -28,7 +27,8 @@ behaviour can drift.
 - **Output:** `{"flagged": bool, "reasons": [string, ...], "spam_score":
   0.0-1.0, "duplicate_risk": "low"|"possible", "word_count": int}`
 - **Policy class:** read-only, no side effects.
-- **HTTP:** `POST /tools/check_review_quality` on `http_server.py`.
+- **Compatibility HTTP:** `POST /tools/check_review_quality` is co-hosted by
+  `server.py`; the legacy `http_server.py` exposes the same route.
 - **MCP tool names:** `review_quality_check` (the original Student 5 name)
   and `check_review_quality` (an equivalent descriptive alias) on `server.py`.
 

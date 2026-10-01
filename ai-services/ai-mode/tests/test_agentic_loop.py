@@ -3,7 +3,7 @@
 The LLM is replaced by a stub client so the tests run offline in GitHub Actions
 (no Ollama container in CI).
 
-Run from the repository root:  pytest ai-services/ai-mode/tests -v
+Run from the repository root: pytest ai-services/ai-mode/tests -v
 """
 
 import os
@@ -59,7 +59,6 @@ def make_request(**overrides):
     return AgentRequest.from_json(payload)
 
 
-# --------------------------------------------------------------- validators
 def test_parse_json_handles_code_fences():
     assert parse_json('```json\n{"a": 1}\n```') == {"a": 1}
 
@@ -79,7 +78,6 @@ def test_validate_reports_every_violation():
     assert len(violations) == 2
 
 
-# --------------------------------------------------------------------- loop
 def test_loop_succeeds_on_first_attempt():
     client = StubClient(['{"description": "A neat little thing.", "price": 19.99}'])
     outcome = AgenticLoop(client=client, max_attempts=2).run(make_request())
@@ -93,7 +91,7 @@ def test_loop_succeeds_on_first_attempt():
 
 def test_loop_adapts_after_a_rejected_answer():
     client = StubClient([
-        '{"description": "too short", "price": 999}',        # violates both rules
+        '{"description": "too short", "price": 999}',
         '{"description": "A neat little thing.", "price": 19.99}',
     ])
     outcome = AgenticLoop(client=client, max_attempts=2).run(make_request())
@@ -140,7 +138,6 @@ def test_request_mode_defaults_to_chat():
     assert make_request(mode="rag_validation").mode == "rag_validation"
 
 
-# --------------------------------------------------------- validation modes
 def make_validation_request(mode, schema, fallback, context):
     return AgentRequest(
         goal="{}_validation".format(mode),

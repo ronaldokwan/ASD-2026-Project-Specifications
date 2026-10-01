@@ -3,7 +3,7 @@
 Embeddings are the pipeline's own deterministic hashing function (no model
 needed) and the LLM call is stubbed, so this suite runs fully offline.
 
-Run from the repository root:  pytest ai-services/rag-server/tests -v
+Run from the repository root: pytest ai-services/rag-server/tests -v
 """
 
 import os
@@ -13,9 +13,8 @@ import tempfile
 SERVICE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SERVICE_ROOT)
 
-# rag_pipeline resolves its data directory from this env var at import time,
-# so point it at a scratch directory before importing (same pattern as
-# student-5/tests/conftest.py setting DB_PATH before importing the db module).
+# rag_pipeline resolves data paths at import time, so set a scratch directory
+# before importing it.
 os.environ["RAG_DATA_DIR"] = tempfile.mkdtemp(prefix="asd-rag-tests-")
 
 import pytest  # noqa: E402

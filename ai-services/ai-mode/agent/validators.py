@@ -8,10 +8,7 @@ Adapt step can re-prompt with specific, actionable corrections.
 import json
 import re
 
-# Canned Observe schemas for the two Release 1 validation modes (see
-# app.py: POST /agent/validate). Both ask the model to check somebody else's
-# already-produced output (an MCP tool result, or a RAG answer + citations)
-# rather than to generate anything new.
+# Schemas for MCP and RAG verdicts returned by POST /agent/validate.
 MCP_VALIDATION_SCHEMA = {
     "valid": {
         "type": "enum",
@@ -211,14 +208,7 @@ def _normalise_evidence(value):
 
 
 def _answer_is_verbatim_supported(subject):
-    """Recognise the strongest generic grounding case without an LLM judgment.
-
-    The shared RAG service deliberately returns extractive answers when a model
-    paraphrase cannot be verified. Each answer sentence must therefore occur in
-    at least one supplied source excerpt before this shortcut can mark it as
-    supported. Answers without direct support are handled conservatively by the
-    verdict guardrail below.
-    """
+    """Check whether every answer sentence occurs verbatim in a source excerpt."""
     if not isinstance(subject, dict):
         return False
     answer = subject.get("answer")
@@ -255,13 +245,10 @@ def _answer_is_verbatim_supported(subject):
 
 
 def validate_rag_verdict(data, subject):
-    """Enforce a coherent RAG verdict and construct its explanation.
+    """Align a RAG verdict with the supplied answer and sources.
 
-    The LLM proposes a verdict, while this guardrail independently recognises
-    exact extractive support and rejects an unverified positive verdict. It also
-    enforces the relationship between the final verdict and unsupported claims.
-    Notes are derived from the accepted structured fields, so they cannot state
-    the opposite conclusion.
+    Exact extractive evidence can confirm support; unverified positive verdicts
+    are rejected. Notes are derived from the final structured fields.
     """
     cleaned = dict(data)
     verbatim_supported = _answer_is_verbatim_supported(subject)
