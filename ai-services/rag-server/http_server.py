@@ -17,45 +17,54 @@ import os
 
 from flask import Flask, jsonify, request
 
-from rag_pipeline import answer_question, delete_document, upsert_documents
+from rag_pipeline import (
+    RAGValidationError,
+    answer_question,
+    delete_document,
+    upsert_documents,
+)
 
 app = Flask(__name__)
 
 
 @app.get("/health")
 def health():
-    return jsonify({"service": "rag-server", "status": "ok", "model": os.getenv("LLM_MODEL", "qwen2.5:0.5b")})
+    return jsonify({
+        "service": "rag-server",
+        "status": "ok",
+        "model": os.getenv("LLM_MODEL", "qwen2.5:0.5b"),
+    })
 
 
 @app.post("/rag/documents")
 def add_documents():
     payload = request.get_json(silent=True) or {}
-    documents = payload.get("documents")
-    if not isinstance(documents, list) or not documents:
-        return jsonify({"ok": False, "error": "'documents' must be a non-empty list"}), 400
-    for doc in documents:
-        if not isinstance(doc, dict) or not doc.get("id") or not doc.get("text"):
-            return jsonify({"ok": False, "error": "each document needs an 'id' and 'text'"}), 400
-
-    return jsonify(upsert_documents(documents))
+    try:
+        return jsonify(upsert_documents(payload.get("documents")))
+    except RAGValidationError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
 
 
 @app.delete("/rag/documents/<doc_id>")
 def remove_document(doc_id):
-    return jsonify(delete_document(doc_id))
+    try:
+        return jsonify(delete_document(doc_id))
+    except RAGValidationError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
 
 
 @app.post("/rag/query")
 def query():
     payload = request.get_json(silent=True) or {}
-    question = (payload.get("query") or "").strip()
-    if not question:
-        return jsonify({"ok": False, "error": "'query' is required"}), 400
-
-    top_k = int(payload.get("top_k", 5))
-    filters = payload.get("filters") or None
-    result = answer_question(question, top_k=top_k, filters=filters)
-    return jsonify(result)
+    try:
+        result = answer_question(
+            payload.get("query"),
+            top_k=payload.get("top_k", 5),
+            filters=payload.get("filters") or None,
+        )
+    except RAGValidationError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    return jsonify(result), (503 if result.get("status") == "service_unavailable" else 200)
 
 
 @app.errorhandler(404)
@@ -64,4 +73,5 @@ def not_found(_):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7003")), debug=True)
+    debug = os.getenv("FLASK_DEBUG", "false").strip().lower() in ("1", "true", "yes")
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7003")), debug=debug)

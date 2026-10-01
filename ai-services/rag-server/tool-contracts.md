@@ -4,8 +4,8 @@
 embedding -> ChromaDB -> retrieve -> Ollama -> cited answer) and is exposed
 two ways, exactly like `ai-services/mcp-server/`:
 
-* `server.py` - a real MCP server (stdio, via the official `mcp` SDK's
-  `FastMCP`). Launch with `mcp-config.json` from any MCP-aware client.
+* `server.py` - a real MCP server (stdio, via the official `mcp==2.2.0`
+  SDK's `MCPServer`). Launch with `mcp-config.json` from any MCP-aware client.
 * `http_server.py` - a plain Flask HTTP front door on port **7003**. This is
   the "shared non-containerised local RAG server" every student backend
   actually calls over the network.
@@ -43,7 +43,7 @@ two ways, exactly like `ai-services/mcp-server/`:
   the local LLM using only the retrieved chunks.
 - **Input:** `query` (required), `top_k` (default 5), `filters` (optional).
 - **Output (two shapes):**
-  - No chunk close enough to the query (`distance >= 0.9`):
+  - No chunk close enough to the query (`distance >= 1.5`):
     `{"status": "insufficient_context", "confidence": "insufficient",
     "sources": [], "message": "..."}` - the frontend must render this as its
     own state, not as a normal low-confidence answer.
@@ -54,6 +54,18 @@ two ways, exactly like `ai-services/mcp-server/`:
     never by the LLM's own self-reported certainty.
 - **HTTP:** `POST /rag/query`
 - **Auditing:** every call is appended to `data/rag-audit.jsonl`.
+
+If Ollama is unavailable, the server returns HTTP 503 with
+`status: "service_unavailable"`, an empty answer and sources, and
+`confidence: "unavailable"`. That state is distinct from insufficient
+context and is never presented as a grounded answer.
+
+## Checked-in knowledge
+
+Markdown sources in `knowledge/` are indexed deterministically on the first
+query. `customer-loyalty-policy.md` is split by its level-two section headings
+and indexed with `feature: customer_accounts`, source filename and section
+metadata. Runtime JSONL, audit and Chroma data remain under ignored `data/`.
 
 ## Adding your own content
 

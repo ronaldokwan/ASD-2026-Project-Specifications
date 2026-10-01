@@ -1,46 +1,50 @@
-"""The shared RAG server's MCP front door (real Model Context Protocol, stdio).
+"""Optional MCP stdio exposure of the shared RAG pipeline.
 
-Mirrors ``ai-services/mcp-server/server.py``: any MCP-aware client can list
-and call these tools directly via ``mcp-config.json``. Student backends
-instead call ``http_server.py`` over plain HTTP within a request/response
-cycle - both front doors call the same functions in ``rag_pipeline.py``.
-
-Run standalone:  python server.py
+Student backends use the native RAG HTTP API on port 7003. This process is for
+MCP-aware local clients and uses the same validated pipeline functions.
 """
 
-from mcp.server.fastmcp import FastMCP
+from typing import Any
 
-from rag_pipeline import answer_question, delete_document, retrieve_context, upsert_documents
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("ASD Group 40 Shared RAG Server")
+from rag_pipeline import (
+    answer_question,
+    delete_document,
+    retrieve_context,
+    upsert_documents,
+)
 
-AVAILABLE_TOOLS = ["upsert_documents", "delete_document", "retrieve_context", "answer_question"]
+mcp = MCPServer("ASD Group 40 Shared RAG Server", version="1.1.0")
+
+AVAILABLE_TOOLS = [
+    "upsert_documents", "delete_document", "retrieve_context", "answer_question"
+]
 
 
-@mcp.tool()
-def upsert_documents_tool(documents: list):
+@mcp.tool(name="upsert_documents", structured_output=True)
+def upsert_documents_tool(documents: list[dict[str, Any]]) -> dict[str, Any]:
     return upsert_documents(documents)
 
 
-@mcp.tool()
-def delete_document_tool(doc_id: str):
+@mcp.tool(name="delete_document", structured_output=True)
+def delete_document_tool(doc_id: str) -> dict[str, Any]:
     return delete_document(doc_id)
 
 
-@mcp.tool()
-def retrieve_context_tool(query: str, top_k: int = 5):
-    return retrieve_context(query, top_k=top_k)
+@mcp.tool(name="retrieve_context", structured_output=True)
+def retrieve_context_tool(
+    query: str, top_k: int = 5, filters: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    return retrieve_context(query, top_k=top_k, filters=filters)
 
 
-@mcp.tool()
-def answer_question_tool(query: str, top_k: int = 5):
-    return answer_question(query, top_k=top_k)
+@mcp.tool(name="answer_question", structured_output=True)
+def answer_question_tool(
+    query: str, top_k: int = 5, filters: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    return answer_question(query, top_k=top_k, filters=filters)
 
 
 if __name__ == "__main__":
-    print("Starting the shared RAG server (Group 40)...")
-    print("Server status: RUNNING")
-    print("Available tools:")
-    for tool in AVAILABLE_TOOLS:
-        print("- {}".format(tool))
-    mcp.run()
+    mcp.run(transport="stdio")
