@@ -1,0 +1,17 @@
+{
+  "answer": "Aurora Wireless Headphones (SKU-AUD-1001) is an active Audio product priced at 199.95 AUD. Aurora Wireless Headphones are a premium audio solution that offers a sleek design and wireless connectivity. These headphones are ideal for professionals who need to work in noisy environments or those who want to stay connected while on-the-go.",
+  "confidence": "medium",
+  "elapsed_ms": 317,
+  "question": "Which headphones have active noise cancelling?",
+  "retrieved_count": 1,
+  "sources": [
+    {
+      "section": "SKU-AUD-1001 Aurora Wireless Headphones",
+      "snippet": "Aurora Wireless Headphones (SKU-AUD-1001) is an active Audio product priced at 199.95 AUD. Aurora Wireless Headphones are a premium audio solution that offers a sleek design and wireless connectivity.",
+      "source": "Product Catalogue database",
+      "text": "Aurora Wireless Headphones (SKU-AUD-1001) is an active Audio product priced at 199.95 AUD. Aurora Wireless Headphones are a premium audio solution that offers a sleek design and wireless connectivity. These headphones are ideal for professionals who need to work in noisy environments or those who want to stay connected while on-the-go."
+    }
+  ],
+  "status": "ok",
+  "round_trip_ms": 651
+}

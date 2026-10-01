@@ -27,10 +27,12 @@ COLLECTION_NAME = "asd_group40_shared_corpus"
 EMBED_VECTOR_SIZE = 256
 
 # Remove common terms before hashing so they do not dominate similarity.
-_STOPWORDS = frozenset((
-    "a an the is are was were of to and or in on at for it this that how what "
-    "does do i my with as be has have very so but not just"
-).split())
+_STOPWORDS = frozenset(
+    (
+        "a an the is are was were of to and or in on at for it this that how what "
+        "does do i my with as be has have very so but not just"
+    ).split()
+)
 
 # ChromaDB's "l2" space returns squared L2 distance over the (unit-norm)
 # vectors below: 0.0 = identical, 2.0 = no shared vocabulary at all,
@@ -113,10 +115,7 @@ def chunk_text(text, max_words=80):
     words = (text or "").split()
     if not words:
         return []
-    return [
-        " ".join(words[i:i + max_words])
-        for i in range(0, len(words), max_words)
-    ]
+    return [" ".join(words[i : i + max_words]) for i in range(0, len(words), max_words)]
 
 
 def _normalise_metadata(metadata):
@@ -127,8 +126,12 @@ def _normalise_metadata(metadata):
     cleaned = {}
     for key, value in metadata.items():
         if not isinstance(key, str) or not key.strip() or len(key) > 80:
-            raise RAGValidationError("metadata keys must be non-empty strings up to 80 characters")
-        if not isinstance(value, (str, int, float, bool)) or isinstance(value, type(None)):
+            raise RAGValidationError(
+                "metadata keys must be non-empty strings up to 80 characters"
+            )
+        if not isinstance(value, (str, int, float, bool)) or isinstance(
+            value, type(None)
+        ):
             raise RAGValidationError(
                 "metadata values must be strings, numbers or booleans"
             )
@@ -145,7 +148,9 @@ def _normalise_documents(documents):
             raise RAGValidationError("each document must be an object")
         doc_id = document.get("id")
         text = document.get("text")
-        if not isinstance(doc_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", doc_id):
+        if not isinstance(doc_id, str) or not re.fullmatch(
+            r"[A-Za-z0-9_.:-]{1,160}", doc_id
+        ):
             raise RAGValidationError(
                 "document id must use 1-160 letters, numbers, '.', '_', ':' or '-'"
             )
@@ -153,11 +158,13 @@ def _normalise_documents(documents):
             raise RAGValidationError("document text must be a non-empty string")
         if len(text) > 20000:
             raise RAGValidationError("document text must be 20000 characters or fewer")
-        cleaned.append({
-            "id": doc_id,
-            "text": text.strip(),
-            "metadata": _normalise_metadata(document.get("metadata")),
-        })
+        cleaned.append(
+            {
+                "id": doc_id,
+                "text": text.strip(),
+                "metadata": _normalise_metadata(document.get("metadata")),
+            }
+        )
     return cleaned
 
 
@@ -200,9 +207,16 @@ def _write_corpus(chunks):
             handle.write(json.dumps(chunk) + "\n")
 
 
+_FEATURE_MARKER = re.compile(r"<!--\s*rag-feature:\s*([a-z0-9_]{1,60})\s*-->")
+_DEFAULT_KNOWLEDGE_FEATURE = "customer_accounts"
+
+
 def _knowledge_documents(path):
     """Convert one checked-in Markdown policy into section-level documents."""
     source = path.name
+    content = path.read_text(encoding="utf-8")
+    marker = _FEATURE_MARKER.search(content)
+    feature = marker.group(1) if marker else _DEFAULT_KNOWLEDGE_FEATURE
     current_section = None
     current_lines = []
     documents = []
@@ -211,17 +225,19 @@ def _knowledge_documents(path):
         if current_section and current_lines:
             slug = re.sub(r"[^a-z0-9]+", "-", current_section.lower()).strip("-")
             text = "{}\n{}".format(current_section, " ".join(current_lines).strip())
-            documents.append({
-                "id": "knowledge:customer_accounts:{}:{}".format(path.stem, slug),
-                "text": text,
-                "metadata": {
-                    "feature": "customer_accounts",
-                    "source": source,
-                    "section": current_section,
-                },
-            })
+            documents.append(
+                {
+                    "id": "knowledge:{}:{}:{}".format(feature, path.stem, slug),
+                    "text": text,
+                    "metadata": {
+                        "feature": feature,
+                        "source": source,
+                        "section": current_section,
+                    },
+                }
+            )
 
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
+    for raw_line in content.splitlines():
         line = raw_line.strip()
         if line.startswith("## "):
             append_section()
@@ -246,8 +262,17 @@ def load_knowledge_sources(force=False):
         if not documents:
             raise RAGValidationError("no checked-in RAG knowledge documents were found")
         outcome = upsert_documents(documents)
+        current = {document["id"] for document in documents}
+        stale = {
+            chunk["doc_id"]
+            for chunk in _read_corpus()
+            if chunk["doc_id"].startswith("knowledge:")
+            and chunk["doc_id"] not in current
+        }
+        for doc_id in sorted(stale):
+            delete_document(doc_id)
         _knowledge_loaded = True
-        return dict(outcome, knowledge_loaded=True)
+        return dict(outcome, knowledge_loaded=True, stale_documents_removed=len(stale))
 
 
 def upsert_documents(documents):
@@ -264,13 +289,15 @@ def upsert_documents(documents):
     for doc in documents:
         pieces = chunk_text(doc["text"]) or [doc["text"]]
         for index, piece in enumerate(pieces):
-            new_chunks.append({
-                "chunk_id": "{}::{}".format(doc["id"], index),
-                "doc_id": doc["id"],
-                "text": piece,
-                "metadata": doc.get("metadata") or {},
-                "indexed_at": now_iso(),
-            })
+            new_chunks.append(
+                {
+                    "chunk_id": "{}::{}".format(doc["id"], index),
+                    "doc_id": doc["id"],
+                    "text": piece,
+                    "metadata": doc.get("metadata") or {},
+                    "indexed_at": now_iso(),
+                }
+            )
 
     corpus.extend(new_chunks)
     _write_corpus(corpus)
@@ -286,7 +313,11 @@ def upsert_documents(documents):
             embeddings=embed_texts([c["text"] for c in new_chunks]),
         )
 
-    return {"ok": True, "documents_indexed": len(documents), "chunks_indexed": len(new_chunks)}
+    return {
+        "ok": True,
+        "documents_indexed": len(documents),
+        "chunks_indexed": len(new_chunks),
+    }
 
 
 def _delete_from_collection(collection, doc_id):
@@ -295,7 +326,9 @@ def _delete_from_collection(collection, doc_id):
 
 def delete_document(doc_id):
     """Remove a document (all its chunks) from the shared corpus."""
-    if not isinstance(doc_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", doc_id):
+    if not isinstance(doc_id, str) or not re.fullmatch(
+        r"[A-Za-z0-9_.:-]{1,160}", doc_id
+    ):
         raise RAGValidationError("invalid document id")
     corpus = _read_corpus()
     remaining = [c for c in corpus if c["doc_id"] != doc_id]
@@ -326,13 +359,15 @@ def retrieve_context(query, top_k=5, filters=None):
 
     ranked = []
     for i, chunk_id in enumerate(ids):
-        ranked.append({
-            "chunk_id": chunk_id,
-            "doc_id": (metas[i] or {}).get("doc_id") if i < len(metas) else None,
-            "text": docs[i] if i < len(docs) else "",
-            "metadata": metas[i] if i < len(metas) else {},
-            "distance": distances[i] if i < len(distances) else None,
-        })
+        ranked.append(
+            {
+                "chunk_id": chunk_id,
+                "doc_id": (metas[i] or {}).get("doc_id") if i < len(metas) else None,
+                "text": docs[i] if i < len(docs) else "",
+                "metadata": metas[i] if i < len(metas) else {},
+                "distance": distances[i] if i < len(distances) else None,
+            }
+        )
     return ranked
 
 
@@ -363,17 +398,23 @@ def _multi_tier_reward_tiers(query):
     query_terms = _lexical_terms(query)
     comparison_terms = set(re.findall(r"[a-z0-9]+", query.casefold()))
     has_reward_intent = bool(query_terms.intersection({"benefit", "reward"}))
-    has_comparison_intent = bool(comparison_terms.intersection({
-        "difference", "different", "compare", "comparison", "versus", "vs",
-    }))
+    has_comparison_intent = bool(
+        comparison_terms.intersection(
+            {
+                "difference",
+                "different",
+                "compare",
+                "comparison",
+                "versus",
+                "vs",
+            }
+        )
+    )
     if not has_reward_intent and not has_comparison_intent:
         return None
 
     lowered_query = query.casefold()
-    mentioned = [
-        tier for tier in ("bronze", "silver", "gold")
-        if tier in query_terms
-    ]
+    mentioned = [tier for tier in ("bronze", "silver", "gold") if tier in query_terms]
     if len(mentioned) < 2:
         return None
     return sorted(mentioned, key=lowered_query.find)
@@ -395,20 +436,26 @@ def _select_multi_tier_reward_results(results, tiers):
 def _select_membership_conditions_result(query, results):
     """Select conditions for an explicit tier-selection question, if present."""
     query_terms = set(re.findall(r"[a-z0-9]+", query.casefold()))
-    asks_how_tiers_are_set = (
-        bool(query_terms.intersection({"tier", "tiers"}))
-        and bool(query_terms.intersection({
-            "select", "selected", "selection", "calculate", "calculated",
-            "automatic", "automatically",
-        }))
+    asks_how_tiers_are_set = bool(query_terms.intersection({"tier", "tiers"})) and bool(
+        query_terms.intersection(
+            {
+                "select",
+                "selected",
+                "selection",
+                "calculate",
+                "calculated",
+                "automatic",
+                "automatically",
+            }
+        )
     )
     if not asks_how_tiers_are_set:
         return None
     return next(
         (
-            result for result in results
-            if (result.get("metadata") or {}).get("section")
-            == "Membership Conditions"
+            result
+            for result in results
+            if (result.get("metadata") or {}).get("section") == "Membership Conditions"
         ),
         None,
     )
@@ -418,17 +465,28 @@ def _select_reward_restrictions_result(query, results):
     """Select restrictions when the question asks how a reward may be used."""
     query_terms = set(re.findall(r"[a-z0-9]+", query.casefold()))
     restriction_terms = {
-        "cash", "exchange", "exchanged", "apply", "applied", "email",
-        "emailed", "save", "saved", "store", "stored", "persist",
-        "persisted", "persistence",
+        "cash",
+        "exchange",
+        "exchanged",
+        "apply",
+        "applied",
+        "email",
+        "emailed",
+        "save",
+        "saved",
+        "store",
+        "stored",
+        "persist",
+        "persisted",
+        "persistence",
     }
     if not query_terms.intersection(restriction_terms):
         return None
     return next(
         (
-            result for result in results
-            if (result.get("metadata") or {}).get("section")
-            == "Reward Restrictions"
+            result
+            for result in results
+            if (result.get("metadata") or {}).get("section") == "Reward Restrictions"
         ),
         None,
     )
@@ -445,12 +503,10 @@ def _select_relevant_results(query, results):
     selected = []
     for result, lexical_score in zip(results, lexical_scores):
         vector_relevant = (
-            result["distance"] is not None
-            and result["distance"] < RELEVANT_DISTANCE
+            result["distance"] is not None and result["distance"] < RELEVANT_DISTANCE
         )
         lexical_relevant = (
-            best_lexical_score >= 2
-            and lexical_score == best_lexical_score
+            best_lexical_score >= 2 and lexical_score == best_lexical_score
         )
         if vector_relevant or lexical_relevant:
             selected.append(result)
@@ -496,11 +552,13 @@ def _remove_leading_section_heading(answer, results):
             cleaned,
             flags=re.IGNORECASE,
         )
-        if match and cleaned[match.end():].strip():
-            remainder = cleaned[match.end():].strip()
+        if match and cleaned[match.end() :].strip():
+            remainder = cleaned[match.end() :].strip()
             for index, character in enumerate(remainder):
                 if character.isalpha():
-                    return remainder[:index] + character.upper() + remainder[index + 1:]
+                    return (
+                        remainder[:index] + character.upper() + remainder[index + 1 :]
+                    )
             return remainder
     return cleaned
 
@@ -521,8 +579,7 @@ def _extractive_supporting_results(answer, results):
         return []
 
     evidence = [
-        _normalise_grounding_text(_extractive_evidence(result))
-        for result in results
+        _normalise_grounding_text(_extractive_evidence(result)) for result in results
     ]
     combined_evidence = " ".join(evidence)
     answer_start = combined_evidence.find(normalised_answer)
@@ -570,23 +627,20 @@ def answer_question(query, top_k=5, filters=None):
     query, top_k, filters = _normalise_query(query, top_k, filters)
     load_knowledge_sources()
     comparison_tiers = _multi_tier_reward_tiers(query)
-    candidate_k = (
-        max(top_k, len(comparison_tiers) + 2)
-        if comparison_tiers else top_k
-    )
+    candidate_k = max(top_k, len(comparison_tiers) + 2) if comparison_tiers else top_k
     results = retrieve_context(query, top_k=candidate_k, filters=filters)
     if comparison_tiers:
-        relevant = _select_multi_tier_reward_results(
-            results, comparison_tiers
-        )[:top_k]
+        relevant = _select_multi_tier_reward_results(results, comparison_tiers)[:top_k]
     else:
         reward_restrictions = _select_reward_restrictions_result(query, results)
         membership_conditions = _select_membership_conditions_result(query, results)
         relevant = (
             [reward_restrictions]
-            if reward_restrictions else (
+            if reward_restrictions
+            else (
                 [membership_conditions]
-                if membership_conditions else _select_relevant_results(query, results)
+                if membership_conditions
+                else _select_relevant_results(query, results)
             )
         )
 
@@ -599,8 +653,10 @@ def answer_question(query, top_k=5, filters=None):
             "message": "Insufficient relevant context was found.",
         }
         append_audit(
-            "answer_question", {"query": query, "filters": filters},
-            output, "insufficient",
+            "answer_question",
+            {"query": query, "filters": filters},
+            output,
+            "insufficient",
         )
         return output
 
@@ -616,7 +672,10 @@ def answer_question(query, top_k=5, filters=None):
             "message": "The local language model is unavailable.",
         }
         append_audit(
-            "answer_question", {"query": query, "filters": filters}, output, "unavailable"
+            "answer_question",
+            {"query": query, "filters": filters},
+            output,
+            "unavailable",
         )
         return output
 
@@ -632,15 +691,16 @@ def answer_question(query, top_k=5, filters=None):
             "message": "Insufficient relevant context was found.",
         }
         append_audit(
-            "answer_question", {"query": query, "filters": filters}, output, "insufficient"
+            "answer_question",
+            {"query": query, "filters": filters},
+            output,
+            "insufficient",
         )
         return output
     answer = _remove_leading_section_heading(answer, relevant)
     answer_mode = "generated"
     if not _is_extractive_answer(answer, relevant):
-        answer = _extractive_fallback(
-            relevant, include_all=bool(comparison_tiers)
-        )
+        answer = _extractive_fallback(relevant, include_all=bool(comparison_tiers))
         answer_mode = "extractive_fallback"
     relevant = _extractive_supporting_results(answer, relevant)
     confidence = confidence_from_results(len(relevant))
@@ -655,6 +715,7 @@ def answer_question(query, top_k=5, filters=None):
                 "source": r["metadata"].get("source", r["doc_id"]),
                 "section": r["metadata"].get("section", "Retrieved context"),
                 "snippet": r["text"][:200],
+                "text": r["text"],
                 "metadata": r["metadata"],
             }
             for r in relevant
@@ -664,7 +725,8 @@ def answer_question(query, top_k=5, filters=None):
         "elapsed_ms": int((time.time() - start) * 1000),
     }
     append_audit(
-        "answer_question", {"query": query, "filters": filters},
+        "answer_question",
+        {"query": query, "filters": filters},
         {
             "confidence": confidence,
             "retrieved_count": len(relevant),

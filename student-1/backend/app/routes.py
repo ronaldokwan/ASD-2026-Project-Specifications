@@ -12,11 +12,17 @@ Endpoints registered in the Project Group Registration Form:
     GET    /next-sku?category=            preview the next generated SKU
     GET    /stats/category/<category>     facts used to ground the AI
     POST   /admin/reseed                  reset to the 12 seed records
+
+Release 1 (shared MCP and RAG servers, both outside Docker Compose):
+
+    POST   /api/products/<id>/mcp-check   MCP tool check_product_listing
+    POST   /api/catalogue/ask             grounded RAG answer with citations
+    POST   /api/catalogue/rag-sync        re-index every product into the RAG corpus
 """
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client
+from . import ai_agent, db_client, mcp_client, rag_client
 from .config import Config
 from .validation import ValidationError, canonical_category, clean_product
 
@@ -40,6 +46,8 @@ def health():
         "status": "ok" if database_ok else "degraded",
         "database": database,
         "ai_mode": ai_agent.ai_mode_health(),
+        "mcp_server": mcp_client.health(),
+        "rag_server": rag_client.health(),
     }
     return jsonify(body), (200 if database_ok else 503)
 
@@ -97,18 +105,23 @@ def get_product(product_id):
 @api.post("/api/products")
 def create_product():
     payload = clean_product(request.get_json(silent=True) or {})
-    return jsonify(db_client.create_product(payload)), 201
+    product = db_client.create_product(payload)
+    rag_client.sync_product(product)
+    return jsonify(product), 201
 
 
 @api.put("/api/products/<int:product_id>")
 def update_product(product_id):
     payload = clean_product(request.get_json(silent=True) or {}, partial=True)
-    return jsonify(db_client.update_product(product_id, payload))
+    product = db_client.update_product(product_id, payload)
+    rag_client.sync_product(product)
+    return jsonify(product)
 
 
 @api.delete("/api/products/<int:product_id>")
 def delete_product(product_id):
     db_client.delete_product(product_id)
+    rag_client.remove_product(product_id)
     return jsonify({"deleted": product_id})
 
 
@@ -134,6 +147,45 @@ def generate_product_copy():
 
     outcome = ai_agent.suggest_product_copy(name, category, keywords)
     return jsonify(outcome), (200 if outcome.get("ok") else 502)
+
+
+# ------------------------------------------------------------ Release 1: MCP
+@api.post("/api/products/<int:product_id>/mcp-check")
+def mcp_listing_check(product_id):
+    """Run the shared MCP tool check_product_listing for one product."""
+    product = db_client.get_product(product_id)
+    return jsonify(mcp_client.check_listing(product))
+
+
+@api.post("/api/catalogue/ask")
+def ask_catalogue():
+    """Grounded answer about the catalogue from the shared RAG server."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    question = payload.get("question")
+    if not isinstance(question, str):
+        raise ValidationError(["question must be a string"])
+    question = question.strip()
+    if not Config.QUESTION_MIN_CHARS <= len(question) <= Config.QUESTION_MAX_CHARS:
+        raise ValidationError(
+            [
+                "question must be between {} and {} characters".format(
+                    Config.QUESTION_MIN_CHARS, Config.QUESTION_MAX_CHARS
+                )
+            ]
+        )
+
+    rag_client.ensure_synced(db_client.list_products)
+    outcome = rag_client.ask(question)
+    outcome["question"] = question
+    return jsonify(outcome)
+
+
+@api.post("/api/catalogue/rag-sync")
+def rag_sync():
+    """Re-index every catalogue product into the shared RAG corpus."""
+    return jsonify(rag_client.sync_products(db_client.list_products()))
 
 
 # ----------------------------------------------------------- error handlers
@@ -163,6 +215,32 @@ def handle_database_error(exc):
 @api.app_errorhandler(ai_agent.AIServiceError)
 def handle_ai_error(exc):
     return jsonify({"error": "AI-Mode service unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPServiceUnavailable)
+def handle_mcp_unavailable(exc):
+    return jsonify({"error": "MCP server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPBadResponse)
+def handle_mcp_bad_response(exc):
+    return (
+        jsonify({"error": "MCP server returned an invalid result", "detail": str(exc)}),
+        502,
+    )
+
+
+@api.app_errorhandler(rag_client.RAGServiceUnavailable)
+def handle_rag_unavailable(exc):
+    return jsonify({"error": "RAG server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(rag_client.RAGBadResponse)
+def handle_rag_bad_response(exc):
+    return (
+        jsonify({"error": "RAG server returned an invalid result", "detail": str(exc)}),
+        502,
+    )
 
 
 @api.app_errorhandler(404)

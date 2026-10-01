@@ -7,25 +7,47 @@ cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
 
 if [ -z "${PYTHON_BIN:-}" ]; then
-  if command -v python3.11 >/dev/null 2>&1; then
-    PYTHON_BIN=python3.11
-  else
-    PYTHON_BIN=python3
-  fi
+  for candidate in python3.11 python3 python; do
+    if "${candidate}" -c 'import sys' >/dev/null 2>&1; then
+      PYTHON_BIN=${candidate}
+      break
+    fi
+  done
 fi
 "${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ is required"'
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:0.5b}"
 
+# Refuse to start a second copy: on Windows a running service also locks its
+# venv's python.exe, so recreating the venv would fail with "Permission denied".
+busy=""
+for port in 7001 7002 7003; do
+  if curl -s -m 2 -o /dev/null "http://localhost:${port}/health"; then
+    busy="${busy} ${port}"
+  fi
+done
+if [ -n "${busy}" ]; then
+  echo "Already running on port(s)${busy}. Stop the existing services first," >&2
+  echo "or use them as they are (check http://localhost:7001/health)." >&2
+  exit 1
+fi
+
 start_service() {
   local name=$1 dir=$2 port=$3 module=$4
   echo "Starting ${name} on :${port} ..."
   (
     cd "${ROOT_DIR}/${dir}"
-    "${PYTHON_BIN}" -m venv .venv
+    # Reuse an existing venv; only create one on the first run.
+    if [ ! -f .venv/Scripts/activate ] && [ ! -f .venv/bin/activate ]; then
+      "${PYTHON_BIN}" -m venv .venv
+    fi
     # shellcheck disable=SC1091
-    source .venv/bin/activate
+    if [ -f .venv/Scripts/activate ]; then
+      source .venv/Scripts/activate   # Windows venv layout
+    else
+      source .venv/bin/activate
+    fi
     pip install -q -r requirements.txt
     SERVICE_PORT="${port}" python "${module}"
   ) &

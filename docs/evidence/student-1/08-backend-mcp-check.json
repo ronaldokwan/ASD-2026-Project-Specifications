@@ -1,0 +1,33 @@
+{
+  "arguments": {
+    "category": "Audio",
+    "comparable_avg_price": 97.82,
+    "comparable_count": 3,
+    "comparable_max_price": 199.95,
+    "comparable_min_price": 34.5,
+    "description": "Aurora Wireless Headphones are a premium audio solution that offers a sleek design and wireless connectivity. These headphones are ideal for professionals who need to work in noisy environments or those who want to stay connected while on-the-go.",
+    "name": "Aurora Wireless Headphones",
+    "price": 199.95,
+    "sku": "SKU-AUD-1001",
+    "status": "active"
+  },
+  "elapsed_ms": 105,
+  "product_id": 1,
+  "result": {
+    "comparable_count": 3,
+    "description_word_count": 38,
+    "errors": [],
+    "issues": [],
+    "listing_status": "ready",
+    "price_position": "within_range",
+    "price_vs_average_pct": 104.4,
+    "sku": "SKU-AUD-1001",
+    "tool": "check_product_listing",
+    "warnings": [
+      "price is 104.4% above the category average of 97.82"
+    ]
+  },
+  "server": "http://host.docker.internal:7002/mcp",
+  "tool": "check_product_listing",
+  "round_trip_ms": 124
+}

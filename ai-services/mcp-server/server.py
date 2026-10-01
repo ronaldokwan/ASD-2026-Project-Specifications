@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from tools import check_customer_profile as _check_customer_profile
+from tools import check_product_listing as _check_product_listing
 from tools import check_review_quality as _check_review_quality
 
 mcp = MCPServer("ASD Group 40 Shared MCP Server", version="1.1.0")
@@ -23,6 +24,7 @@ AVAILABLE_TOOLS = [
     "review_quality_check",
     "check_review_quality",
     "check_customer_profile",
+    "check_product_listing",
 ]
 TOOL_CONTRACTS = {
     "check_review_quality": {
@@ -41,6 +43,18 @@ TOOL_CONTRACTS = {
             "as_of_date",
         ],
         "optional": [],
+        "transport": "MCP",
+    },
+    "check_product_listing": {
+        "description": "Read-only publish-readiness and price-position check for one product.",
+        "required": ["sku", "name", "category", "price", "status"],
+        "optional": [
+            "description",
+            "comparable_count",
+            "comparable_avg_price",
+            "comparable_min_price",
+            "comparable_max_price",
+        ],
         "transport": "MCP",
     },
 }
@@ -83,6 +97,27 @@ def check_customer_profile(
     """Check tier, membership duration and optional profile completeness."""
     return _check_customer_profile(
         loyalty_tier, joined_at, has_phone, has_address, as_of_date
+    )
+
+
+@mcp.tool(name="check_product_listing", structured_output=True)
+def check_product_listing(
+    sku: str,
+    name: str,
+    category: str,
+    price: float,
+    status: str,
+    description: str = "",
+    comparable_count: int = 0,
+    comparable_avg_price: float | None = None,
+    comparable_min_price: float | None = None,
+    comparable_max_price: float | None = None,
+) -> dict[str, Any]:
+    """Check one catalogue listing is ready to publish and how its price compares."""
+    return _check_product_listing(
+        sku, name, category, price, status, description,
+        comparable_count, comparable_avg_price,
+        comparable_min_price, comparable_max_price,
     )
 
 

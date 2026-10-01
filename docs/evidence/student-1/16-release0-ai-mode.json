@@ -1,0 +1,43 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 1011,
+  "fallback_used": false,
+  "grounding": {
+    "category": "Audio",
+    "category_avg_price": 123.35,
+    "category_price_range": "34.5 to 199.95",
+    "category_products": 4,
+    "comparable_products": "Studio Wired Earbuds at $34.5, Pebble Bluetooth Speaker at $59.0, Aurora Wireless Headphones at $199.95, game at $199.95",
+    "currency": "AUD",
+    "product_name": "Cadence Earbuds",
+    "seller": "Group 40 retail store",
+    "seller_keywords": "waterproof, 8 hour battery"
+  },
+  "mode": "chat",
+  "model": "qwen2.5:0.5b",
+  "ok": true,
+  "result": {
+    "description": "Cadence Earbuds are a premium audio device that offers a 8-hour battery life and waterproof protection. They are the perfect choice for music lovers and gamers alike.",
+    "price": 34.5
+  },
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'product_catalogue_copy' with 9 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called qwen2.5:0.5b through the Ollama runtime.",
+      "raw_preview": "{\n  \"description\": \"Cadence Earbuds are a premium audio device that offers a 8-hour battery life and waterproof protection. They are the perfect choice for music lovers and gamers alike.\",\n  \"price\": 34.5\n}",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ],
+  "round_trip_ms": 1038
+}

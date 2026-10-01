@@ -46,6 +46,30 @@ The MCP and compatibility routes call the same functions in `tools.py`.
 - **Policy class:** read-only, deterministic, no side effects.
 - **MCP tool name:** `check_customer_profile`.
 
+## check_product_listing
+
+- **Owner:** Student 1 - Product Catalogue
+- **Purpose:** decide whether one catalogue listing is ready to publish
+  (catalogue rules plus description and status readiness) and position its
+  price against comparable products in the same category.
+- **Input:** `sku`, `name`, `category` (`Audio`, `Computing`, `Home`,
+  `Wearables`), `price` (1-9999), `status` (`active`, `draft`, `archived`) -
+  all required; `description` (up to 1200 characters), `comparable_count`,
+  `comparable_avg_price`, `comparable_min_price`, `comparable_max_price` -
+  optional. The caller grounds the comparable facts from its own database
+  (the other products in the category, excluding this one); the tool never
+  reaches back into the catalogue service.
+- **Output:** `tool`, `sku`, `listing_status` (`ready`, `needs_attention`,
+  or `invalid`), `price_position` (`below_range`, `within_range`,
+  `above_range`, `no_comparables`, or `unknown`), nullable
+  `price_vs_average_pct`, `comparable_count`, `description_word_count`, and
+  string lists `issues` (fix before publishing), `warnings` (informational)
+  and `errors` (input contract violations).
+- **Policy class:** read-only, deterministic, no side effects. The tool
+  never writes a product, never changes a price and holds no database
+  address or credential; the result is advice the administrator reviews.
+- **MCP tool name:** `check_product_listing`.
+
 ## Adding your own tool
 
 1. Add a pure function to `tools.py` (grounding facts as arguments, no calls

@@ -46,8 +46,11 @@ two ways, exactly like `ai-services/mcp-server/`:
     "sources": [], "message": "..."}` - the frontend must render this as its
     own state, not as a normal low-confidence answer.
   - Otherwise: `{"status": "ok", "answer": str, "sources": [{"doc_id",
-    "chunk_id", "snippet", "metadata"}], "confidence": "high"|"medium"|"low",
-    "retrieved_count": int}`. Confidence is driven by how many chunks were
+    "chunk_id", "source", "section", "snippet", "text", "metadata"}],
+    "confidence": "high"|"medium"|"low", "retrieved_count": int}`.
+    `snippet` is a 200-character display preview; `text` is the full
+    retrieved chunk, which grounding validation must check the answer
+    against. Confidence is driven by how many chunks were
     close enough to count as supporting evidence (3+ = high, 1-2 = medium),
     never by the LLM's own self-reported certainty.
 - **HTTP:** `POST /rag/query`

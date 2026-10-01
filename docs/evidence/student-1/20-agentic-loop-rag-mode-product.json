@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 1056,
+  "fallback_used": false,
+  "mode": "rag_validation",
+  "model": "qwen2.5:0.5b",
+  "ok": true,
+  "result": {
+    "confidence_ok": "true",
+    "grounded": "true",
+    "notes": "The answer is supported by the retrieved evidence.",
+    "unsupported_claims": "none"
+  },
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'rag_validation' with 4 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called qwen2.5:0.5b through the Ollama runtime.",
+      "raw_preview": "{\n  \"grounded\": true,\n  \"unsupported_claims\": \"none\",\n  \"confidence_ok\": true\n}",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ],
+  "round_trip_ms": 3098
+}
