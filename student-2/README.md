@@ -7,22 +7,25 @@ Java/Spring Boot implementation of the SmartShop Customer Orders feature.
 | Service | Local port | Responsibility |
 | --- | ---: | --- |
 | `frontend` | 3002 | Thymeleaf and HTMX pages |
-| `backend` | 8002 | Order business API, product/stock coordination, AI |
+| `backend` | 8002 | Order business API, product/stock coordination, MCP/RAG integration |
 | `database-api` | 9002 | SQLite ownership and internal CRUD API |
 
 SQLite is embedded inside `database-api`; port 9002 belongs to the Spring Boot API, not to SQLite. The SQLite file is persisted in the Docker volume `student2-orders-data`.
 
 ## Run with Docker
 
-From this directory:
+The shared AI services are host processes and are intentionally not included in Compose. From the repository root, start Ollama and the application containers, then run the shared services in a second terminal:
 
 ```bash
 docker compose up --build
+bash scripts/run-ai-services.sh
 ```
 
 Open <http://localhost:3002/orders>.
 
-The AI endpoints try the shared Ollama URL and return a development fallback response when Ollama is unavailable. Product details are loaded from Student 1's catalogue API; if that service is unavailable or the SKU is not found, the order service falls back to the raw SKU. Stock methods still return fixed development values until Student 3's API is ready.
+The order detail page calls the shared MCP tool `check_order_fulfilment` and asks the shared RAG service questions grounded in a sanitised order record plus `backend/src/main/resources/rag/shipping-policy.md`. Order mutations refresh the RAG record on a best-effort basis, and the page also provides a manual refresh button. No customer email is sent to the RAG service.
+
+Product details are loaded from Student 1's catalogue API; if that service is unavailable or the SKU is not found, the order service falls back to the raw SKU. Stock methods still return fixed development values until Student 3's API is ready.
 
 The create and edit forms load real products from Student 1. Every order mutation confirms each SKU again in the backend and stores the catalogue price instead of trusting the submitted `unitPrice`. Unknown SKUs are rejected, and orders are not saved while the catalogue is unavailable.
 
@@ -62,10 +65,23 @@ DELETE http://localhost:8002/api/orders/{orderId}/lines/{lineId}
 POST   http://localhost:8002/api/orders/stock-check
 POST   http://localhost:8002/api/orders/{id}/ai/delay-email
 POST   http://localhost:8002/api/orders/ai/customer-summary
+POST   http://localhost:8002/api/orders/{id}/mcp/fulfilment-check
+POST   http://localhost:8002/api/orders/{id}/rag/refresh
+POST   http://localhost:8002/api/orders/{id}/rag/ask
 
 GET    http://localhost:8002/api/catalog/products
 GET    http://localhost:8002/api/catalog/products?sku=SKU-AUD-1001
 ```
+
+Example RAG question:
+
+```json
+{
+  "question": "Can this order be shipped, and what policy applies?"
+}
+```
+
+The backend reads `MCP_SERVER_URL` (default `http://localhost:7002`) and `RAG_SERVER_URL` (default `http://localhost:7003`). Set `MCP_ENABLED=false` or `RAG_ENABLED=false` when the shared services are deliberately unavailable, such as an isolated CI run.
 
 Example create request:
 

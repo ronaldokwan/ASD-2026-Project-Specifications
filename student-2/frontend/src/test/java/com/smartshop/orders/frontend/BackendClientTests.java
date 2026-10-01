@@ -14,8 +14,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 class BackendClientTests {
@@ -51,6 +54,30 @@ class BackendClientTests {
         assertThatThrownBy(() -> backendClient.create(request))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Insufficient stock for SKU SKU-AUD-1001 (available 50, requested 1000)");
+        server.verify();
+    }
+
+    @Test
+    void callsTheOrderFulfilmentEndpoint() {
+        server.expect(once(), requestTo("http://student2-api:8002/api/orders/7/mcp/fulfilment-check"))
+            .andRespond(withSuccess("""
+                {"ok":true,"tool":"check_order_fulfilment","result":{
+                  "ready_to_ship":true,"blockers":[],"checked_rules":[],"summary":"Ready"}}
+                """, MediaType.APPLICATION_JSON));
+
+        assertThat(backendClient.checkFulfilment(7).result().readyToShip()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void sendsTheRagQuestionAsJson() {
+        server.expect(once(), requestTo("http://student2-api:8002/api/orders/7/rag/ask"))
+            .andExpect(content().json("{\"question\":\"Can this order ship?\"}"))
+            .andRespond(withSuccess("""
+                {"status":"ok","answer":"Yes.","confidence":"high","sources":[]}
+                """, MediaType.APPLICATION_JSON));
+
+        assertThat(backendClient.askRag(7, "Can this order ship?").answer()).isEqualTo("Yes.");
         server.verify();
     }
 }

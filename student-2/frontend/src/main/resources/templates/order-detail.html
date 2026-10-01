@@ -82,10 +82,46 @@
             <div id="ai-result" class="ai-result muted">The generated email will appear here.</div>
         </article>
     </section>
+
+    <section class="panel intelligence-panel">
+        <div class="section-heading intelligence-heading">
+            <div>
+                <span class="eyebrow">Release 1 · Shared services</span>
+                <h2>Order intelligence</h2>
+            </div>
+            <button class="button secondary" type="button"
+                    th:attr="hx-post=@{/orders/{id}/rag/refresh(id=${order.id})}"
+                    hx-target="#rag-result" hx-swap="innerHTML">Refresh RAG context</button>
+        </div>
+        <div class="intelligence-grid">
+            <article>
+                <h3>MCP fulfilment check</h3>
+                <p class="muted">Run the shared deterministic tool against this order's current status, lines and inventory commitment.</p>
+                <button class="button primary" type="button"
+                        th:attr="hx-post=@{/orders/{id}/mcp/fulfilment-check(id=${order.id})}"
+                        hx-target="#mcp-result" hx-swap="innerHTML">Check readiness</button>
+                <div id="mcp-result" class="intelligence-result muted">The MCP result will appear here.</div>
+            </article>
+            <article>
+                <h3>Ask the RAG assistant</h3>
+                <p class="muted">Answers are grounded in the sanitised order record and the internal SmartShop shipping policy.</p>
+                <form class="rag-form" th:attr="hx-post=@{/orders/{id}/rag/ask(id=${order.id})}"
+                      hx-target="#rag-result" hx-swap="innerHTML">
+                    <label for="rag-question"><span>Question</span></label>
+                    <div class="inline-form">
+                        <input id="rag-question" name="question" maxlength="500" required
+                               placeholder="Can this order be shipped, and what policy applies?">
+                        <button class="button dark" type="submit">Ask</button>
+                    </div>
+                </form>
+                <div id="rag-result" class="intelligence-result muted">The grounded answer and sources will appear here.</div>
+            </article>
+        </div>
+    </section>
 </main>
 <footer class="container muted" style="padding-bottom:32px">
     ASD 2026 · Canvas Group 40 · Agentic AI Retail Application ·
-    frontend → backend/API → AI-Mode → Ollama → LLM
+    frontend → backend/API → shared MCP/RAG services → Ollama → LLM
 </footer>
 </body>
 </html>
