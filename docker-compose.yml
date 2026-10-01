@@ -14,7 +14,7 @@ name: asd2026-group40
 # too, not just Docker Desktop).
 x-ai-env: &ai-env
   OLLAMA_URL: http://ollama:11434
-  LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+  LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
   LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
   AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
   MCP_SERVER_URL: ${MCP_SERVER_URL:-http://host.docker.internal:7002}
@@ -63,7 +63,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     entrypoint: ["/bin/sh", "-c"]
     command: >
       'echo "Pulling $${LLM_MODEL} ..." && ollama pull "$${LLM_MODEL}" && ollama list'
@@ -105,11 +105,10 @@ services:
       SERVICE_PORT: "8001"
     ports:
       - "8001:8001"
+    <<: *host-gateway
     depends_on:
       student-1-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -166,15 +165,15 @@ services:
       dockerfile: backend/Dockerfile
     container_name: asd-student2-api
     environment:
+      <<: *ai-env
       SERVER_PORT: "8002"
       DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: http://student-1-backend:8001
       STOCK_API_URL: http://student-4-backend:8004
-      OLLAMA_URL: http://ollama:11434
-      AI_MODE_URL: http://ai-mode:7000
-      OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+      OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     ports:
       - "8002:8002"
+    <<: *host-gateway
     depends_on:
       student2-db:
         condition: service_healthy
@@ -242,11 +241,10 @@ services:
       SERVICE_PORT: "8003"
     ports:
       - "8003:8003"
+    <<: *host-gateway
     depends_on:
       student-3-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -310,11 +308,10 @@ services:
       SERVICE_PORT: "8004"
     ports:
       - "8004:8004"
+    <<: *host-gateway
     depends_on:
       student-4-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
