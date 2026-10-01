@@ -24,7 +24,7 @@ app = Flask(__name__)
 
 @app.get("/health")
 def health():
-    return jsonify({"service": "rag-server", "status": "ok", "model": os.getenv("LLM_MODEL", "qwen2.5:0.5b")})
+    return jsonify({"service": "rag-server", "status": "ok", "model": os.getenv("LLM_MODEL", "qwen2.5:3b")})
 
 
 @app.post("/rag/documents")

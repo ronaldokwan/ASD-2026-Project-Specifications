@@ -32,6 +32,21 @@ behaviour can drift.
 - **HTTP:** `POST /tools/check_review_quality` on `http_server.py`.
 - **MCP tool name:** `review_quality_check` on `server.py`.
 
+## check_order_fulfilment
+
+- **Owner:** Student 2 - Customer Orders
+- **Purpose:** deterministic shipment-readiness check grounded with facts from
+  the caller's order record.
+- **Input:** `order_number` (string), `status` (string), `line_count` (int),
+  `total_quantity` (int), `order_total` (number), and `inventory_committed`
+  (boolean). All fields are required.
+- **Output:** `{"ready_to_ship": bool, "blockers": [string, ...],
+  "checked_rules": [string, ...], "summary": string}`.
+- **Policy class:** read-only, no side effects. The tool never reads another
+  service and never calls an LLM.
+- **HTTP:** `POST /tools/check_order_fulfilment` on `http_server.py`.
+- **MCP tool name:** `check_order_fulfilment` on `server.py`.
+
 ## Adding your own tool
 
 1. Add a pure function to `tools.py` (grounding facts as arguments, no calls

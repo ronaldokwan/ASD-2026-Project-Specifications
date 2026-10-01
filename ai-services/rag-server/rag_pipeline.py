@@ -48,7 +48,7 @@ _STOPWORDS = frozenset((
 RELEVANT_DISTANCE = 1.8
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:0.5b")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:3b")
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
 
 _collection = None
@@ -233,23 +233,77 @@ def confidence_from_results(relevant_count):
     return "low"
 
 
-def _generate_with_ollama(query, context_text):
+class GroundingError(RuntimeError):
+    """Raised when the LLM response cannot be proven against retrieved sources."""
+
+
+def _generate_with_ollama(query, sources):
+    context_text = "\n\n".join(
+        "SOURCE_ID: {chunk_id}\nDOCUMENT_ID: {doc_id}\nCONTENT:\n{text}".format(**source)
+        for source in sources
+    )
     prompt = (
-        "Answer the question using ONLY the review excerpts in the context below. "
-        "Be factual and concise (1-2 sentences). If the context does not answer the "
-        "question, reply exactly: Insufficient evidence.\n\n"
+        "You are a strict retrieval-grounded assistant. Answer using ONLY facts stated in the sources below. "
+        "Apply explicit policy conditions literally and do not add assumptions, invented blockers, or outside facts. "
+        "Before answering, verify that every claim is directly supported by at least one supplied SOURCE_ID. "
+        "Set answerable to true when the sources contain the facts needed for the specific question; not every source "
+        "needs to be used and you must not demand facts the question did not ask for. For a policy decision, combine "
+        "the stated order facts with the stated policy conditions. "
+        "Return only a JSON object with exactly these fields: "
+        "{{\"answerable\": true or false, \"answer\": \"1-2 concise sentences\", "
+        "\"source_ids\": [\"exact SOURCE_ID values actually used\"]}}. "
+        "Set answerable to false, answer to an empty string, and source_ids to [] only when a fact necessary to answer "
+        "the specific question is absent. Never cite a SOURCE_ID that is not supplied.\n\n"
         "QUESTION:\n{}\n\nCONTEXT:\n{}\n".format(query, context_text)
     )
     try:
         response = requests.post(
             "{}/api/generate".format(OLLAMA_URL),
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
+            json={
+                "model": LLM_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "format": "json",
+                "options": {"temperature": 0},
+            },
             timeout=LLM_TIMEOUT,
         )
         response.raise_for_status()
-        return (response.json().get("response") or "").strip() or "Insufficient evidence."
-    except requests.RequestException as exc:
-        return "Insufficient evidence. (LLM unreachable: {})".format(exc)
+        generated = json.loads((response.json().get("response") or "").strip())
+    except (requests.RequestException, ValueError, TypeError) as exc:
+        raise GroundingError("LLM response was unavailable or malformed") from exc
+
+    if not isinstance(generated, dict) or not isinstance(generated.get("answerable"), bool):
+        raise GroundingError("LLM response did not match the grounding contract")
+    if not generated["answerable"]:
+        return {"answerable": False, "answer": "", "source_ids": []}
+
+    answer = generated.get("answer")
+    source_ids = generated.get("source_ids")
+    if not isinstance(answer, str) or not answer.strip():
+        raise GroundingError("Grounded answer was empty")
+    if not isinstance(source_ids, list) or not source_ids or not all(isinstance(item, str) for item in source_ids):
+        raise GroundingError("Grounded answer did not cite sources")
+
+    available_ids = {source["chunk_id"] for source in sources}
+    cited_ids = list(dict.fromkeys(source_ids))
+    if not set(cited_ids).issubset(available_ids):
+        raise GroundingError("Grounded answer cited a source that was not retrieved")
+
+    return {"answerable": True, "answer": answer.strip(), "source_ids": cited_ids}
+
+
+def _insufficient_output(message, relevant_count=0, start=None):
+    output = {
+        "status": "insufficient_context",
+        "confidence": "insufficient",
+        "sources": [],
+        "message": message,
+        "retrieved_count": relevant_count,
+    }
+    if start is not None:
+        output["elapsed_ms"] = int((time.time() - start) * 1000)
+    return output
 
 
 def answer_question(query, top_k=5, filters=None):
@@ -266,26 +320,46 @@ def answer_question(query, top_k=5, filters=None):
     relevant = [r for r in results if r["distance"] is not None and r["distance"] < RELEVANT_DISTANCE]
 
     if not relevant:
-        output = {
-            "status": "insufficient_context",
-            "confidence": "insufficient",
-            "sources": [],
-            "message": "Not enough relevant context was found to answer this question.",
-        }
+        output = _insufficient_output(
+            "Not enough relevant context was found to answer this question.", start=start
+        )
         append_audit("answer_question", {"query": query, "filters": filters}, output, "insufficient")
         return output
 
-    context_text = "\n\n".join(r["text"] for r in relevant)
-    answer = _generate_with_ollama(query, context_text)
-    confidence = confidence_from_results(len(relevant))
+    try:
+        generated = _generate_with_ollama(query, relevant)
+    except GroundingError as exc:
+        output = _insufficient_output(
+            "The retrieved context could not produce a verifiably grounded answer.",
+            relevant_count=len(relevant),
+            start=start,
+        )
+        append_audit(
+            "answer_question", {"query": query, "filters": filters},
+            {"reason": str(exc), "retrieved_count": len(relevant)}, "insufficient",
+        )
+        return output
+
+    if not generated["answerable"]:
+        output = _insufficient_output(
+            "The retrieved context does not fully support an answer to this question.",
+            relevant_count=len(relevant),
+            start=start,
+        )
+        append_audit("answer_question", {"query": query, "filters": filters}, output, "insufficient")
+        return output
+
+    cited_ids = set(generated["source_ids"])
+    cited_results = [r for r in relevant if r["chunk_id"] in cited_ids]
+    confidence = confidence_from_results(len(cited_results))
 
     output = {
         "status": "ok",
-        "answer": answer,
+        "answer": generated["answer"],
         "sources": [
             {"doc_id": r["doc_id"], "chunk_id": r["chunk_id"], "snippet": r["text"][:200],
              "metadata": r["metadata"]}
-            for r in relevant
+            for r in cited_results
         ],
         "confidence": confidence,
         "retrieved_count": len(relevant),

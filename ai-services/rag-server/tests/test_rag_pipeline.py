@@ -23,6 +23,17 @@ import pytest  # noqa: E402
 import rag_pipeline  # noqa: E402
 
 
+class FakeOllamaResponse:
+    def __init__(self, generated):
+        self.generated = generated
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return {"response": self.generated}
+
+
 @pytest.fixture(autouse=True)
 def fresh_corpus(monkeypatch, tmp_path):
     """Isolate each test's corpus/index in its own temp directory."""
@@ -58,6 +69,25 @@ def test_retrieve_context_respects_metadata_filters():
     assert all(r["metadata"].get("product_sku") == "SKU-HOM-3001" for r in results)
 
 
+def test_order_filter_includes_only_current_order_and_shipping_policy():
+    rag_pipeline.upsert_documents([
+        {"id": "order-1", "text": "Order ORD-100 is pending.",
+         "metadata": {"feature": "orders", "doc_type": "order", "order_number": "ORD-100"}},
+        {"id": "order-2", "text": "Order ORD-200 is delivered.",
+         "metadata": {"feature": "orders", "doc_type": "order", "order_number": "ORD-200"}},
+        {"id": "policy", "text": "Pending orders may proceed to shipment.",
+         "metadata": {"feature": "orders", "doc_type": "shipping_policy"}},
+    ])
+    filters = {"$and": [
+        {"feature": "orders"},
+        {"$or": [{"order_number": "ORD-100"}, {"doc_type": "shipping_policy"}]},
+    ]}
+
+    results = rag_pipeline.retrieve_context("pending shipment", top_k=5, filters=filters)
+
+    assert {result["doc_id"] for result in results} == {"order-1", "policy"}
+
+
 def test_answer_question_returns_insufficient_context_for_unrelated_query():
     seed_reviews()
     output = rag_pipeline.answer_question("What is the warranty policy for laptops?", top_k=5)
@@ -68,7 +98,11 @@ def test_answer_question_returns_insufficient_context_for_unrelated_query():
 
 def test_answer_question_returns_grounded_answer_with_citations(monkeypatch):
     seed_reviews()
-    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda q, c: "The battery life is excellent.")
+    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda q, c: {
+        "answerable": True,
+        "answer": "The battery life is excellent.",
+        "source_ids": ["r1::0"],
+    })
 
     output = rag_pipeline.answer_question("How is the battery life?", top_k=5,
                                            filters={"product_sku": "SKU-AUD-1001"})
@@ -77,12 +111,61 @@ def test_answer_question_returns_grounded_answer_with_citations(monkeypatch):
     assert output["answer"] == "The battery life is excellent."
     assert output["confidence"] in ("high", "medium", "low")
     assert output["sources"]
-    assert output["sources"][0]["doc_id"] in ("r1", "r2")
+    assert {source["doc_id"] for source in output["sources"]} == {"r1"}
+
+
+def test_answer_question_returns_insufficient_when_model_declines(monkeypatch):
+    seed_reviews()
+    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda q, c: {
+        "answerable": False, "answer": "", "source_ids": [],
+    })
+
+    output = rag_pipeline.answer_question("How is the battery life?", top_k=5,
+                                           filters={"product_sku": "SKU-AUD-1001"})
+
+    assert output["status"] == "insufficient_context"
+    assert output["sources"] == []
+
+
+def test_answer_question_returns_insufficient_for_grounding_error(monkeypatch):
+    seed_reviews()
+
+    def invalid_generation(_query, _sources):
+        raise rag_pipeline.GroundingError("invalid citation")
+
+    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", invalid_generation)
+    output = rag_pipeline.answer_question("How is the battery life?", top_k=5,
+                                           filters={"product_sku": "SKU-AUD-1001"})
+
+    assert output["status"] == "insufficient_context"
+    assert output["sources"] == []
+
+
+def test_ollama_generation_accepts_only_retrieved_source_ids(monkeypatch):
+    sources = [{"doc_id": "r1", "chunk_id": "r1::0", "text": "Battery lasts all day."}]
+    generated = '{"answerable":true,"answer":"The battery lasts all day.","source_ids":["r1::0"]}'
+    monkeypatch.setattr(rag_pipeline.requests, "post", lambda *args, **kwargs: FakeOllamaResponse(generated))
+
+    output = rag_pipeline._generate_with_ollama("How is the battery?", sources)
+
+    assert output["answerable"] is True
+    assert output["source_ids"] == ["r1::0"]
+
+
+def test_ollama_generation_rejects_invented_source_id(monkeypatch):
+    sources = [{"doc_id": "r1", "chunk_id": "r1::0", "text": "Battery lasts all day."}]
+    generated = '{"answerable":true,"answer":"It has a warranty.","source_ids":["not-retrieved"]}'
+    monkeypatch.setattr(rag_pipeline.requests, "post", lambda *args, **kwargs: FakeOllamaResponse(generated))
+
+    with pytest.raises(rag_pipeline.GroundingError):
+        rag_pipeline._generate_with_ollama("Does it have a warranty?", sources)
 
 
 def test_delete_document_removes_it_from_retrieval(monkeypatch):
     seed_reviews()
-    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda q, c: "answer")
+    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda q, c: {
+        "answerable": True, "answer": "answer", "source_ids": ["r2::0"],
+    })
 
     rag_pipeline.delete_document("r1")
     output = rag_pipeline.answer_question("How is the battery life?", top_k=5,

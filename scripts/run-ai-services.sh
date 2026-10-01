@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
-export LLM_MODEL="${LLM_MODEL:-qwen2.5:0.5b}"
+export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
 
 start_service() {
   local name=$1 dir=$2 port=$3 module=$4

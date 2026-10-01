@@ -9,7 +9,7 @@ import sys
 SERVICE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SERVICE_ROOT)
 
-from tools import check_review_quality  # noqa: E402
+from tools import check_order_fulfilment, check_review_quality  # noqa: E402
 
 
 def test_flags_short_reviews():
@@ -48,3 +48,21 @@ def test_duplicate_risk_flagged_for_generic_short_text_on_popular_products():
 def test_non_integer_rating_is_tolerated():
     result = check_review_quality("Solid headphones, would recommend to a friend.", "5")
     assert result["flagged"] is False
+
+
+def test_pending_order_with_committed_inventory_is_ready_to_ship():
+    result = check_order_fulfilment("ORD-100", "pending", 2, 3, 89.90, True)
+    assert result["ready_to_ship"] is True
+    assert result["blockers"] == []
+
+
+def test_non_pending_order_is_not_ready_to_ship():
+    result = check_order_fulfilment("ORD-101", "delivered", 1, 1, 20, True)
+    assert result["ready_to_ship"] is False
+    assert any("pending" in blocker for blocker in result["blockers"])
+
+
+def test_incomplete_order_reports_every_blocker():
+    result = check_order_fulfilment("", "pending", 0, 0, 0, False)
+    assert result["ready_to_ship"] is False
+    assert len(result["blockers"]) == 5
