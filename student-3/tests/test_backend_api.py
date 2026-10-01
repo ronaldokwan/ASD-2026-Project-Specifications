@@ -1,8 +1,12 @@
-"""Business API, validation, database-client, and AI tests."""
+"""Business API, validation, database-client, AI, MCP and RAG tests."""
+
+import asyncio
+import copy
 
 import pytest
 
-from app import ai_agent, db_client
+from app import ai_agent, db_client, mcp_client, rag_client
+from app.config import Config
 from app.validation import ValidationError, clean_customer
 
 
@@ -79,6 +83,7 @@ def test_partial_update_requires_a_field():
 
 
 def test_ai_reward_uses_stored_customer_and_grounding(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "AI_MODE_ENABLED", True)
     captured = {}
 
     class Response:
@@ -122,6 +127,7 @@ def test_ai_reward_uses_stored_customer_and_grounding(backend, fake_db, monkeypa
 
 
 def test_ai_transport_failure_returns_tier_fallback(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "AI_MODE_ENABLED", True)
     monkeypatch.setattr(
         ai_agent.requests, "post",
         lambda *args, **kwargs: (_ for _ in ()).throw(
@@ -133,3 +139,201 @@ def test_ai_transport_failure_returns_tier_fallback(backend, fake_db, monkeypatc
     assert body["fallback_used"] is True
     assert body["result"]["reward"] == "10% off the next purchase"
     assert body["trace"][0]["status"] == "fallback"
+
+
+def profile_result(**overrides):
+    result = {
+        "tool": "check_customer_profile",
+        "tier_valid": True,
+        "membership_days": 629,
+        "profile_status": "complete",
+        "missing_optional_fields": [],
+        "warnings": [],
+        "errors": [],
+    }
+    result.update(overrides)
+    return result
+
+
+def test_mcp_profile_endpoint_returns_structured_result(backend, fake_db, monkeypatch):
+    captured = {}
+
+    def check(customer):
+        captured["customer"] = customer
+        return profile_result()
+
+    monkeypatch.setattr(mcp_client, "check_customer_profile", check)
+    response = backend.post("/api/customers/1/mcp-profile")
+    assert response.status_code == 200
+    assert response.get_json()["profile_status"] == "complete"
+    assert captured["customer"]["loyalty_tier"] == "Silver"
+
+
+def test_mcp_client_sends_only_privacy_minimised_grounding(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(Config, "MCP_ENABLED", True)
+
+    def execute(arguments):
+        captured.update(arguments)
+        return profile_result()
+
+    monkeypatch.setattr(mcp_client, "_execute", execute)
+    customer = {
+        "id": 7, "name": "Private Name", "email": "private@example.test",
+        "phone": "0400 111 222", "address": "Private address",
+        "loyalty_tier": "Gold", "joined_at": "2024-08-19",
+    }
+    result = mcp_client.check_customer_profile(customer, as_of_date="2026-10-01")
+    assert result["tool"] == "check_customer_profile"
+    assert captured == {
+        "loyalty_tier": "Gold", "joined_at": "2024-08-19",
+        "has_phone": True, "has_address": True, "as_of_date": "2026-10-01",
+    }
+    assert not {"id", "name", "email", "phone", "address"}.intersection(captured)
+
+
+def test_mcp_customer_not_found(backend, fake_db):
+    assert backend.post("/api/customers/999/mcp-profile").status_code == 404
+
+
+def test_mcp_timeout_is_reported_as_unavailable(monkeypatch):
+    async def slow_call(_arguments):
+        await asyncio.sleep(0.05)
+
+    monkeypatch.setattr(mcp_client, "_call_tool", slow_call)
+    monkeypatch.setattr(Config, "MCP_TIMEOUT", 0.001)
+    with pytest.raises(mcp_client.MCPServiceUnavailable, match="timed out"):
+        mcp_client._execute({})
+
+
+def test_mcp_unavailable_and_malformed_map_to_503_and_502(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(
+        mcp_client, "check_customer_profile",
+        lambda _customer: (_ for _ in ()).throw(
+            mcp_client.MCPServiceUnavailable("offline")
+        ),
+    )
+    assert backend.post("/api/customers/1/mcp-profile").status_code == 503
+
+    monkeypatch.setattr(
+        mcp_client, "check_customer_profile",
+        lambda _customer: (_ for _ in ()).throw(
+            mcp_client.MCPBadResponse("missing fields")
+        ),
+    )
+    assert backend.post("/api/customers/1/mcp-profile").status_code == 502
+
+
+def test_mcp_client_rejects_malformed_response(monkeypatch):
+    monkeypatch.setattr(Config, "MCP_ENABLED", True)
+    monkeypatch.setattr(mcp_client, "_execute", lambda _arguments: {"tool": "wrong"})
+    with pytest.raises(mcp_client.MCPBadResponse):
+        mcp_client.check_customer_profile({
+            "loyalty_tier": "Gold", "joined_at": "2024-08-19",
+            "phone": None, "address": None,
+        })
+
+
+def test_rag_endpoint_returns_grounded_answer_and_enforces_feature_filter(
+    backend, monkeypatch
+):
+    captured = {}
+
+    def fake_ask(question):
+        captured["question"] = question
+        return {
+            "status": "ok", "answer": "Gold customers receive approved benefits.",
+            "sources": [{"source": "customer-loyalty-policy.md",
+                         "section": "Gold Membership", "snippet": "Gold benefits..."}],
+            "confidence": "high",
+        }
+
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", fake_ask)
+    response = backend.post(
+        "/api/loyalty-benefits/ask",
+        json={"question": "What benefits are available to Gold customers?",
+              "filters": {"feature": "reviews"}},
+    )
+    assert response.status_code == 200
+    assert response.get_json()["confidence"] == "high"
+    assert captured["question"] == "What benefits are available to Gold customers?"
+
+
+def test_rag_client_always_sends_customer_accounts_filter(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(Config, "RAG_ENABLED", True)
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {
+                "status": "ok", "answer": "Gold benefit answer.", "confidence": "medium",
+                "sources": [{"source": "customer-loyalty-policy.md",
+                             "section": "Gold Membership", "snippet": "Gold benefit text."}],
+            }
+
+    def post(url, json=None, timeout=None):
+        captured.update({"url": url, "json": json, "timeout": timeout})
+        return Response()
+
+    monkeypatch.setattr(rag_client.requests, "post", post)
+    rag_client.ask_loyalty_benefits("What are Gold benefits?")
+    assert captured["json"]["filters"] == {"feature": "customer_accounts"}
+
+
+def test_rag_insufficient_context_passes_through(backend, monkeypatch):
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "insufficient_context", "answer": "", "sources": [],
+        "confidence": "insufficient", "message": "Insufficient relevant context was found.",
+    })
+    body = backend.post(
+        "/api/loyalty-benefits/ask", json={"question": "How do I reset a password?"}
+    ).get_json()
+    assert body["status"] == "insufficient_context"
+    assert body["sources"] == []
+
+
+def test_rag_timeout_and_unavailable_are_reported(monkeypatch):
+    monkeypatch.setattr(Config, "RAG_ENABLED", True)
+    monkeypatch.setattr(
+        rag_client.requests, "post",
+        lambda *args, **kwargs: (_ for _ in ()).throw(rag_client.requests.Timeout()),
+    )
+    with pytest.raises(rag_client.RAGServiceUnavailable, match="timed out"):
+        rag_client.ask_loyalty_benefits("What are Gold benefits?")
+
+    monkeypatch.setattr(
+        rag_client.requests, "post",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            rag_client.requests.ConnectionError("offline")
+        ),
+    )
+    with pytest.raises(rag_client.RAGServiceUnavailable, match="unreachable"):
+        rag_client.ask_loyalty_benefits("What are Gold benefits?")
+
+
+def test_rag_client_rejects_malformed_response(monkeypatch):
+    monkeypatch.setattr(Config, "RAG_ENABLED", True)
+
+    class Response:
+        status_code = 200
+
+        def json(self):
+            return {"status": "ok", "answer": "Unsupported", "sources": []}
+
+    monkeypatch.setattr(rag_client.requests, "post", lambda *args, **kwargs: Response())
+    with pytest.raises(rag_client.RAGBadResponse):
+        rag_client.ask_loyalty_benefits("What are Gold benefits?")
+
+
+def test_mcp_and_rag_do_not_mutate_customer_database(backend, fake_db, monkeypatch):
+    before = copy.deepcopy(fake_db.rows)
+    monkeypatch.setattr(mcp_client, "check_customer_profile", lambda _customer: profile_result())
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "insufficient_context", "answer": "", "sources": [],
+        "confidence": "insufficient", "message": "Insufficient relevant context was found.",
+    })
+    backend.post("/api/customers/1/mcp-profile")
+    backend.post("/api/loyalty-benefits/ask", json={"question": "Unknown policy question"})
+    assert fake_db.rows == before

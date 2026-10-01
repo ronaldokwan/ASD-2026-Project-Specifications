@@ -45,6 +45,8 @@ def test_customer_detail(frontend, fake_api):
     assert "avery@example.test" in html
     assert "Sydney NSW" in html
     assert "Customer ID" not in html
+    assert "Check Profile with MCP" in html
+    assert "Customer #1" not in html
 
 
 def test_create_returns_oob_updates(frontend, fake_api):
@@ -93,3 +95,87 @@ def test_ai_reward_result_and_trace(frontend, fake_api):
 def test_frontend_health(frontend, monkeypatch):
     monkeypatch.setattr(api_client, "backend_health", lambda: {"status": "ok"})
     assert frontend.get("/health").get_json()["status"] == "ok"
+
+
+def test_mcp_profile_result_is_structured_and_safe(frontend, fake_api, monkeypatch):
+    html = frontend.post("/customers/1/mcp-profile").get_data(as_text=True)
+    assert "Profile check complete" in html
+    assert "629 days" in html
+    assert "This result is not stored" in html
+
+    monkeypatch.setattr(api_client, "check_customer_profile", lambda _customer_id: {
+        "tool": "check_customer_profile", "tier_valid": False,
+        "membership_days": None, "profile_status": "invalid",
+        "missing_optional_fields": [], "warnings": [],
+        "errors": ["<script>alert('x')</script>"],
+    })
+    unsafe = frontend.post("/customers/1/mcp-profile").get_data(as_text=True)
+    assert "<script>" not in unsafe
+    assert "&lt;script&gt;" in unsafe
+
+
+def test_mcp_service_unavailable_is_displayed(frontend, fake_api, monkeypatch):
+    monkeypatch.setattr(
+        api_client, "check_customer_profile",
+        lambda _customer_id: (_ for _ in ()).throw(
+            api_client.ApiError("MCP server unavailable", 503)
+        ),
+    )
+    response = frontend.post("/customers/1/mcp-profile")
+    assert response.status_code == 503
+    assert "MCP server unavailable" in response.get_data(as_text=True)
+
+
+def test_rag_answer_displays_sources_and_confidence(frontend, fake_api):
+    html = frontend.post(
+        "/loyalty-benefits/ask",
+        data={"question": "What benefits are available to Gold customers?"},
+    ).get_data(as_text=True)
+    assert "fifteen percent off" in html
+    assert "customer-loyalty-policy.md" in html
+    assert "Gold Membership" in html
+    assert "Confidence:" in html and "High" in html
+    assert "not stored in the customer database" in html
+
+
+def test_rag_insufficient_context_is_displayed(frontend, fake_api, monkeypatch):
+    monkeypatch.setattr(api_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "insufficient_context", "answer": "", "sources": [],
+        "confidence": "insufficient", "message": "Insufficient relevant context was found.",
+    })
+    html = frontend.post(
+        "/loyalty-benefits/ask", data={"question": "How do I reset a password?"}
+    ).get_data(as_text=True)
+    assert "Insufficient context" in html
+    assert "Insufficient relevant context was found" in html
+
+
+def test_rag_service_unavailable_and_unsafe_html_are_safe(
+    frontend, fake_api, monkeypatch
+):
+    monkeypatch.setattr(
+        api_client, "ask_loyalty_benefits",
+        lambda _question: (_ for _ in ()).throw(
+            api_client.ApiError("RAG service unavailable", 503)
+        ),
+    )
+    unavailable = frontend.post(
+        "/loyalty-benefits/ask", data={"question": "Gold benefits?"}
+    )
+    assert unavailable.status_code == 503
+    assert "RAG service unavailable" in unavailable.get_data(as_text=True)
+
+    monkeypatch.setattr(api_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "ok", "answer": "<script>alert('answer')</script>",
+        "confidence": "low", "sources": [{
+            "source": "<img src=x onerror=alert(1)>",
+            "section": "Gold <b>Membership</b>",
+            "snippet": "<script>alert('source')</script>",
+        }],
+    })
+    html = frontend.post(
+        "/loyalty-benefits/ask", data={"question": "Gold benefits?"}
+    ).get_data(as_text=True)
+    assert "<script>" not in html
+    assert "<img" not in html
+    assert "&lt;script&gt;" in html

@@ -123,6 +123,11 @@ details summary {
 .badge.silver { background: #e8ebef; color: #485361; }
 .badge.gold { background: #fff2c7; color: #7b5a00; }
 .ai-output { background: var(--surface-alt); border-radius: 6px; padding: 10px 12px; }
+.feature-result { margin-top: 14px; }
+.result-list { display: grid; grid-template-columns: 150px 1fr; gap: 8px; }
+.result-list dt { color: var(--text-muted); font-weight: 600; }
+.result-list dd { margin: 0; }
+.rag-sources li { margin-bottom: 10px; }
 
 @media (max-width: 1000px) {
   .customer-layout { grid-template-columns: 1fr; }
