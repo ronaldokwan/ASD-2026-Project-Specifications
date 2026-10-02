@@ -16,6 +16,19 @@ if [ -z "${PYTHON_BIN:-}" ]; then
 fi
 "${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ is required"'
 
+# Use the same model settings as Compose, otherwise these services ask Ollama
+# for a model it never pulled. Only host-safe keys are read: the *_URL entries
+# in .env are container addresses (ollama, host.docker.internal). Exported
+# values win.
+if [ -f .env ]; then
+  for key in LLM_MODEL LLM_TIMEOUT; do
+    if [ -z "${!key:-}" ]; then
+      value=$(sed -n "s/^${key}=//p" .env | tr -d '\r' | tail -n 1)
+      if [ -n "${value}" ]; then export "${key}=${value}"; fi
+    fi
+  done
+fi
+
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
 
