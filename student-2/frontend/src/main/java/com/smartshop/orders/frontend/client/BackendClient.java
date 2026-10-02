@@ -6,6 +6,10 @@ import com.smartshop.orders.frontend.dto.FrontendModels.CustomerSummaryRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.ProductInfo;
+import com.smartshop.orders.frontend.dto.FrontendModels.McpToolResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagAnswerResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagQuestionRequest;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagWriteResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.StatusRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -86,6 +90,22 @@ public class BackendClient {
         return restClient.post().uri("/api/orders/ai/customer-summary")
             .contentType(MediaType.APPLICATION_JSON).body(new CustomerSummaryRequest(email))
             .retrieve().body(AiResponse.class);
+    }
+
+    public McpToolResponse checkFulfilment(long id) {
+        return restClient.post().uri("/api/orders/{id}/mcp/fulfilment-check", id)
+            .retrieve().body(McpToolResponse.class);
+    }
+
+    public RagWriteResponse refreshRag(long id) {
+        return restClient.post().uri("/api/orders/{id}/rag/refresh", id)
+            .retrieve().body(RagWriteResponse.class);
+    }
+
+    public RagAnswerResponse askRag(long id, String question) {
+        return restClient.post().uri("/api/orders/{id}/rag/ask", id)
+            .contentType(MediaType.APPLICATION_JSON).body(new RagQuestionRequest(question))
+            .retrieve().body(RagAnswerResponse.class);
     }
 
     public Map<String, Object> health() {

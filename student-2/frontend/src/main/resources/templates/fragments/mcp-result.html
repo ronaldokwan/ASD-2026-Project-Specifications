@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="intelligence-result" th:fragment="result">
+    <div class="notice error" th:if="${serviceError}" th:text="${serviceError}">MCP service error</div>
+    <th:block th:if="${mcp}">
+        <div class="result-meta">Shared MCP · check_order_fulfilment</div>
+        <div class="readiness-row">
+            <span class="readiness-badge" th:classappend="${mcp.result.readyToShip ? 'ready' : 'blocked'}"
+                  th:text="${mcp.result.readyToShip ? 'Ready to ship' : 'Not ready'}">Ready</span>
+            <span th:text="${mcp.result.summary}">Result summary</span>
+        </div>
+        <ul th:if="${!mcp.result.blockers.isEmpty()}">
+            <li th:each="blocker : ${mcp.result.blockers}" th:text="${blocker}">Blocker</li>
+        </ul>
+        <p class="result-footnote" th:text="|Rules checked: ${#strings.listJoin(mcp.result.checkedRules, ', ')}|">Rules checked</p>
+    </th:block>
+</div>
+</body>
+</html>

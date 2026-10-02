@@ -9,13 +9,14 @@ Endpoints
     GET  /health                          liveness
     GET  /tools                           list the tools this server exposes
     POST /tools/check_review_quality      run Student 5's moderation tool
+    POST /tools/check_order_fulfilment    run Student 2's order-readiness tool
 """
 
 import os
 
 from flask import Flask, jsonify, request
 
-from tools import check_review_quality
+from tools import check_order_fulfilment, check_review_quality
 
 app = Flask(__name__)
 
@@ -24,6 +25,14 @@ TOOL_CONTRACTS = {
         "description": "Deterministic moderation check for one product review.",
         "required": ["review_text", "rating"],
         "optional": ["existing_review_count", "average_rating"],
+    },
+    "check_order_fulfilment": {
+        "description": "Deterministic shipment-readiness check for one order.",
+        "required": [
+            "order_number", "status", "line_count", "total_quantity",
+            "order_total", "inventory_committed",
+        ],
+        "optional": [],
     },
 }
 
@@ -51,6 +60,28 @@ def run_check_review_quality():
         average_rating=payload.get("average_rating"),
     )
     return jsonify({"ok": True, "tool": "check_review_quality", "result": result})
+
+
+@app.post("/tools/check_order_fulfilment")
+def run_check_order_fulfilment():
+    payload = request.get_json(silent=True) or {}
+    required = TOOL_CONTRACTS["check_order_fulfilment"]["required"]
+    missing = [field for field in required if field not in payload]
+    if missing:
+        return jsonify({
+            "ok": False,
+            "error": "missing required field(s): {}".format(", ".join(missing)),
+        }), 400
+
+    result = check_order_fulfilment(
+        order_number=payload.get("order_number"),
+        status=payload.get("status"),
+        line_count=payload.get("line_count"),
+        total_quantity=payload.get("total_quantity"),
+        order_total=payload.get("order_total"),
+        inventory_committed=payload.get("inventory_committed"),
+    )
+    return jsonify({"ok": True, "tool": "check_order_fulfilment", "result": result})
 
 
 @app.errorhandler(404)

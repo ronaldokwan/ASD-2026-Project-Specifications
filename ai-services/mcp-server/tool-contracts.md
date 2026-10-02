@@ -85,6 +85,21 @@ The MCP and compatibility routes call the same functions in `tools.py`.
   quantity targets twice the threshold, bounded to the configured order range.
 - **MCP tool name:** `check_stock_reorder`.
 
+## check_order_fulfilment
+
+- **Owner:** Student 2 - Customer Orders
+- **Purpose:** deterministic shipment-readiness check grounded with facts from
+  the caller's order record.
+- **Input:** `order_number` (string), `status` (string), `line_count` (int),
+  `total_quantity` (int), `order_total` (number), and `inventory_committed`
+  (boolean). All fields are required.
+- **Output:** `{"ready_to_ship": bool, "blockers": [string, ...],
+  "checked_rules": [string, ...], "summary": string}`.
+- **Policy class:** read-only, no side effects. The tool never reads another
+  service and never calls an LLM.
+- **HTTP:** `POST /tools/check_order_fulfilment` on `http_server.py`.
+- **MCP tool name:** `check_order_fulfilment` on `server.py`.
+
 ## Adding your own tool
 
 1. Add a pure function to `tools.py` (grounding facts as arguments, no calls

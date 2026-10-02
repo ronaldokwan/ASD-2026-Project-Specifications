@@ -17,7 +17,7 @@ fi
 "${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ is required"'
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
-export LLM_MODEL="${LLM_MODEL:-qwen2.5:0.5b}"
+export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
 
 # Refuse to start a second copy: on Windows a running service also locks its
 # venv's python.exe, so recreating the venv would fail with "Permission denied".

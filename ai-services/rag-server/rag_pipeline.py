@@ -42,7 +42,7 @@ _STOPWORDS = frozenset(
 RELEVANT_DISTANCE = 1.5
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:0.5b")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:3b")
 LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
 
 _collection = None

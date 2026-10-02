@@ -374,3 +374,65 @@ def check_stock_reorder(sku, quantity, restock_threshold):
         "reason": reason,
         "errors": errors,
     }
+
+
+def check_order_fulfilment(
+    order_number,
+    status,
+    line_count,
+    total_quantity,
+    order_total,
+    inventory_committed,
+):
+    """Perform Student 2's deterministic shipment-readiness check."""
+    number = str(order_number or "").strip()
+    normalised_status = str(status or "").strip().lower()
+
+    try:
+        lines = int(line_count)
+    except (TypeError, ValueError):
+        lines = 0
+    try:
+        quantity = int(total_quantity)
+    except (TypeError, ValueError):
+        quantity = 0
+    try:
+        total = float(order_total)
+    except (TypeError, ValueError):
+        total = 0.0
+
+    blockers = []
+    if not number:
+        blockers.append("order number is missing")
+    if normalised_status != "pending":
+        blockers.append("only pending orders can proceed to shipment")
+    if lines <= 0:
+        blockers.append("order has no order lines")
+    if quantity <= 0:
+        blockers.append("order quantity must be positive")
+    if total <= 0:
+        blockers.append("order total must be positive")
+    if inventory_committed is not True:
+        blockers.append("inventory has not been committed")
+
+    ready = not blockers
+    summary = (
+        "Order {} is ready for shipment.".format(number)
+        if ready
+        else "Order {} is not ready for shipment: {}.".format(
+            number or "<unknown>", "; ".join(blockers)
+        )
+    )
+    return {
+        "ready_to_ship": ready,
+        "blockers": blockers,
+        "checked_rules": [
+            "order_number_present",
+            "order_is_pending",
+            "contains_order_lines",
+            "positive_quantity",
+            "positive_total",
+            "inventory_committed",
+        ],
+        "summary": summary,
+    }

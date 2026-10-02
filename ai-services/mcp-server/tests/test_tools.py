@@ -11,6 +11,7 @@ sys.path.insert(0, SERVICE_ROOT)
 
 from tools import (
     check_customer_profile,
+    check_order_fulfilment,
     check_product_listing,
     check_review_quality,
     check_stock_reorder,
@@ -193,3 +194,21 @@ def test_stock_reorder_reports_invalid_inputs():
     assert result["reorder_required"] is False
     assert result["recommended_order_quantity"] is None
     assert len(result["errors"]) == 3
+
+
+def test_pending_order_with_committed_inventory_is_ready_to_ship():
+    result = check_order_fulfilment("ORD-100", "pending", 2, 3, 89.90, True)
+    assert result["ready_to_ship"] is True
+    assert result["blockers"] == []
+
+
+def test_non_pending_order_is_not_ready_to_ship():
+    result = check_order_fulfilment("ORD-101", "delivered", 1, 1, 20, True)
+    assert result["ready_to_ship"] is False
+    assert any("pending" in blocker for blocker in result["blockers"])
+
+
+def test_incomplete_order_reports_every_blocker():
+    result = check_order_fulfilment("", "pending", 0, 0, 0, False)
+    assert result["ready_to_ship"] is False
+    assert len(result["blockers"]) == 5

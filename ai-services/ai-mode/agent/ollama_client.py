@@ -18,7 +18,7 @@ class OllamaClient:
         self.base_url = (
             base_url or os.getenv("OLLAMA_URL", "http://ollama:11434")
         ).rstrip("/")
-        self.model = model or os.getenv("LLM_MODEL", "qwen2.5:0.5b")
+        self.model = model or os.getenv("LLM_MODEL", "qwen2.5:3b")
         self.timeout = int(timeout or os.getenv("LLM_TIMEOUT", "120"))
 
     # -- health ------------------------------------------------------------

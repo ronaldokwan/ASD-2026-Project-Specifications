@@ -32,7 +32,7 @@ def health():
     return jsonify({
         "service": "rag-server",
         "status": "ok",
-        "model": os.getenv("LLM_MODEL", "qwen2.5:0.5b"),
+        "model": os.getenv("LLM_MODEL", "qwen2.5:3b"),
     })
 
 

@@ -6,6 +6,9 @@ import com.smartshop.orders.frontend.dto.FrontendModels.OrderLineRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderLineResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagAnswerResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagSource;
+import com.smartshop.orders.frontend.dto.FrontendModels.RagSourceView;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,10 +18,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Controller
 public class OrderPageController {
+
+    private static final Pattern ORDER_NUMBER_SOURCE = Pattern.compile("Order number: ([^.]+)");
 
     private final BackendClient backend;
 
@@ -135,6 +144,77 @@ public class OrderPageController {
     public String customerSummary(@RequestParam String customerEmail, Model model) {
         model.addAttribute("ai", backend.customerSummary(customerEmail));
         return "fragments/ai-result :: result";
+    }
+
+    @PostMapping("/orders/{id}/mcp/fulfilment-check")
+    public String checkFulfilment(@PathVariable long id, Model model) {
+        try {
+            model.addAttribute("mcp", backend.checkFulfilment(id));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/mcp-result :: result";
+    }
+
+    @PostMapping("/orders/{id}/rag/refresh")
+    public String refreshRag(@PathVariable long id, Model model) {
+        try {
+            model.addAttribute("ragWrite", backend.refreshRag(id));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/rag-result :: result";
+    }
+
+    @PostMapping("/orders/{id}/rag/ask")
+    public String askRag(@PathVariable long id, @RequestParam String question, Model model) {
+        try {
+            RagAnswerResponse rag = backend.askRag(id, question);
+            model.addAttribute("rag", rag);
+            model.addAttribute("ragSources", groupSources(rag.sources()));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/rag-result :: result";
+    }
+
+    static List<RagSourceView> groupSources(List<RagSource> sources) {
+        if (sources == null || sources.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, List<String>> snippetsByDocument = new LinkedHashMap<>();
+        Map<String, String> labelsByDocument = new LinkedHashMap<>();
+        for (RagSource source : sources) {
+            if (source == null || source.docId() == null || source.docId().isBlank()) {
+                continue;
+            }
+            labelsByDocument.putIfAbsent(source.docId(), sourceLabel(source));
+            List<String> snippets = snippetsByDocument.computeIfAbsent(
+                source.docId(), ignored -> new ArrayList<>()
+            );
+            if (source.snippet() != null && !source.snippet().isBlank()
+                && !snippets.contains(source.snippet())) {
+                snippets.add(source.snippet());
+            }
+        }
+
+        return snippetsByDocument.entrySet().stream()
+            .map(entry -> new RagSourceView(
+                entry.getKey(), labelsByDocument.get(entry.getKey()), List.copyOf(entry.getValue())
+            ))
+            .toList();
+    }
+
+    private static String sourceLabel(RagSource source) {
+        if (source.docId().startsWith("orders-shipping-policy")) {
+            return "SmartShop Shipping Policy";
+        }
+        Matcher orderNumber = ORDER_NUMBER_SOURCE.matcher(source.snippet() == null ? "" : source.snippet());
+        if (source.docId().startsWith("order-") && orderNumber.find()) {
+            return "Order " + orderNumber.group(1);
+        }
+        return source.docId();
     }
 
     private void populateOrders(

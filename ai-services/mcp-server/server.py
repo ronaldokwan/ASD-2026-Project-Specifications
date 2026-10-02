@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from tools import check_customer_profile as _check_customer_profile
+from tools import check_order_fulfilment as _check_order_fulfilment
 from tools import check_product_listing as _check_product_listing
 from tools import check_review_quality as _check_review_quality
 from tools import check_stock_reorder as _check_stock_reorder
@@ -25,6 +26,7 @@ AVAILABLE_TOOLS = [
     "review_quality_check",
     "check_review_quality",
     "check_customer_profile",
+    "check_order_fulfilment",
     "check_product_listing",
     "check_stock_reorder",
 ]
@@ -46,6 +48,19 @@ TOOL_CONTRACTS = {
         ],
         "optional": [],
         "transport": "MCP",
+    },
+    "check_order_fulfilment": {
+        "description": "Deterministic shipment-readiness check for one order.",
+        "required": [
+            "order_number",
+            "status",
+            "line_count",
+            "total_quantity",
+            "order_total",
+            "inventory_committed",
+        ],
+        "optional": [],
+        "transport": "MCP and compatibility REST",
     },
     "check_product_listing": {
         "description": "Read-only publish-readiness and price-position check for one product.",
@@ -105,6 +120,26 @@ def check_customer_profile(
     """Check tier, membership duration and optional profile completeness."""
     return _check_customer_profile(
         loyalty_tier, joined_at, has_phone, has_address, as_of_date
+    )
+
+
+@mcp.tool(name="check_order_fulfilment", structured_output=True)
+def check_order_fulfilment(
+    order_number: str,
+    status: str,
+    line_count: int,
+    total_quantity: int,
+    order_total: float,
+    inventory_committed: bool,
+) -> dict[str, Any]:
+    """Check whether one Customer Order is ready for shipment."""
+    return _check_order_fulfilment(
+        order_number,
+        status,
+        line_count,
+        total_quantity,
+        order_total,
+        inventory_committed,
     )
 
 
@@ -178,6 +213,40 @@ async def review_quality_compatibility(request: Request) -> JSONResponse:
         "tool": "check_review_quality",
         "result": result,
     })
+
+
+@mcp.custom_route("/tools/check_order_fulfilment", methods=["POST"])
+async def order_fulfilment_compatibility(request: Request) -> JSONResponse:
+    """Compatibility REST path used by the Student 2 backend."""
+    try:
+        payload = await request.json()
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        return JSONResponse(
+            {"ok": False, "error": "request body must be an object"}, 400
+        )
+    required = TOOL_CONTRACTS["check_order_fulfilment"]["required"]
+    missing = [field for field in required if field not in payload]
+    if missing:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "missing required field(s): {}".format(", ".join(missing)),
+            },
+            400,
+        )
+    result = _check_order_fulfilment(
+        order_number=payload.get("order_number"),
+        status=payload.get("status"),
+        line_count=payload.get("line_count"),
+        total_quantity=payload.get("total_quantity"),
+        order_total=payload.get("order_total"),
+        inventory_committed=payload.get("inventory_committed"),
+    )
+    return JSONResponse(
+        {"ok": True, "tool": "check_order_fulfilment", "result": result}
+    )
 
 
 def run():

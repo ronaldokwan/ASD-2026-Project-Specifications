@@ -14,6 +14,8 @@ import com.smartshop.orders.backend.dto.OrderModels.StockCheckResult;
 import com.smartshop.orders.backend.dto.OrderModels.StockItemRequest;
 import com.smartshop.orders.backend.dto.OrderModels.StockUpdateResult;
 import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,18 +35,23 @@ import java.util.function.Supplier;
 @Service
 public class OrderService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+
     private final DatabaseApiClient databaseApi;
     private final ProductService productService;
     private final StockService stockService;
+    private final OrderRagService ragService;
 
     public OrderService(
         DatabaseApiClient databaseApi,
         ProductService productService,
-        StockService stockService
+        StockService stockService,
+        OrderRagService ragService
     ) {
         this.databaseApi = databaseApi;
         this.productService = productService;
         this.stockService = stockService;
+        this.ragService = ragService;
     }
 
     public List<OrderResponse> list(String status, String customerEmail, String orderNumber) {
@@ -76,7 +83,9 @@ public class OrderService {
             databaseApi.delete(created.id());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, update.message());
         }
-        return enrich(created);
+        OrderResponse response = enrich(created);
+        ragService.syncOrderBestEffort(response);
+        return response;
     }
 
     public OrderResponse update(long id, OrderRequest request) {
@@ -91,11 +100,15 @@ public class OrderService {
                 request.customerEmail(), request.status(), confirmedLines
             ))
         );
-        return enrich(updated);
+        OrderResponse response = enrich(updated);
+        ragService.syncOrderBestEffort(response);
+        return response;
     }
 
     public OrderResponse updateStatus(long id, StatusRequest request) {
-        return enrich(databaseApi.updateStatus(id, request));
+        OrderResponse response = enrich(databaseApi.updateStatus(id, request));
+        ragService.syncOrderBestEffort(response);
+        return response;
     }
 
     public void delete(long id) {
@@ -107,6 +120,7 @@ public class OrderService {
             databaseApi.delete(id);
             return null;
         });
+        ragService.removeOrderBestEffort(id);
     }
 
     public List<OrderLineResponse> listLines(long orderId) {
@@ -122,7 +136,9 @@ public class OrderService {
             adjustment,
             () -> databaseApi.addLine(orderId, confirmedLine)
         );
-        return enrichLine(added);
+        OrderLineResponse response = enrichLine(added);
+        syncCurrentOrderBestEffort(orderId);
+        return response;
     }
 
     public OrderLineResponse updateLine(long orderId, long lineId, OrderLineRequest request) {
@@ -138,7 +154,9 @@ public class OrderService {
             adjustments,
             () -> databaseApi.updateLine(orderId, lineId, confirmedLine)
         );
-        return enrichLine(updated);
+        OrderLineResponse response = enrichLine(updated);
+        syncCurrentOrderBestEffort(orderId);
+        return response;
     }
 
     public void deleteLine(long orderId, long lineId) {
@@ -151,6 +169,7 @@ public class OrderService {
             databaseApi.deleteLine(orderId, lineId);
             return null;
         });
+        syncCurrentOrderBestEffort(orderId);
     }
 
     public StockCheckResult checkStock(List<OrderLineRequest> lines) {
@@ -235,6 +254,15 @@ public class OrderService {
             ? HttpStatus.CONFLICT
             : HttpStatus.BAD_GATEWAY;
         return new ResponseStatusException(status, result.message());
+    }
+
+    private void syncCurrentOrderBestEffort(long orderId) {
+        try {
+            ragService.syncOrderBestEffort(get(orderId));
+        } catch (RuntimeException exception) {
+            logger.warn("Order {} changed but its RAG context could not be rebuilt: {}",
+                orderId, exception.getMessage());
+        }
     }
 
     private DatabaseOrderLine findLine(DatabaseOrder order, long lineId) {
