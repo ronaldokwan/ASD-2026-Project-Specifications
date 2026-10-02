@@ -7,6 +7,10 @@ machine that starts the stack with Docker Compose.
 import os
 
 
+def _enabled(name, default="true"):
+    return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
 class Config:
     SERVICE_NAME = "student-4-backend"
     STUDENT = 4
@@ -21,6 +25,25 @@ class Config:
     AI_MODE_URL = os.getenv("AI_MODE_URL", "http://ai-mode:7000").rstrip("/")
     AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
     LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:0.5b")
+
+    # Shared services run on the host; Compose supplies reachable URLs to this container.
+    MCP_SERVER_URL = os.getenv(
+        "MCP_SERVER_URL", "http://host.docker.internal:7002"
+    ).rstrip("/")
+    MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
+    MCP_ENABLED = _enabled("MCP_ENABLED")
+    MCP_TOOL = "check_stock_reorder"
+
+    RAG_SERVER_URL = os.getenv(
+        "RAG_SERVER_URL", "http://host.docker.internal:7003"
+    ).rstrip("/")
+    RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+    RAG_ENABLED = _enabled("RAG_ENABLED")
+    # Tag documents and filter retrieval so inventory questions cannot cite other features.
+    RAG_FEATURE = "inventory_stock"
+    RAG_TOP_K = 5
+    QUESTION_MIN_CHARS = 5
+    QUESTION_MAX_CHARS = 500
 
     PORT = int(os.getenv("SERVICE_PORT", "8004"))
 

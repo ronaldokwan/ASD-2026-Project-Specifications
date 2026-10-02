@@ -70,6 +70,21 @@ The MCP and compatibility routes call the same functions in `tools.py`.
   address or credential; the result is advice the administrator reviews.
 - **MCP tool name:** `check_product_listing`.
 
+## check_stock_reorder
+
+- **Owner:** Student 4 - Inventory and Stock
+- **Purpose:** determine whether one stock item is at or below its restock
+  threshold and calculate a bounded reorder quantity.
+- **Input:** `sku` (string), `quantity` (non-negative integer), and
+  `restock_threshold` (non-negative integer). The caller supplies the values
+  from its own database; the tool never reaches into the inventory service.
+- **Output:** `tool`, `sku`, `reorder_required`, the validated quantity and
+  threshold, `recommended_order_quantity` (null when no reorder is needed,
+  otherwise 10-1000), `reason`, and `errors`.
+- **Policy class:** read-only, deterministic, no side effects. The suggested
+  quantity targets twice the threshold, bounded to the configured order range.
+- **MCP tool name:** `check_stock_reorder`.
+
 ## Adding your own tool
 
 1. Add a pure function to `tools.py` (grounding facts as arguments, no calls

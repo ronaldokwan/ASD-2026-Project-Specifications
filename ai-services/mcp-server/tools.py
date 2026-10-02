@@ -324,3 +324,53 @@ def check_product_listing(
         "warnings": warnings,
         "errors": errors,
     }
+
+
+def check_stock_reorder(sku, quantity, restock_threshold):
+    """Assess one inventory item and calculate a bounded reorder quantity."""
+    errors = []
+    sku = str(sku or "").strip().upper()
+    if not sku:
+        errors.append("sku is required")
+
+    numeric = {}
+    for field, value in (
+        ("quantity", quantity),
+        ("restock_threshold", restock_threshold),
+    ):
+        try:
+            if isinstance(value, bool):
+                raise ValueError
+            parsed = int(value)
+            if str(value).strip() != str(parsed) and not isinstance(value, int):
+                raise ValueError
+            if parsed < 0:
+                raise ValueError
+            numeric[field] = parsed
+        except (TypeError, ValueError):
+            errors.append("{} must be a non-negative integer".format(field))
+            numeric[field] = None
+
+    reorder_required = False
+    recommended_order_quantity = None
+    reason = "Stock is at or above its restock threshold."
+    if not errors:
+        reorder_required = numeric["quantity"] <= numeric["restock_threshold"]
+        if reorder_required:
+            # Refill toward twice the threshold, clamped to the shared order-size guardrails.
+            target_quantity = numeric["restock_threshold"] * 2
+            recommended_order_quantity = min(
+                1000, max(10, target_quantity - numeric["quantity"])
+            )
+            reason = "Stock is at or below its restock threshold."
+
+    return {
+        "tool": "check_stock_reorder",
+        "sku": sku,
+        "reorder_required": reorder_required,
+        "quantity": numeric["quantity"],
+        "restock_threshold": numeric["restock_threshold"],
+        "recommended_order_quantity": recommended_order_quantity,
+        "reason": reason,
+        "errors": errors,
+    }

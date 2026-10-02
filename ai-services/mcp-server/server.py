@@ -17,6 +17,7 @@ from starlette.responses import JSONResponse
 from tools import check_customer_profile as _check_customer_profile
 from tools import check_product_listing as _check_product_listing
 from tools import check_review_quality as _check_review_quality
+from tools import check_stock_reorder as _check_stock_reorder
 
 mcp = MCPServer("ASD Group 40 Shared MCP Server", version="1.1.0")
 
@@ -25,6 +26,7 @@ AVAILABLE_TOOLS = [
     "check_review_quality",
     "check_customer_profile",
     "check_product_listing",
+    "check_stock_reorder",
 ]
 TOOL_CONTRACTS = {
     "check_review_quality": {
@@ -55,6 +57,12 @@ TOOL_CONTRACTS = {
             "comparable_min_price",
             "comparable_max_price",
         ],
+        "transport": "MCP",
+    },
+    "check_stock_reorder": {
+        "description": "Read-only reorder assessment for one inventory item.",
+        "required": ["sku", "quantity", "restock_threshold"],
+        "optional": [],
         "transport": "MCP",
     },
 }
@@ -119,6 +127,13 @@ def check_product_listing(
         comparable_count, comparable_avg_price,
         comparable_min_price, comparable_max_price,
     )
+
+
+@mcp.tool(name="check_stock_reorder", structured_output=True)
+def check_stock_reorder(sku: str, quantity: int, restock_threshold: int) -> dict[str, Any]:
+    """Assess whether one stock item needs reordering and suggest a quantity."""
+    # Keep the MCP wrapper thin; the shared pure function owns all reorder rules.
+    return _check_stock_reorder(sku, quantity, restock_threshold)
 
 
 @mcp.custom_route("/health", methods=["GET"])

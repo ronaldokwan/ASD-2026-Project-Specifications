@@ -1,0 +1,15 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% else %}
+  {% set result = outcome.result %}
+  <div class="card" id="mcp-result">
+    <div class="alert {{ 'info' if result.reorder_required else 'ok' }}">
+      {{ 'Reorder recommended' if result.reorder_required else 'Stock is above threshold' }}
+      &middot; {{ result.sku }}
+    </div>
+    {% if result.reorder_required %}
+      <p>Order <strong>{{ result.recommended_order_quantity }}</strong> units.</p>
+    {% endif %}
+    <p class="muted">{{ result.reason }}</p>
+  </div>
+{% endif %}

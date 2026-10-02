@@ -13,6 +13,7 @@ from tools import (
     check_customer_profile,
     check_product_listing,
     check_review_quality,
+    check_stock_reorder,
 )
 
 
@@ -171,3 +172,24 @@ def test_product_listing_archived_is_a_warning_not_an_issue():
     result = check_product_listing(**dict(AURORA, status="archived"))
     assert result["listing_status"] == "ready"
     assert any("archived" in w for w in result["warnings"])
+
+
+def test_stock_reorder_recommends_quantity_for_low_stock():
+    result = check_stock_reorder("SKU-AUD-1001", 18, 25)
+    assert result["tool"] == "check_stock_reorder"
+    assert result["reorder_required"] is True
+    assert result["recommended_order_quantity"] == 32
+    assert result["errors"] == []
+
+
+def test_stock_reorder_does_not_recommend_for_healthy_stock():
+    result = check_stock_reorder("SKU-HOM-3001", 60, 20)
+    assert result["reorder_required"] is False
+    assert result["recommended_order_quantity"] is None
+
+
+def test_stock_reorder_reports_invalid_inputs():
+    result = check_stock_reorder("", -1, "unknown")
+    assert result["reorder_required"] is False
+    assert result["recommended_order_quantity"] is None
+    assert len(result["errors"]) == 3
