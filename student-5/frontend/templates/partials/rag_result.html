@@ -1,0 +1,39 @@
+{# Result of asking the shared RAG server a question about a product's
+   reviews, plus AI-Mode's second-opinion validation of the grounded answer. #}
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+
+{% elif result.status == 'insufficient_context' %}
+  <div class="alert info">
+    Not enough relevant reviews were found to answer that question yet.
+  </div>
+
+{% else %}
+  <div class="alert ok">
+    Confidence: <strong>{{ result.confidence }}</strong>
+    &middot; grounded in {{ result.retrieved_count }} review(s)
+  </div>
+
+  <p class="ai-output">{{ result.answer }}</p>
+
+  <h3 style="font-size:13px;margin:14px 0 6px">Sources</h3>
+  <ul style="margin:0 0 0 18px">
+    {% for source in result.sources %}
+      <li><span class="muted">{{ source.doc_id }}</span> &mdash; &ldquo;{{ source.snippet }}&rdquo;</li>
+    {% endfor %}
+  </ul>
+
+  {% set v = result.validation.result if result.validation else None %}
+  {% if v %}
+    <div class="alert {{ 'ok' if v.grounded == 'true' and v.confidence_ok == 'true' else 'error' }}"
+         style="margin-top:10px">
+      AI-Mode validation &mdash; grounded: <strong>{{ v.grounded }}</strong>,
+      confidence justified: <strong>{{ v.confidence_ok }}</strong>
+      <div class="muted">{{ v.notes }}</div>
+      {% if v.unsupported_claims and v.unsupported_claims != 'none' %}
+        <div class="muted">Unsupported claims: {{ v.unsupported_claims }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endif %}

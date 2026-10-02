@@ -214,6 +214,46 @@ def ai_summary():
     )
 
 
+# ---------------------------------------------------- Release 1: RAG and MCP
+@app.post("/ai/ask")
+def ai_ask():
+    """Grounded Q&A over a product's reviews, via the shared RAG server."""
+    product_sku = request.form.get("product_sku", "").strip().upper()
+    question = request.form.get("question", "").strip()
+
+    if len(product_sku) < 3 or len(question) < 5:
+        return render_template(
+            "partials/rag_result.html",
+            error="Choose a product and ask a full question (at least 5 characters).",
+        )
+
+    try:
+        result = api_client.ask_about_reviews(product_sku, question)
+    except ApiError as exc:
+        return render_template("partials/rag_result.html", error=exc.message)
+
+    return render_template("partials/rag_result.html", result=result)
+
+
+@app.post("/ai/moderate")
+def ai_moderate():
+    """Moderation check for the review currently in the form, via the shared MCP server."""
+    payload = _form_payload(request.form)
+
+    if len(payload["product_sku"]) < 3 or not payload["review"]:
+        return render_template(
+            "partials/mcp_result.html",
+            error="Choose a product and write a review first.",
+        )
+
+    try:
+        result = api_client.moderate_review(payload["product_sku"], payload["review"], payload["rating"])
+    except ApiError as exc:
+        return render_template("partials/mcp_result.html", error=exc.message)
+
+    return render_template("partials/mcp_result.html", result=result)
+
+
 # -------------------------------------------------------------------- health
 @app.get("/health")
 def health():

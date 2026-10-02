@@ -65,6 +65,8 @@ def db_client_http(database):
 from app import create_app  # noqa: E402
 from app import catalogue_client as backend_catalogue  # noqa: E402
 from app import db_client as backend_db  # noqa: E402
+from app import mcp_client as backend_mcp  # noqa: E402
+from app import rag_client as backend_rag  # noqa: E402
 
 
 @pytest.fixture()
@@ -175,6 +177,64 @@ def fake_db(monkeypatch):
     return fake
 
 
+@pytest.fixture()
+def fake_rag(monkeypatch):
+    """In-memory stand-in for the shared RAG server (Release 1)."""
+    state = {"indexed": {}, "removed": []}
+
+    def index_review(review):
+        state["indexed"][review["review_id"]] = review
+
+    def remove_review(review_id):
+        state["removed"].append(review_id)
+        state["indexed"].pop(review_id, None)
+
+    def ask(product_sku, question, top_k=5):
+        matches = [r for r in state["indexed"].values() if r["product_sku"] == product_sku]
+        if not matches:
+            return {
+                "status": "insufficient_context", "confidence": "insufficient", "sources": [],
+                "message": "Not enough relevant context was found to answer this question.",
+            }
+        return {
+            "status": "ok",
+            "answer": "Reviewers say: {}".format(matches[0]["review"]),
+            "sources": [
+                {"doc_id": "review-{}".format(r["review_id"]), "chunk_id": "c0",
+                 "snippet": r["review"][:50], "metadata": {}}
+                for r in matches
+            ],
+            "confidence": "medium",
+            "retrieved_count": len(matches),
+        }
+
+    monkeypatch.setattr(backend_rag, "index_review", index_review)
+    monkeypatch.setattr(backend_rag, "remove_review", remove_review)
+    monkeypatch.setattr(backend_rag, "ask", ask)
+    return state
+
+
+@pytest.fixture()
+def fake_mcp(monkeypatch):
+    """In-memory stand-in for the shared MCP server's check_review_quality tool."""
+
+    def check_review_quality(review_text, rating, existing_review_count=0, average_rating=None):
+        flagged = "http://" in review_text or "www." in review_text
+        return {
+            "ok": True, "tool": "check_review_quality",
+            "result": {
+                "flagged": flagged,
+                "reasons": ["review contains a link"] if flagged else ["no issues found"],
+                "spam_score": 1.0 if flagged else 0.0,
+                "duplicate_risk": "low",
+                "word_count": len(review_text.split()),
+            },
+        }
+
+    monkeypatch.setattr(backend_mcp, "check_review_quality", check_review_quality)
+    return check_review_quality
+
+
 # --------------------------------------------------------------- frontend
 frontend_service = _load("student5_frontend", os.path.join(FRONTEND_DIR, "app.py"))
 import api_client as frontend_api  # noqa: E402
@@ -216,4 +276,12 @@ def fake_api(monkeypatch):
     monkeypatch.setattr(frontend_api, "create_review", create)
     monkeypatch.setattr(frontend_api, "update_review", lambda rid, payload: dict(payload, review_id=rid))
     monkeypatch.setattr(frontend_api, "delete_review", delete)
+    monkeypatch.setattr(frontend_api, "ask_about_reviews", lambda sku, question: {
+        "status": "ok", "answer": "Reviewers like it.", "confidence": "medium", "retrieved_count": 1,
+        "sources": [{"doc_id": "review-r1", "chunk_id": "c0", "snippet": "Fantastic.", "metadata": {}}],
+    })
+    monkeypatch.setattr(frontend_api, "moderate_review", lambda sku, text, rating: {
+        "tool_result": {"flagged": False, "reasons": ["no issues found"], "spam_score": 0, "duplicate_risk": "low"},
+        "validation": {"result": {"valid": "true", "confidence": "high", "notes": "looks fine"}},
+    })
     return state

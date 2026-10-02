@@ -109,6 +109,50 @@ def test_ai_panel_shows_fallback_warning(frontend, fake_api, monkeypatch):
     assert "local fallback was used" in html
 
 
+# --------------------------------------------------- Release 1: RAG and MCP
+def test_index_includes_the_rag_and_mcp_panels(frontend, fake_api):
+    html = frontend.get("/").get_data(as_text=True)
+    assert 'id="rag-panel"' in html
+    assert 'id="moderation-panel"' in html
+
+
+def test_ask_panel_renders_grounded_answer(frontend, fake_api):
+    html = frontend.post("/ai/ask", data={
+        "product_sku": "SKU-AUD-1001", "question": "How is the battery life?",
+    }).get_data(as_text=True)
+    assert "Reviewers like it" in html
+    assert "medium" in html
+
+
+def test_ask_panel_requires_product_and_question(frontend, fake_api):
+    html = frontend.post("/ai/ask", data={"product_sku": "", "question": "hi"}).get_data(as_text=True)
+    assert "Choose a product" in html
+
+
+def test_ask_panel_shows_insufficient_context(frontend, fake_api, monkeypatch):
+    monkeypatch.setattr(api_client, "ask_about_reviews", lambda sku, question: {
+        "status": "insufficient_context", "confidence": "insufficient", "sources": [],
+        "message": "Not enough relevant context was found to answer this question.",
+    })
+    html = frontend.post("/ai/ask", data={
+        "product_sku": "SKU-AUD-1001", "question": "Anything at all?",
+    }).get_data(as_text=True)
+    assert "Not enough relevant reviews" in html
+
+
+def test_moderation_panel_renders_tool_result(frontend, fake_api):
+    html = frontend.post("/ai/moderate", data={
+        "product_sku": "SKU-AUD-1001", "user_id": "u", "rating": "5", "review": "Great product.",
+    }).get_data(as_text=True)
+    assert "No issues found" in html
+    assert "AI-Mode validation" in html
+
+
+def test_moderation_panel_requires_a_review(frontend, fake_api):
+    html = frontend.post("/ai/moderate", data={"product_sku": "", "review": ""}).get_data(as_text=True)
+    assert "write a review first" in html
+
+
 def test_backend_outage_is_reported_on_the_page(frontend, monkeypatch):
     def boom(**_kwargs):
         raise api_client.ApiError("Reviews and Ratings API is unreachable.", 503)

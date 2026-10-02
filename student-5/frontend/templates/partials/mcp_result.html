@@ -1,0 +1,26 @@
+{# Result of the shared MCP server's check_review_quality tool, plus
+   AI-Mode's second-opinion validation of the tool's verdict. #}
+
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+
+{% else %}
+  {% set tool = result.tool_result %}
+  <div class="alert {{ 'error' if tool.flagged else 'ok' }}">
+    {{ 'Flagged for review' if tool.flagged else 'No issues found' }}
+    &middot; spam score {{ tool.spam_score }} &middot; duplicate risk: {{ tool.duplicate_risk }}
+  </div>
+
+  <ul style="margin:0 0 0 18px">
+    {% for reason in tool.reasons %}<li>{{ reason }}</li>{% endfor %}
+  </ul>
+
+  {% set v = result.validation.result if result.validation else None %}
+  {% if v %}
+    <div class="alert {{ 'ok' if v.valid == 'true' else 'error' }}" style="margin-top:10px">
+      AI-Mode validation &mdash; valid: <strong>{{ v.valid }}</strong>,
+      confidence: <strong>{{ v.confidence }}</strong>
+      <div class="muted">{{ v.notes }}</div>
+    </div>
+  {% endif %}
+{% endif %}

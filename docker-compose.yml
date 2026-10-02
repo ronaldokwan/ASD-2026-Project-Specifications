@@ -108,8 +108,8 @@ services:
     depends_on:
       student-1-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
+      # ai-mode:                  # TEMP: commented out for local testing only, do not commit -
+      #   condition: service_started  # ai-mode service removed from Compose in Release 1
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -245,8 +245,8 @@ services:
     depends_on:
       student-3-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
+      # ai-mode:                  # TEMP: commented out for local testing only, do not commit -
+      #   condition: service_started  # ai-mode service removed from Compose in Release 1
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -313,8 +313,8 @@ services:
     depends_on:
       student-4-db:
         condition: service_healthy
-      ai-mode:
-        condition: service_started
+      # ai-mode:                  # TEMP: commented out for local testing only, do not commit -
+      #   condition: service_started  # ai-mode service removed from Compose in Release 1
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
