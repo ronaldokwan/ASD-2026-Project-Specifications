@@ -15,6 +15,8 @@ def test_index_renders_inventory_dashboard(frontend, fake_api):
     assert "/shared/css/theme.css" in html
     assert 'id="product-form"' in html
     assert 'id="ai-panel"' in html
+    assert 'id="rag-panel"' in html
+    assert '/stock/1/mcp-check' in html
 
 
 # HTMX table refreshes return fragments rather than a complete HTML document.
@@ -107,6 +109,26 @@ def test_ai_panel_renders_restock_recommendation(frontend, fake_api, monkeypatch
     for step in ("Plan", "Act", "Observe", "Adapt"):
         assert step in html
     assert "data-apply-ai" in html
+
+
+def test_mcp_stock_check_renders_deterministic_reorder_result(frontend, fake_api):
+    html = frontend.post("/stock/1/mcp-check").get_data(as_text=True)
+    assert 'id="mcp-result"' in html
+    assert "SKU-AUD-1001" in html
+    assert "32" in html
+
+
+def test_rag_ask_renders_answer_and_citations(frontend, fake_api):
+    html = frontend.post("/rag/ask", data={
+        "question": "Which Audio items need restocking?",
+    }).get_data(as_text=True)
+    assert "below its threshold of 25" in html
+    assert "Inventory and Stock database" in html
+
+
+def test_rag_insufficient_question_is_rejected(frontend, fake_api):
+    html = frontend.post("/rag/ask", data={"question": "why?"}).get_data(as_text=True)
+    assert "at least 5 characters" in html
 
 
 # A backend outage is visible to the user rather than breaking page rendering.

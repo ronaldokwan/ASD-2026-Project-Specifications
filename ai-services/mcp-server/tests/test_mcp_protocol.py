@@ -23,6 +23,7 @@ def test_registered_tools_are_callable_through_real_mcp():
             assert "review_quality_check" in names
             assert "check_customer_profile" in names
             assert "check_product_listing" in names
+            assert "check_stock_reorder" in names
 
             response = await client.call_tool(
                 "check_customer_profile",
@@ -57,6 +58,14 @@ def test_registered_tools_are_callable_through_real_mcp():
             assert listing.is_error is False
             assert listing.structured_content["listing_status"] == "ready"
             assert listing.structured_content["price_position"] == "within_range"
+
+            stock = await client.call_tool(
+                "check_stock_reorder",
+                {"sku": "SKU-AUD-1001", "quantity": 18, "restock_threshold": 25},
+            )
+            assert stock.is_error is False
+            assert stock.structured_content["reorder_required"] is True
+            assert stock.structured_content["recommended_order_quantity"] == 32
 
             rejected = await client.call_tool(
                 "check_product_listing",

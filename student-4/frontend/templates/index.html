@@ -34,6 +34,22 @@
           </p>
         </div>
       </div>
+
+      <div class="card">
+        <h2>Ask inventory</h2>
+        <form hx-post="/rag/ask" hx-target="#rag-panel" hx-swap="innerHTML">
+          <div class="field">
+            <label for="inventory-question">Question</label>
+            <input id="inventory-question" name="question" type="text" minlength="5"
+                   maxlength="500" required placeholder="Which Audio items need restocking?">
+          </div>
+          <button type="submit" class="btn ai">Ask</button>
+          <span class="htmx-indicator muted">Searching inventory records…</span>
+        </form>
+        <div id="rag-panel" aria-live="polite">
+          <p class="muted">No inventory answer yet.</p>
+        </div>
+      </div>
     </section>
 
     <!-- ============================ RIGHT: stock list =================== -->
@@ -91,6 +107,7 @@
       </div>
 
       {% include "partials/product_table.html" %}
+      <div id="mcp-panel" aria-live="polite"></div>
     </section>
 
   </div>

@@ -205,4 +205,24 @@ def fake_api(monkeypatch):
                             "trace": [{"step": "Plan", "detail": "Reviewed stock"}],
                             "grounding": {"low_stock_count": 1},
                         })
+    monkeypatch.setattr(frontend_api, "check_reorder", lambda stock_id: {
+        "stock_id": stock_id,
+        "result": {
+            "sku": "SKU-AUD-1001",
+            "reorder_required": True,
+            "recommended_order_quantity": 32,
+            "reason": "Stock is at or below its restock threshold.",
+        },
+    })
+    monkeypatch.setattr(frontend_api, "ask_inventory", lambda question: {
+        "status": "ok",
+        "question": question,
+        "answer": "SKU-AUD-1001 has 18 units, below its threshold of 25.",
+        "confidence": "high",
+        "sources": [{
+            "source": "Inventory and Stock database",
+            "section": "SKU-AUD-1001 Aurora Wireless Headphones",
+            "snippet": "Current quantity is 18; its restock threshold is 25.",
+        }],
+    })
     return state
