@@ -16,7 +16,12 @@ import time
 from dataclasses import dataclass, field
 
 from .ollama_client import OllamaClient, OllamaError
-from .validators import parse_json, validate
+from .validators import (
+    parse_json,
+    validate,
+    validate_mcp_verdict,
+    validate_rag_verdict,
+)
 
 SYSTEM_PROMPT = (
     "You are the AI assistant inside a retail management application. "
@@ -67,7 +72,6 @@ class AgenticLoop:
             max_attempts or os.getenv("AI_MODE_MAX_ADAPT_ATTEMPTS", "2")
         )
 
-    # ------------------------------------------------------------------ PLAN
     def plan(self, request, violations=None):
         """Build the prompt. On an Adapt pass, violations are folded back in."""
         lines = ["TASK: " + request.task, ""]
@@ -95,20 +99,24 @@ class AgenticLoop:
         )
         return "\n".join(lines)
 
-    # ------------------------------------------------------------------- ACT
     def act(self, prompt):
         return self.client.generate(prompt, system=SYSTEM_PROMPT, json_mode=True)
 
-    # --------------------------------------------------------------- OBSERVE
     def observe(self, raw, request):
         """Parse and validate one model answer; returns (result, violations)."""
         try:
             data = parse_json(raw)
         except (ValueError, TypeError) as exc:
             return {}, ["output was not valid JSON ({})".format(exc)]
-        return validate(data, request.output_schema)
+        result, violations = validate(data, request.output_schema)
+        if violations:
+            return result, violations
+        if request.mode == "mcp_validation":
+            return validate_mcp_verdict(result, request.context)
+        if request.mode == "rag_validation":
+            return validate_rag_verdict(result, request.context)
+        return result, []
 
-    # ------------------------------------------------------------------- RUN
     def run(self, request):
         """Execute the full loop and return a result plus an auditable trace."""
         trace = []
@@ -186,9 +194,8 @@ class AgenticLoop:
 
         return self._fallback(request, trace, "; ".join(violations), started)
 
-    # -------------------------------------------------------------- FALLBACK
     def _fallback(self, request, trace, reason, started):
-        """Adapt of last resort: never leave the calling UI without an answer."""
+        """Return the caller-provided fallback when generation or validation fails."""
         trace.append(
             {
                 "step": "Adapt",

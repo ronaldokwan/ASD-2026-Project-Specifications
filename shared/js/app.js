@@ -22,7 +22,7 @@
   function featureCard(f) {
     const ready = f.status === "ready";
     const pill = ready
-      ? '<span class="status-pill ready">Release 0 ready</span>'
+      ? '<span class="status-pill ready">Release 1 ready</span>'
       : '<span class="status-pill pending">not implemented</span>';
     const inner =
       pill +

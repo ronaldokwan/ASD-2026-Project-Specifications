@@ -90,6 +90,23 @@ def generate_recommendation(category):
     )
 
 
+def check_reorder(stock_id):
+    """Run the shared MCP reorder assessment for one inventory row."""
+    # Keep shared-service credentials and transport behind the backend boundary.
+    return _call("POST", "/api/stock/{}/mcp-check".format(stock_id))
+
+
+def ask_inventory(question):
+    """Ask the shared RAG service a question scoped to inventory documents."""
+    # The backend performs corpus sync, feature filtering, and citation validation.
+    return _call(
+        "POST",
+        "/api/stock/ask",
+        timeout=AI_TIMEOUT,
+        json={"question": question},
+    )
+
+
 def backend_health():
     """Return backend health data without raising when the service is unavailable."""
     try:

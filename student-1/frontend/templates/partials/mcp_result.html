@@ -1,0 +1,47 @@
+{# Structured result of the shared MCP tool check_product_listing. #}
+
+{% if error %}
+  <div class="alert error">
+    {{ error }}
+    <div class="muted">The shared MCP server runs outside Docker &mdash; start it with
+      <code>bash scripts/run-ai-services.sh</code>.</div>
+  </div>
+
+{% else %}
+  {% set labels = {'ready': 'Ready to publish', 'needs_attention': 'Needs attention', 'invalid': 'Invalid'} %}
+  <div class="alert {{ 'ok' if result.listing_status == 'ready' else 'error' }}">
+    <strong>{{ outcome.arguments.name }}</strong> ({{ result.sku }}):
+    {{ labels.get(result.listing_status, result.listing_status) }}.
+  </div>
+
+  <dl class="result-list">
+    <dt>Listing status</dt>
+    <dd><span class="badge listing-{{ result.listing_status }}">{{ result.listing_status|replace('_', ' ') }}</span></dd>
+    <dt>Price position</dt><dd>{{ result.price_position|replace('_', ' ') }}</dd>
+    <dt>vs category average</dt>
+    <dd>{% if result.price_vs_average_pct is not none %}{{ '%+.1f'|format(result.price_vs_average_pct) }}%
+        ({{ result.comparable_count }} comparable product{{ '' if result.comparable_count == 1 else 's' }})
+        {% else %}&mdash;{% endif %}</dd>
+    <dt>Description</dt><dd>{{ result.description_word_count }} words</dd>
+  </dl>
+
+  {% for field, level, title in [('errors', 'error', 'Errors'), ('issues', 'error', 'Fix before publishing'), ('warnings', 'info', 'Warnings')] %}
+    {% if result[field] %}
+      <div class="alert {{ level }}"><strong>{{ title }}</strong>
+        <ul>{% for item in result[field] %}<li>{{ item }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+  {% endfor %}
+
+  <p class="muted">
+    MCP tool <code>{{ outcome.tool }}</code> at <code>{{ outcome.server }}</code>,
+    {{ outcome.elapsed_ms }} ms. Read-only: nothing was changed in the catalogue.
+  </p>
+
+  <details>
+    <summary class="muted">Tool call (grounded from the database microservice)</summary>
+    <pre>{{ outcome.arguments|tojson(indent=2) }}</pre>
+    <pre>{{ result|tojson(indent=2) }}</pre>
+  </details>
+
+{% endif %}

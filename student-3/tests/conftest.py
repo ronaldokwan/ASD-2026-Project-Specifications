@@ -161,4 +161,19 @@ def fake_api(monkeypatch):
         "grounding": {"customer_name": "Avery Brooks", "loyalty_tier": "Silver",
                       "joined_at": "2025-01-10"},
     })
+    monkeypatch.setattr(frontend_api, "check_customer_profile", lambda customer_id: {
+        "tool": "check_customer_profile", "tier_valid": True,
+        "membership_days": 629, "profile_status": "complete",
+        "missing_optional_fields": [], "warnings": [], "errors": [],
+    })
+    monkeypatch.setattr(frontend_api, "ask_loyalty_benefits", lambda question: {
+        "status": "ok",
+        "answer": "Gold customers may receive fifteen percent off the next purchase.",
+        "sources": [{
+            "source": "customer-loyalty-policy.md",
+            "section": "Gold Membership",
+            "snippet": "Gold customers may receive either fifteen percent off...",
+        }],
+        "confidence": "high",
+    })
     return state

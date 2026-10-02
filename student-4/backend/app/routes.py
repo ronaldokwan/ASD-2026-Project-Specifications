@@ -15,7 +15,7 @@ Plus supporting endpoints: GET /health.
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client
+from . import ai_agent, db_client, mcp_client, rag_client
 from .config import Config
 from .validation import ValidationError, clean_stock
 
@@ -40,6 +40,8 @@ def health():
         "status": "ok" if database_ok else "degraded",
         "database": database,
         "ai_mode": ai_agent.ai_mode_health(),
+        "mcp_server": mcp_client.health(),
+        "rag_server": rag_client.health(),
     }
     return jsonify(body), (200 if database_ok else 503)
 
@@ -74,20 +76,27 @@ def get_stock(stock_id):
 def create_stock():
     """Validate a complete stock payload and create the record."""
     payload = clean_stock(request.get_json(silent=True) or {})
-    return jsonify(db_client.create_stock(payload)), 201
+    stock = db_client.create_stock(payload)
+    # Keep the derived search index current, while the client makes this best-effort.
+    rag_client.sync_stock(stock)
+    return jsonify(stock), 201
 
 
 @api.put("/api/stock/<int:stock_id>")
 def update_stock(stock_id):
     """Validate only supplied fields and update the matching record."""
     payload = clean_stock(request.get_json(silent=True) or {}, partial=True)
-    return jsonify(db_client.update_stock(stock_id, payload))
+    stock = db_client.update_stock(stock_id, payload)
+    # Upsert uses the same stable document ID as creation.
+    rag_client.sync_stock(stock)
+    return jsonify(stock)
 
 
 @api.delete("/api/stock/<int:stock_id>")
 def delete_stock(stock_id):
     """Delete a stock record and return its identifier for client updates."""
     db_client.delete_stock(stock_id)
+    rag_client.remove_stock(stock_id)
     return jsonify({"deleted": stock_id})
 
 
@@ -106,6 +115,45 @@ def recommend_restocking():
 
     outcome = ai_agent.recommend_restocking(category)
     return jsonify(outcome), (200 if outcome.get("ok") else 502)
+
+
+# ----------------------------------------------------------- shared MCP / RAG
+@api.post("/api/stock/<int:stock_id>/mcp-check")
+def mcp_stock_check(stock_id):
+    """Run the shared deterministic reorder assessment for one stock item."""
+    # The frontend calls this API route; only the backend talks to MCP.
+    stock = db_client.get_stock(stock_id)
+    return jsonify(mcp_client.check_reorder(stock))
+
+
+@api.post("/api/stock/ask")
+def ask_inventory():
+    """Answer a question using the inventory-scoped RAG corpus."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    question = payload.get("question")
+    if not isinstance(question, str):
+        raise ValidationError(["question must be a string"])
+    question = question.strip()
+    if not Config.QUESTION_MIN_CHARS <= len(question) <= Config.QUESTION_MAX_CHARS:
+        raise ValidationError([
+            "question must be between {} and {} characters".format(
+                Config.QUESTION_MIN_CHARS, Config.QUESTION_MAX_CHARS
+            )
+        ])
+
+    # Seed the shared corpus from the database before asking about inventory.
+    rag_client.ensure_synced(db_client.list_stock)
+    outcome = rag_client.ask(question)
+    outcome["question"] = question
+    return jsonify(outcome)
+
+
+@api.post("/api/stock/rag-sync")
+def rag_sync():
+    """Re-index all inventory records into the shared RAG corpus."""
+    return jsonify(rag_client.sync_stocks(db_client.list_stock()))
 
 
 # ----------------------------------------------------------- error handlers
@@ -137,6 +185,26 @@ def handle_database_error(exc):
 def handle_ai_error(exc):
     """Report a shared AI-Mode outage to API consumers."""
     return jsonify({"error": "AI-Mode service unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPServiceUnavailable)
+def handle_mcp_unavailable(exc):
+    return jsonify({"error": "MCP server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPBadResponse)
+def handle_mcp_bad_response(exc):
+    return jsonify({"error": "MCP server returned an invalid result", "detail": str(exc)}), 502
+
+
+@api.app_errorhandler(rag_client.RAGServiceUnavailable)
+def handle_rag_unavailable(exc):
+    return jsonify({"error": "RAG server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(rag_client.RAGBadResponse)
+def handle_rag_bad_response(exc):
+    return jsonify({"error": "RAG server returned an invalid result", "detail": str(exc)}), 502
 
 
 @api.app_errorhandler(404)

@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client
+from . import ai_agent, db_client, mcp_client, rag_client
 from .config import Config
 from .validation import ValidationError, clean_customer
 
@@ -62,6 +62,28 @@ def ai_reward(customer_id):
     return jsonify(ai_agent.suggest_reward(customer))
 
 
+@api.post("/api/customers/<int:customer_id>/mcp-profile")
+def mcp_profile(customer_id):
+    """Run the registered MCP profile tool with privacy-minimised facts."""
+    customer = db_client.get_customer(customer_id)
+    return jsonify(mcp_client.check_customer_profile(customer))
+
+
+@api.post("/api/loyalty-benefits/ask")
+def ask_loyalty_benefits():
+    """Ask the shared RAG server about the checked-in loyalty policy."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    question = payload.get("question")
+    if not isinstance(question, str):
+        raise ValidationError(["question must be a string"])
+    question = question.strip()
+    if not 5 <= len(question) <= 500:
+        raise ValidationError(["question must be between 5 and 500 characters"])
+    return jsonify(rag_client.ask_loyalty_benefits(question))
+
+
 @api.app_errorhandler(ValidationError)
 def handle_validation_error(exc):
     return jsonify({"error": "validation failed", "details": exc.errors}), 400
@@ -80,6 +102,26 @@ def handle_conflict(exc):
 @api.app_errorhandler(db_client.DatabaseError)
 def handle_database_error(exc):
     return jsonify({"error": "database microservice unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPServiceUnavailable)
+def handle_mcp_unavailable(exc):
+    return jsonify({"error": "MCP server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPBadResponse)
+def handle_mcp_bad_response(exc):
+    return jsonify({"error": "MCP server returned an invalid result", "detail": str(exc)}), 502
+
+
+@api.app_errorhandler(rag_client.RAGServiceUnavailable)
+def handle_rag_unavailable(exc):
+    return jsonify({"error": "RAG service unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(rag_client.RAGBadResponse)
+def handle_rag_bad_response(exc):
+    return jsonify({"error": "RAG server returned an invalid result", "detail": str(exc)}), 502
 
 
 @api.app_errorhandler(404)

@@ -33,6 +33,14 @@ def _fallback(customer, reason):
 
 
 def suggest_reward(customer):
+    if not Config.AI_MODE_ENABLED:
+        outcome = _fallback(customer, "AI-Mode is disabled by configuration")
+        outcome["grounding"] = {
+            "customer_name": customer["name"],
+            "loyalty_tier": customer["loyalty_tier"],
+            "joined_at": customer["joined_at"],
+        }
+        return outcome
     reward_options = {
         "Bronze": (
             "Free standard delivery on the next purchase",
@@ -101,6 +109,8 @@ def suggest_reward(customer):
 
 
 def ai_mode_health():
+    if not Config.AI_MODE_ENABLED:
+        return {"status": "disabled"}
     try:
         response = requests.get("{}/health".format(Config.AI_MODE_URL), timeout=5)
         return response.json()

@@ -1,0 +1,27 @@
+{
+  "query": "What price range is allowed for a catalogue product?",
+  "elapsed_ms": 6650,
+  "response": {
+    "answer": "The allowed price range is 1 to 9999 AUD. Every price is in Australian dollars and is stored to two decimal places.",
+    "confidence": "medium",
+    "elapsed_ms": 4605,
+    "retrieved_count": 1,
+    "sources": [
+      {
+        "chunk_id": "knowledge:product_catalogue:product-catalogue-policy:pricing-rules::0",
+        "doc_id": "knowledge:product_catalogue:product-catalogue-policy:pricing-rules",
+        "metadata": {
+          "doc_id": "knowledge:product_catalogue:product-catalogue-policy:pricing-rules",
+          "feature": "product_catalogue",
+          "section": "Pricing Rules",
+          "source": "product-catalogue-policy.md"
+        },
+        "section": "Pricing Rules",
+        "snippet": "Pricing Rules The allowed price range is 1 to 9999 AUD. Every price is in Australian dollars and is stored to two decimal places.",
+        "source": "product-catalogue-policy.md",
+        "text": "Pricing Rules The allowed price range is 1 to 9999 AUD. Every price is in Australian dollars and is stored to two decimal places."
+      }
+    ],
+    "status": "ok"
+  }
+}

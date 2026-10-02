@@ -14,7 +14,7 @@
       "student": 1,
       "owner": "Ronaldo Kwan",
       "feature": "Product Catalogue",
-      "description": "Browse, filter and manage products, with AI-generated descriptions and price suggestions.",
+      "description": "Browse, filter and manage products, with AI-generated descriptions and price suggestions, MCP listing checks and grounded RAG answers.",
       "status": "ready",
       "frontend": "http://localhost:3001",
       "backend": "http://localhost:8001",

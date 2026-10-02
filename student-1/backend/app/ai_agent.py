@@ -82,6 +82,9 @@ def suggest_product_copy(name, category, keywords=""):
     context = build_context(name, category, keywords)
     fallback = _fallback(name, category, context)
 
+    if not Config.AI_MODE_ENABLED:
+        return _disabled_outcome(fallback, context)
+
     payload = {
         "goal": "product_catalogue_copy",
         "task": (
@@ -132,9 +135,31 @@ def suggest_product_copy(name, category, keywords=""):
     return outcome
 
 
+def _disabled_outcome(fallback, context):
+    """AI-Mode is switched off (CI): answer with the deterministic fallback."""
+    return {
+        "ok": True,
+        "result": fallback,
+        "attempts": 0,
+        "fallback_used": True,
+        "error": "AI-Mode is disabled by configuration",
+        "model": Config.LLM_MODEL,
+        "elapsed_ms": 0,
+        "trace": [{
+            "step": "Adapt",
+            "status": "fallback",
+            "detail": "AI-Mode is disabled by configuration, so the deterministic "
+                      "fallback was used without calling the LLM.",
+        }],
+        "grounding": context,
+    }
+
+
 def ai_mode_health():
+    if not Config.AI_MODE_ENABLED:
+        return {"status": "disabled"}
     try:
-        response = requests.get("{}/health".format(Config.AI_MODE_URL), timeout=5)
+        response = requests.get("{}/health".format(Config.AI_MODE_URL), timeout=(1, 3))
         return response.json()
     except (requests.RequestException, ValueError) as exc:
         return {"status": "unreachable", "error": str(exc)}

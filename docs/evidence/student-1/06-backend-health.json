@@ -1,0 +1,44 @@
+{
+  "ai_mode": {
+    "model": "qwen2.5:0.5b",
+    "model_pulled": true,
+    "models_available": [
+      "qwen2.5:0.5b"
+    ],
+    "ollama_reachable": true,
+    "ollama_url": "http://localhost:11434",
+    "service": "ai-mode",
+    "status": "ok"
+  },
+  "database": {
+    "db_path": "/data/products.db",
+    "feature": "Product Catalogue",
+    "owner": "Ronaldo Kwan",
+    "products": 16,
+    "service": "student-1-db",
+    "status": "ok",
+    "student": 1
+  },
+  "feature": "Product Catalogue",
+  "mcp_server": {
+    "endpoint": "/mcp",
+    "protocol": "MCP Streamable HTTP",
+    "service": "mcp-server",
+    "status": "ok",
+    "tools": [
+      "review_quality_check",
+      "check_review_quality",
+      "check_customer_profile",
+      "check_product_listing"
+    ]
+  },
+  "owner": "Ronaldo Kwan",
+  "rag_server": {
+    "model": "qwen2.5:0.5b",
+    "service": "rag-server",
+    "status": "ok"
+  },
+  "service": "student-1-backend",
+  "status": "ok",
+  "student": 1
+}

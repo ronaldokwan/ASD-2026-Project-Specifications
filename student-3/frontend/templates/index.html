@@ -22,6 +22,29 @@
           Select Reward beside a customer.
         </div>
       </div>
+      <div class="card">
+        <h2>MCP profile check</h2>
+        <p class="hint">Checks tier, joining date and optional-field completeness without sending contact values.</p>
+        <div id="mcp-panel" class="muted result-panel" tabindex="-1" aria-live="polite">
+          Select View, then choose Check Profile with MCP.
+        </div>
+      </div>
+      <div class="card">
+        <h2>Ask about loyalty benefits</h2>
+        <p class="hint">Answers are grounded in the checked-in Customer Account loyalty policy.</p>
+        <form hx-post="/loyalty-benefits/ask" hx-target="#rag-panel" hx-disabled-elt="find button">
+          <div class="field">
+            <label for="loyalty-question">Question</label>
+            <textarea id="loyalty-question" name="question" required minlength="5" maxlength="500"
+                      placeholder="What benefits are available to Gold customers?"></textarea>
+          </div>
+          <button class="btn ai" type="submit">Ask with RAG</button>
+          <span class="htmx-indicator muted">Retrieving policy…</span>
+        </form>
+        <div id="rag-panel" class="muted result-panel feature-result" tabindex="-1" aria-live="polite">
+          Enter a question about loyalty benefits or membership conditions.
+        </div>
+      </div>
     </section>
 
     <section class="customer-list" aria-label="Customer list">

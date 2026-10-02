@@ -45,6 +45,10 @@
                         hx-get="/partials/form/{{ item.id }}"
                         hx-target="#product-form"
                         hx-swap="outerHTML">Edit</button>
+                      <button class="btn ai"
+                        hx-post="/stock/{{ item.id }}/mcp-check"
+                        hx-target="#mcp-panel"
+                        hx-swap="innerHTML">MCP check</button>
                 <button class="btn danger"
                         hx-post="/stock/{{ item.id }}/delete"
                         hx-target="#alerts"

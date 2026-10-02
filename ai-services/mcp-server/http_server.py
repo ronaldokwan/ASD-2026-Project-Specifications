@@ -1,10 +1,9 @@
-"""HTTP front door for the shared MCP server.
+"""Legacy Flask compatibility facade for the shared MCP tools.
 
-Student backends run inside Docker and need to call a tool synchronously
-within one request/response cycle, which the MCP stdio transport in
-``server.py`` isn't built for. This Flask app exposes the same tool
-functions from ``tools.py`` as plain JSON endpoints instead - the "shared
-non-containerised local MCP server" every feature's backend/API talks to.
+The normal startup path now runs ``server.py`` with genuine MCP Streamable
+HTTP at ``/mcp``. That server also co-hosts the Student 5 compatibility REST
+route. This module remains only for backward-compatible direct Flask tests or
+manual use and is not an MCP protocol endpoint.
 
 Endpoints
     GET  /health                          liveness

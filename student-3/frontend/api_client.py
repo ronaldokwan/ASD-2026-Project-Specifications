@@ -7,6 +7,8 @@ import requests
 BACKEND_URL = os.getenv("BACKEND_URL", "http://student-3-backend:8003").rstrip("/")
 TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
+MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
+RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
 
 
 class ApiError(Exception):
@@ -60,6 +62,23 @@ def delete_customer(customer_id):
 def suggest_reward(customer_id):
     return _call(
         "POST", "/api/customers/{}/ai-reward".format(customer_id), timeout=AI_TIMEOUT
+    )
+
+
+def check_customer_profile(customer_id):
+    return _call(
+        "POST",
+        "/api/customers/{}/mcp-profile".format(customer_id),
+        timeout=MCP_TIMEOUT,
+    )
+
+
+def ask_loyalty_benefits(question):
+    return _call(
+        "POST",
+        "/api/loyalty-benefits/ask",
+        json={"question": question},
+        timeout=RAG_TIMEOUT,
     )
 
 

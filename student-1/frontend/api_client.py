@@ -12,6 +12,8 @@ import requests
 BACKEND_URL = os.getenv("BACKEND_URL", "http://student-1-backend:8001").rstrip("/")
 TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
+MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
+RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
 
 
 class ApiError(Exception):
@@ -29,7 +31,9 @@ def _call(method, path, timeout=None, **kwargs):
     try:
         response = requests.request(method, url, timeout=timeout or TIMEOUT, **kwargs)
     except requests.RequestException as exc:
-        raise ApiError("Product Catalogue API is unreachable ({}).".format(exc), 503) from exc
+        raise ApiError(
+            "Product Catalogue API is unreachable ({}).".format(exc), 503
+        ) from exc
 
     try:
         body = response.json() if response.content else {}
@@ -38,7 +42,9 @@ def _call(method, path, timeout=None, **kwargs):
 
     if response.status_code >= 400:
         raise ApiError(
-            body.get("error", "Request failed with status {}".format(response.status_code)),
+            body.get(
+                "error", "Request failed with status {}".format(response.status_code)
+            ),
             response.status_code,
             body.get("details"),
         )
@@ -72,7 +78,9 @@ def list_categories():
 
 def next_sku(category):
     """Preview the SKU a create would assign for ``category``."""
-    return _call("GET", "/api/products/next-sku", params={"category": category}).get("sku")
+    return _call("GET", "/api/products/next-sku", params={"category": category}).get(
+        "sku"
+    )
 
 
 def valid_categories():
@@ -86,6 +94,26 @@ def generate_copy(name, category, keywords=""):
         "/api/products/ai",
         timeout=AI_TIMEOUT,
         json={"name": name, "category": category, "keywords": keywords},
+    )
+
+
+def check_listing(product_id):
+    """MCP tool check_product_listing for one product."""
+    return _call(
+        "POST",
+        "/api/products/{}/mcp-check".format(product_id),
+        timeout=MCP_TIMEOUT,
+        json={},
+    )
+
+
+def ask_catalogue(question):
+    """Grounded RAG answer about the catalogue."""
+    return _call(
+        "POST",
+        "/api/catalogue/ask",
+        timeout=RAG_TIMEOUT,
+        json={"question": question},
     )
 
 

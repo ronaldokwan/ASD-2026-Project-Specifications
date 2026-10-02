@@ -1,0 +1,39 @@
+{# Grounded answer from the shared RAG server: citations + confidence, or an
+   explicit insufficient-context state - never an unsupported answer. #}
+
+{% if error %}
+  <div class="alert error">
+    {{ error }}
+    <div class="muted">The shared RAG server runs outside Docker &mdash; start it with
+      <code>bash scripts/run-ai-services.sh</code>.</div>
+  </div>
+
+{% elif outcome.status == 'insufficient_context' %}
+  <div class="alert info" id="rag-insufficient">
+    <strong>Insufficient context.</strong> {{ outcome.message }}
+    No answer was generated, because nothing in the catalogue sources supports one.
+  </div>
+  <p class="muted">Question: {{ outcome.question }}</p>
+
+{% else %}
+  <div class="field">
+    <label>Grounded answer</label>
+    <p class="ai-output" id="rag-answer">{{ outcome.answer }}</p>
+  </div>
+  <p>
+    <strong>Confidence:</strong>
+    <span class="badge confidence-{{ outcome.confidence }}" id="rag-confidence">{{ outcome.confidence }}</span>
+    <span class="muted">&middot; {{ outcome.sources|length }} supporting source{{ '' if outcome.sources|length == 1 else 's' }}</span>
+  </p>
+
+  <div class="rag-sources">
+    <strong>Sources</strong>
+    <ol>
+      {% for source in outcome.sources %}
+        <li><strong>{{ source.source }}</strong> &mdash; {{ source.section }}
+          <div class="muted">{{ source.snippet }}</div></li>
+      {% endfor %}
+    </ol>
+  </div>
+
+{% endif %}
