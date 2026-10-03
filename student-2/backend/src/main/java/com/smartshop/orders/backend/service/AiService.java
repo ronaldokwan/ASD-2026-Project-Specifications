@@ -1,7 +1,9 @@
 package com.smartshop.orders.backend.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartshop.orders.backend.dto.OrderModels.AiResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -12,33 +14,55 @@ import java.util.Map;
 @Service
 public class AiService {
 
-    private final RestClient ollamaClient;
-    private final RestClient aiModeClient;
-    private final String model;
+    private static final Map<String, Object> CONTENT_SCHEMA = Map.of(
+        "content", Map.of(
+            "type", "string",
+            "min_words", 8,
+            "max_words", 120,
+            "hint", "Use only the supplied context facts and follow the task exactly."
+        )
+    );
 
+    private final RestClient aiModeClient;
+
+    @Autowired
     public AiService(
         RestClient.Builder builder,
-        @Value("${services.ollama-url}") String ollamaUrl,
-        @Value("${services.ai-mode-url}") String aiModeUrl,
-        @Value("${services.ollama-model}") String model
+        @Value("${services.ai-mode-url}") String aiModeUrl
     ) {
-        this.ollamaClient = builder.baseUrl(ollamaUrl).build();
-        this.aiModeClient = builder.clone().baseUrl(aiModeUrl).build();
-        this.model = model;
+        this(builder.clone().baseUrl(aiModeUrl).build());
     }
 
-    public AiResponse generate(String prompt, String fallback) {
+    AiService(RestClient aiModeClient) {
+        this.aiModeClient = aiModeClient;
+    }
+
+    public AiResponse generate(
+        String goal,
+        String task,
+        Map<String, Object> context,
+        String fallback
+    ) {
         try {
-            OllamaResponse response = ollamaClient.post().uri("/api/generate")
+            AgentResponse response = aiModeClient.post().uri("/agent/run")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("model", model, "prompt", prompt, "stream", false))
+                .body(Map.of(
+                    "goal", goal,
+                    "task", task,
+                    "context", context,
+                    "output_schema", CONTENT_SCHEMA,
+                    "fallback", Map.of("content", fallback)
+                ))
                 .retrieve()
-                .body(OllamaResponse.class);
-            if (response != null && response.response() != null && !response.response().isBlank()) {
-                return new AiResponse(response.response(), true);
+                .body(AgentResponse.class);
+            if (response != null && response.ok() && response.result() != null) {
+                Object content = response.result().get("content");
+                if (content instanceof String text && !text.isBlank()) {
+                    return new AiResponse(text, !response.fallbackUsed());
+                }
             }
         } catch (RuntimeException ignored) {
-            // The order feature stays demonstrable while the shared Ollama service is unavailable.
+            // Keep the feature usable with its deterministic fallback if AI-Mode is offline.
         }
         return new AiResponse(fallback, false);
     }
@@ -57,5 +81,9 @@ public class AiService {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record OllamaResponse(String response) {}
+    private record AgentResponse(
+        boolean ok,
+        Map<String, Object> result,
+        @JsonProperty("fallback_used") boolean fallbackUsed
+    ) {}
 }

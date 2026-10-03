@@ -169,7 +169,6 @@ services:
       DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: http://student-1-backend:8001
       STOCK_API_URL: http://student-4-backend:8004
-      OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:3b}
       AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
       MCP_ENABLED: ${MCP_ENABLED:-true}
       RAG_ENABLED: ${RAG_ENABLED:-true}
