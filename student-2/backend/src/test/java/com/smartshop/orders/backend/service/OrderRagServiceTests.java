@@ -14,6 +14,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -79,5 +80,16 @@ class OrderRagServiceTests {
             "For order " + ORDER_NUMBER + ": Can this order be shipped?",
             ORDER_NUMBER
         );
+    }
+
+    @Test
+    void labelsOrderRecordsAsPrimaryConfidenceEvidence() {
+        ragService.syncOrder(order);
+
+        verify(ragClient).upsertDocuments(argThat(documents ->
+            documents.size() == 2
+                && "primary".equals(documents.get(0).metadata().get("source_authority"))
+                && "policy".equals(documents.get(1).metadata().get("source_authority"))
+        ));
     }
 }

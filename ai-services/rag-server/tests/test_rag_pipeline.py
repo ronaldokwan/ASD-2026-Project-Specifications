@@ -71,6 +71,55 @@ def test_retrieve_context_respects_metadata_filters():
     assert all(r["metadata"].get("product_sku") == "SKU-HOM-3001" for r in results)
 
 
+def test_retrieve_context_accepts_nested_logical_filters():
+    seed_reviews()
+    results = rag_pipeline.retrieve_context(
+        "battery",
+        top_k=5,
+        filters={
+            "$and": [
+                {"feature": "reviews"},
+                {
+                    "$or": [
+                        {"product_sku": "SKU-AUD-1001"},
+                        {"product_sku": "SKU-HOM-3001"},
+                    ]
+                },
+            ]
+        },
+    )
+    assert results
+    assert all(r["metadata"].get("feature") == "reviews" for r in results)
+
+
+def test_confidence_is_high_for_grounded_primary_record():
+    results = [
+        {
+            "doc_id": "order-33",
+            "metadata": {"source_authority": "primary"},
+        }
+    ]
+    assert rag_pipeline.confidence_from_results(results) == "high"
+
+
+def test_confidence_is_medium_for_single_non_primary_excerpt():
+    results = [
+        {
+            "doc_id": "shipping-policy",
+            "metadata": {"source_authority": "policy"},
+        }
+    ]
+    assert rag_pipeline.confidence_from_results(results) == "medium"
+
+
+def test_confidence_is_high_for_two_independent_documents():
+    results = [
+        {"doc_id": "order-33", "metadata": {}},
+        {"doc_id": "shipping-policy", "metadata": {}},
+    ]
+    assert rag_pipeline.confidence_from_results(results) == "high"
+
+
 def test_answer_question_returns_insufficient_context_for_unrelated_query():
     seed_reviews()
     output = rag_pipeline.answer_question(
@@ -425,6 +474,19 @@ def test_model_insufficient_evidence_is_an_insufficient_context_result(monkeypat
 def test_query_validation_rejects_invalid_controls(query, top_k, filters):
     with pytest.raises(rag_pipeline.RAGValidationError):
         rag_pipeline.retrieve_context(query, top_k=top_k, filters=filters)
+
+
+@pytest.mark.parametrize(
+    "filters",
+    [
+        {"$or": [{"feature": "reviews"}]},
+        {"feature": {"$contains": "reviews"}},
+        {"feature": ["reviews"]},
+    ],
+)
+def test_query_validation_rejects_invalid_nested_filters(filters):
+    with pytest.raises(rag_pipeline.RAGValidationError):
+        rag_pipeline.retrieve_context("valid question", filters=filters)
 
 
 def test_checked_in_catalogue_policy_is_tagged_with_its_own_feature(monkeypatch):
