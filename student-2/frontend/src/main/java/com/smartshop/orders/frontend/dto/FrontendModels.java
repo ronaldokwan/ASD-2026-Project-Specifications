@@ -38,7 +38,7 @@ public final class FrontendModels {
         BigDecimal orderTotal
     ) {}
 
-    public record AiResponse(String content, boolean generatedByOllama) {}
+    public record AiResponse(String content, boolean generatedByAiMode) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record McpToolResponse(

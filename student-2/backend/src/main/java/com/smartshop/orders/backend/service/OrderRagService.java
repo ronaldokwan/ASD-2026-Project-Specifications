@@ -118,6 +118,7 @@ public class OrderRagService {
             Map.of(
                 "feature", "orders",
                 "doc_type", "order",
+                "source_authority", "primary",
                 "order_number", order.orderNumber(),
                 "order_id", order.id()
             )
@@ -128,7 +129,11 @@ public class OrderRagService {
         return new RagDocument(
             POLICY_ID,
             shippingPolicy,
-            Map.of("feature", "orders", "doc_type", "shipping_policy")
+            Map.of(
+                "feature", "orders",
+                "doc_type", "shipping_policy",
+                "source_authority", "policy"
+            )
         );
     }
 

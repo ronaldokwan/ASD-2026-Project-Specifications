@@ -89,5 +89,5 @@ public final class OrderModels {
     public record StockUpdateResult(boolean success, String message) {}
     public record StockCheckRequest(@NotEmpty List<@Valid OrderLineRequest> lines) {}
     public record CustomerSummaryRequest(@NotBlank @Email String customerEmail) {}
-    public record AiResponse(String content, boolean generatedByOllama) {}
+    public record AiResponse(String content, boolean generatedByAiMode) {}
 }

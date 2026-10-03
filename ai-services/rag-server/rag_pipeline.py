@@ -139,6 +139,50 @@ def _normalise_metadata(metadata):
     return cleaned
 
 
+def _normalise_filters(filters, depth=0):
+    """Validate Chroma ``where`` filters without treating them as metadata."""
+    if not isinstance(filters, dict) or not filters:
+        raise RAGValidationError("filters must be a non-empty object")
+    if depth > 8:
+        raise RAGValidationError("filters are nested too deeply")
+
+    cleaned = {}
+    for key, value in filters.items():
+        if key in {"$and", "$or"}:
+            if not isinstance(value, list) or len(value) < 2:
+                raise RAGValidationError(f"{key} must contain at least two filters")
+            cleaned[key] = [_normalise_filters(item, depth + 1) for item in value]
+            continue
+
+        if not isinstance(key, str) or not key.strip() or len(key) > 80:
+            raise RAGValidationError(
+                "filter keys must be non-empty strings up to 80 characters"
+            )
+        if key.startswith("$"):
+            raise RAGValidationError(f"unsupported filter operator: {key}")
+
+        field = key.strip()
+        if isinstance(value, (str, int, float, bool)):
+            cleaned[field] = value
+            continue
+        if not isinstance(value, dict) or len(value) != 1:
+            raise RAGValidationError("filter values must be scalar values or operators")
+
+        operator, operand = next(iter(value.items()))
+        if operator in {"$in", "$nin"}:
+            if not isinstance(operand, list) or not operand or not all(
+                isinstance(item, (str, int, float, bool)) for item in operand
+            ):
+                raise RAGValidationError(f"{operator} must contain scalar values")
+        elif operator in {"$eq", "$ne", "$gt", "$gte", "$lt", "$lte"}:
+            if not isinstance(operand, (str, int, float, bool)):
+                raise RAGValidationError(f"{operator} must use a scalar value")
+        else:
+            raise RAGValidationError(f"unsupported filter operator: {operator}")
+        cleaned[field] = {operator: operand}
+    return cleaned
+
+
 def _normalise_documents(documents):
     if not isinstance(documents, list) or not documents:
         raise RAGValidationError("documents must be a non-empty list")
@@ -184,7 +228,7 @@ def _normalise_query(query, top_k, filters):
         raise RAGValidationError("top_k must be an integer between 1 and 20")
     if filters is not None and not isinstance(filters, dict):
         raise RAGValidationError("filters must be an object")
-    cleaned_filters = _normalise_metadata(filters) if filters else None
+    cleaned_filters = _normalise_filters(filters) if filters else None
     return question, top_k, cleaned_filters
 
 
@@ -371,12 +415,26 @@ def retrieve_context(query, top_k=5, filters=None):
     return ranked
 
 
-def confidence_from_results(relevant_count):
-    if relevant_count >= 3:
+def confidence_from_results(results):
+    """Score only evidence that survived the extractive grounding check.
+
+    A directly matching primary record is authoritative enough for high
+    confidence on factual questions. Multiple independent documents also
+    provide high confidence. A single non-primary excerpt remains medium.
+    """
+    if not results:
+        return "low"
+
+    distinct_documents = {
+        result.get("doc_id") for result in results if result.get("doc_id")
+    }
+    has_primary_source = any(
+        (result.get("metadata") or {}).get("source_authority") == "primary"
+        for result in results
+    )
+    if has_primary_source or len(distinct_documents) >= 2 or len(results) >= 3:
         return "high"
-    if relevant_count >= 1:
-        return "medium"
-    return "low"
+    return "medium"
 
 
 def _lexical_terms(text):
@@ -703,7 +761,7 @@ def answer_question(query, top_k=5, filters=None):
         answer = _extractive_fallback(relevant, include_all=bool(comparison_tiers))
         answer_mode = "extractive_fallback"
     relevant = _extractive_supporting_results(answer, relevant)
-    confidence = confidence_from_results(len(relevant))
+    confidence = confidence_from_results(relevant)
 
     output = {
         "status": "ok",
