@@ -19,6 +19,14 @@
           Pick a product, choose a star rating and share your experience with it.
         </p>
         {% include "partials/review_form.html" %}
+
+        <h3 style="font-size:13px;margin:14px 0 6px">Moderation check (shared MCP server)</h3>
+        <div id="moderation-panel">
+          <p class="muted">
+            No check yet. Fill in the form above, then press
+            <em>Check this review before submitting</em>.
+          </p>
+        </div>
       </div>
 
       <div class="card">
@@ -33,6 +41,42 @@
             No summary yet. Choose a product in the form above, then press
             <em>Summarise reviews with AI</em>.
           </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Ask about the reviews</h2>
+        <p class="hint">
+          Grounded Q&amp;A over this product's reviews through the shared RAG server -
+          the answer always cites the reviews it came from and a confidence category, or
+          says there isn't enough context.
+        </p>
+        <form id="ask-form"
+              hx-post="/ai/ask"
+              hx-target="#rag-panel"
+              hx-swap="innerHTML"
+              hx-indicator="#ask-indicator">
+          <div class="field">
+            <label for="ask_product_sku">Product</label>
+            <select id="ask_product_sku" name="product_sku" required>
+              <option value="">Choose a product&hellip;</option>
+              {% for product in products %}
+                <option value="{{ product.sku }}">{{ product.name }} ({{ product.sku }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="ask_question">Your question</label>
+            <input type="text" id="ask_question" name="question" required maxlength="200"
+                   placeholder="e.g. How is the battery life?">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn ai">Ask</button>
+            <span id="ask-indicator" class="htmx-indicator muted">Retrieving and asking the LLM…</span>
+          </div>
+        </form>
+        <div id="rag-panel">
+          <p class="muted">No question asked yet.</p>
         </div>
       </div>
     </section>

@@ -78,7 +78,17 @@
       Summarise reviews with AI
     </button>
 
+    <button type="button" class="btn ai"
+            hx-post="/ai/moderate"
+            hx-include="#review-form"
+            hx-target="#moderation-panel"
+            hx-swap="innerHTML"
+            hx-indicator="#moderation-indicator">
+      Check this review before submitting
+    </button>
+
     <button type="reset" class="btn secondary">Clear</button>
     <span id="ai-indicator" class="htmx-indicator muted">Asking the LLM…</span>
+    <span id="moderation-indicator" class="htmx-indicator muted">Running the moderation tool…</span>
   </div>
 </form>

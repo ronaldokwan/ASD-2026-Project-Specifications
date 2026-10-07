@@ -10,6 +10,8 @@ on:
     paths:
       - "student-5/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/mcp-server/**"
+      - "ai-services/rag-server/**"
       - "shared/**"
       - "docker-compose.yml"
       - ".github/workflows/student-5.yml"
@@ -17,6 +19,8 @@ on:
     paths:
       - "student-5/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/mcp-server/**"
+      - "ai-services/rag-server/**"
       - "shared/**"
       - "docker-compose.yml"
       - ".github/workflows/student-5.yml"
@@ -45,13 +49,15 @@ jobs:
           pip install -r student-5/backend/requirements.txt
           pip install -r student-5/frontend/requirements.txt
           pip install -r ai-services/ai-mode/requirements.txt
+          pip install -r ai-services/mcp-server/requirements.txt
+          pip install -r ai-services/rag-server/requirements.txt
           pip install flake8
 
       - name: Lint (syntax errors and undefined names fail the build)
         run: |
-          flake8 student-5 ai-services/ai-mode \
+          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
             --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 student-5 ai-services/ai-mode \
+          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
             --count --max-line-length=100 --exit-zero --statistics
 
       - name: Student 5 microservice tests
@@ -59,6 +65,12 @@ jobs:
 
       - name: Shared agentic loop tests (AI-Mode)
         run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+
+      - name: Shared MCP server tests
+        run: pytest ai-services/mcp-server/tests -v --junitxml=reports/mcp-server-tests.xml
+
+      - name: Shared RAG server tests
+        run: pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
 
       - name: Upload test evidence for the technical report
         if: always()
@@ -87,8 +99,12 @@ jobs:
       - name: Start the Student 5 stack
         # --no-deps keeps the multi-gigabyte Ollama image and the Product
         # Catalogue stack out of CI; the AI path is covered by the stubbed
-        # AI-Mode tests in the job above, and the catalogue lookup degrades to
-        # the raw SKU when unreachable (see backend/app/catalogue_client.py).
+        # AI-Mode/MCP/RAG tests in the job above. AI-Mode, the shared MCP
+        # server and the shared RAG server are not containerised (Release 1)
+        # and are not started here either, so every AI-backed endpoint must
+        # degrade gracefully (see the smoke-test step below), and the
+        # catalogue lookup degrades to the raw SKU when unreachable (see
+        # backend/app/catalogue_client.py).
         run: |
           cp .env.example .env
           docker compose up -d --build --no-deps \
@@ -134,6 +150,22 @@ jobs:
             -H 'Content-Type: application/json' -d '{"rating": 2}' | grep -q '"rating": *2'
           curl -fs -X DELETE "http://localhost:8005/api/reviews/$id" > /dev/null
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8005/api/reviews/$id)" = "404"
+
+      - name: Smoke test graceful degradation (AI-Mode, MCP, RAG disabled in CI)
+        # Release 1: none of the three shared AI services run in this job (no
+        # ollama-sized images, no native host processes). Both new endpoints
+        # must fail soft (503 from our own error handler) rather than 500.
+        run: |
+          set -e
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8005/api/reviews/ask \
+            -H 'Content-Type: application/json' \
+            -d '{"product_sku":"SKU-AUD-1001","question":"How is the battery life?"}')
+          test "$code" = "503"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8005/api/reviews/moderate \
+            -H 'Content-Type: application/json' \
+            -d '{"product_sku":"SKU-AUD-1001","review_text":"Great product overall.","rating":5}')
+          test "$code" = "503"
 
       - name: Smoke test the frontend microservice
         run: |

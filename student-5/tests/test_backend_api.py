@@ -6,7 +6,7 @@ API contract, the validation rules and the AI request the backend builds.
 
 import pytest
 
-from app import ai_agent, db_client
+from app import ai_agent, db_client, mcp_client, rag_client
 from app.validation import ValidationError, clean_review
 
 
@@ -176,6 +176,111 @@ def test_ai_fallback_is_grounded_in_the_rating_distribution(fake_db):
     fallback = ai_agent._fallback(context)
     assert "1 review(s) rated 4 or 5 stars" in fallback["pros"]
     assert "1 review(s) rated 1 or 2 stars" in fallback["cons"]
+
+
+# --------------------------------------------------- Release 1: RAG and MCP
+def test_create_review_indexes_it_in_the_shared_rag_corpus(backend, fake_db, fake_rag):
+    backend.post("/api/reviews", json={
+        "product_sku": "sku-new-1", "user_id": "new-user", "rating": "4",
+        "review": "Solid product overall.",
+    })
+    indexed = list(fake_rag["indexed"].values())
+    assert indexed and indexed[0]["review"] == "Solid product overall."
+
+
+def test_delete_review_removes_it_from_the_shared_rag_corpus(backend, fake_db, fake_rag):
+    backend.delete("/api/reviews/r1")
+    assert "r1" in fake_rag["removed"]
+
+
+def test_ask_returns_a_grounded_answer_with_validation(backend, fake_db, fake_rag, monkeypatch):
+    monkeypatch.setattr(ai_agent, "validate_rag_answer", lambda **kwargs: {
+        "ok": True, "result": {"grounded": "true", "unsupported_claims": "none",
+                                "confidence_ok": "true", "notes": "matches the sources"},
+    })
+    fake_rag["indexed"]["r1"] = {"review_id": "r1", "product_sku": "SKU-AUD-1001",
+                                  "review": "Fantastic noise cancelling."}
+
+    response = backend.post("/api/reviews/ask", json={
+        "product_sku": "SKU-AUD-1001", "question": "How is the noise cancelling?",
+    })
+    body = response.get_json()
+
+    assert response.status_code == 200
+    assert body["status"] == "ok"
+    assert body["sources"]
+    assert body["validation"]["result"]["grounded"] == "true"
+
+
+def test_ask_returns_insufficient_context_when_nothing_relevant(backend, fake_db, fake_rag):
+    response = backend.post("/api/reviews/ask", json={
+        "product_sku": "SKU-AUD-1001", "question": "Anything about this product?",
+    })
+    body = response.get_json()
+
+    assert body["status"] == "insufficient_context"
+    assert "validation" not in body  # nothing to validate without an answer
+
+
+def test_ask_requires_a_product_and_a_real_question(backend, fake_db):
+    assert backend.post("/api/reviews/ask", json={"product_sku": "x", "question": "ok?"}).status_code == 400
+    assert backend.post("/api/reviews/ask", json={"product_sku": "SKU-1", "question": "hi"}).status_code == 400
+
+
+def test_moderate_runs_the_tool_and_validates_it(backend, fake_db, fake_mcp, monkeypatch):
+    monkeypatch.setattr(ai_agent, "validate_mcp_result", lambda **kwargs: {
+        "ok": True, "result": {"valid": "true", "notes": "matches the review", "confidence": "high"},
+    })
+
+    response = backend.post("/api/reviews/moderate", json={
+        "product_sku": "SKU-AUD-1001", "review_text": "Great sound and battery life.", "rating": 5,
+    })
+    body = response.get_json()
+
+    assert response.status_code == 200
+    assert body["tool_result"]["flagged"] is False
+    assert body["validation"]["result"]["valid"] == "true"
+
+
+def test_moderate_flags_spammy_reviews(backend, fake_db, fake_mcp, monkeypatch):
+    monkeypatch.setattr(ai_agent, "validate_mcp_result", lambda **kwargs: {
+        "ok": True, "result": {"valid": "true", "notes": "correctly flagged", "confidence": "high"},
+    })
+    response = backend.post("/api/reviews/moderate", json={
+        "product_sku": "SKU-AUD-1001", "review_text": "buy now at http://spam.example", "rating": 5,
+    })
+    assert response.get_json()["tool_result"]["flagged"] is True
+
+
+def test_moderate_requires_product_and_review_text(backend, fake_db):
+    assert backend.post("/api/reviews/moderate",
+                         json={"product_sku": "x", "review_text": "ok"}).status_code == 400
+    assert backend.post("/api/reviews/moderate",
+                         json={"product_sku": "SKU-1", "review_text": ""}).status_code == 400
+
+
+def test_mcp_service_outage_returns_503(backend, fake_db, monkeypatch):
+    def boom(**_kwargs):
+        raise mcp_client.MCPServiceError("connection refused")
+
+    monkeypatch.setattr(mcp_client, "check_review_quality", boom)
+    response = backend.post("/api/reviews/moderate", json={
+        "product_sku": "SKU-AUD-1001", "review_text": "Great product.", "rating": 5,
+    })
+    assert response.status_code == 503
+    assert "MCP" in response.get_json()["error"]
+
+
+def test_rag_service_outage_returns_503(backend, fake_db, monkeypatch):
+    def boom(*_args, **_kwargs):
+        raise rag_client.RAGServiceError("connection refused")
+
+    monkeypatch.setattr(rag_client, "ask", boom)
+    response = backend.post("/api/reviews/ask", json={
+        "product_sku": "SKU-AUD-1001", "question": "How is it?",
+    })
+    assert response.status_code == 503
+    assert "RAG" in response.get_json()["error"]
 
 
 # ------------------------------------------------------------- validation unit

@@ -79,6 +79,26 @@ def generate_summary(product_sku):
     )
 
 
+def ask_about_reviews(product_sku, question):
+    """Release 1: grounded Q&A over a product's reviews (shared RAG server)."""
+    return _call(
+        "POST",
+        "/api/reviews/ask",
+        timeout=AI_TIMEOUT,
+        json={"product_sku": product_sku, "question": question},
+    )
+
+
+def moderate_review(product_sku, review_text, rating):
+    """Release 1: moderation check for a review before it's published (shared MCP server)."""
+    return _call(
+        "POST",
+        "/api/reviews/moderate",
+        timeout=AI_TIMEOUT,
+        json={"product_sku": product_sku, "review_text": review_text, "rating": rating},
+    )
+
+
 def backend_health():
     try:
         return _call("GET", "/health")
