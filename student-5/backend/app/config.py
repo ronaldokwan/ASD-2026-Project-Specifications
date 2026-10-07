@@ -7,6 +7,10 @@ machine that starts the stack with Docker Compose.
 import os
 
 
+def _enabled(name, default="true"):
+    return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
+
+
 class Config:
     SERVICE_NAME = "student-5-backend"
     STUDENT = 5
@@ -34,6 +38,8 @@ class Config:
     MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://host.docker.internal:7002").rstrip("/")
     RAG_SERVER_URL = os.getenv("RAG_SERVER_URL", "http://host.docker.internal:7003").rstrip("/")
     MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
+    MCP_ENABLED = _enabled("MCP_ENABLED")
+    MCP_TOOL = "check_review_quality"
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
 
     PORT = int(os.getenv("SERVICE_PORT", "8005"))

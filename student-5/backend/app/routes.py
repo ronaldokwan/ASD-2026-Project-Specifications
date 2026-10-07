@@ -180,9 +180,14 @@ def handle_ai_error(exc):
     return jsonify({"error": "AI-Mode service unavailable", "detail": str(exc)}), 503
 
 
-@api.app_errorhandler(mcp_client.MCPServiceError)
-def handle_mcp_error(exc):
+@api.app_errorhandler(mcp_client.MCPServiceUnavailable)
+def handle_mcp_unavailable(exc):
     return jsonify({"error": "MCP server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(mcp_client.MCPBadResponse)
+def handle_mcp_bad_response(exc):
+    return jsonify({"error": "MCP server returned an invalid result", "detail": str(exc)}), 502
 
 
 @api.app_errorhandler(rag_client.RAGServiceError)
