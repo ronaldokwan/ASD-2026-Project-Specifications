@@ -2,7 +2,8 @@
   "mcpServers": {
     "asd-group40-shared": {
       "command": "python",
-      "args": ["server.py"]
+      "args": ["server.py"],
+      "env": {"MCP_TRANSPORT": "stdio"}
     }
   }
 }

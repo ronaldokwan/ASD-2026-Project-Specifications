@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="intelligence-result" th:fragment="result">
+    <div class="notice error" th:if="${serviceError}" th:text="${serviceError}">RAG service error</div>
+    <th:block th:if="${ragWrite}">
+        <div class="result-meta">Shared RAG context</div>
+        <p th:text="|Context refreshed: ${ragWrite.documentsIndexed ?: 0} documents, ${ragWrite.chunksIndexed ?: 0} chunks indexed.|">Context refreshed.</p>
+    </th:block>
+    <th:block th:if="${rag}">
+        <div class="result-meta" th:text="|Shared RAG · confidence: ${rag.confidence ?: 'not available'}|">Shared RAG</div>
+        <p class="pre-line" th:if="${rag.status == 'ok'}" th:text="${rag.answer}">Grounded answer</p>
+        <p class="pre-line" th:unless="${rag.status == 'ok'}" th:text="${rag.message ?: 'There is not enough indexed evidence to answer this question.'}">Insufficient context</p>
+        <div class="source-list" th:if="${rag.status == 'ok' and ragSources != null and !ragSources.isEmpty()}">
+            <strong>Sources</strong>
+            <details th:each="source : ${ragSources}">
+                <summary>
+                    <span th:text="${source.label}">Source name</span>
+                    <code th:text="${source.docId}">source-id</code>
+                </summary>
+                <div class="source-evidence">
+                    <p th:each="snippet : ${source.snippets}" th:text="${snippet}">Source evidence</p>
+                </div>
+            </details>
+        </div>
+    </th:block>
+</div>
+</body>
+</html>

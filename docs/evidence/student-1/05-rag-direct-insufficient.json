@@ -1,0 +1,11 @@
+{
+  "query": "Who won the 2022 football world cup final?",
+  "elapsed_ms": 2057,
+  "response": {
+    "answer": "",
+    "confidence": "insufficient",
+    "message": "Insufficient relevant context was found.",
+    "sources": [],
+    "status": "insufficient_context"
+  }
+}

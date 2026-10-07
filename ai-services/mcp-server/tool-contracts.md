@@ -1,19 +1,17 @@
 # MCP Tool Contracts
 
 Every tool is implemented once in `tools.py` as a pure, deterministic function
-(no LLM call, no network call to another microservice) and exposed two ways:
+(no LLM call, no network call to another microservice).
 
-* `server.py` - the real Model Context Protocol server (stdio transport, via
-  the official `mcp` SDK's `FastMCP`). Launch it with any MCP-aware client
-  using `mcp-config.json` (Claude Desktop, the VS Code MCP extension, `mcp
-  dev server.py`, etc.) to list and call tools interactively.
-* `http_server.py` - a plain Flask HTTP front door on port **7002**. This is
-  the "shared non-containerised local MCP server" every student backend
-  actually calls over the network at request time, since a synchronous Flask
-  request handler isn't a good fit for the MCP stdio transport.
+* `server.py` is the native shared server. It uses the official `mcp==2.2.0`
+  SDK and exposes genuine MCP Streamable HTTP at `http://localhost:7002/mcp`.
+* The same server co-hosts the existing Student 5 plain REST route at
+  `/tools/check_review_quality` for compatibility. That route is explicitly
+  not MCP. `http_server.py` is a legacy Flask-only compatibility module.
+* `mcp-config.json` selects stdio when an editor or other local MCP host starts
+  `server.py` as a child process.
 
-Both front doors call the same function, so there is only one place tool
-behaviour can drift.
+The MCP and compatibility routes call the same functions in `tools.py`.
 
 ## check_review_quality
 
@@ -29,16 +27,86 @@ behaviour can drift.
 - **Output:** `{"flagged": bool, "reasons": [string, ...], "spam_score":
   0.0-1.0, "duplicate_risk": "low"|"possible", "word_count": int}`
 - **Policy class:** read-only, no side effects.
-- **HTTP:** `POST /tools/check_review_quality` on `http_server.py`.
-- **MCP tool name:** `review_quality_check` on `server.py`.
+- **Compatibility HTTP:** `POST /tools/check_review_quality` is co-hosted by
+  `server.py`; the legacy `http_server.py` exposes the same route.
+- **MCP tool names:** `review_quality_check` (the original Student 5 name)
+  and `check_review_quality` (an equivalent descriptive alias) on `server.py`.
+
+## check_customer_profile
+
+- **Owner:** Student 3 - Customer Account Management
+- **Purpose:** validate a privacy-minimised profile, calculate membership
+  duration, and report missing optional fields.
+- **Input:** `loyalty_tier`, ISO `joined_at`, booleans `has_phone` and
+  `has_address`, and ISO `as_of_date`. The caller supplies `as_of_date` so the
+  calculation is deterministic. Names and contact values are not accepted.
+- **Output:** `tool`, `tier_valid`, nullable `membership_days`,
+  `profile_status` (`complete`, `incomplete`, or `invalid`),
+  `missing_optional_fields`, `warnings`, and structured `errors`.
+- **Policy class:** read-only, deterministic, no side effects.
+- **MCP tool name:** `check_customer_profile`.
+
+## check_product_listing
+
+- **Owner:** Student 1 - Product Catalogue
+- **Purpose:** decide whether one catalogue listing is ready to publish
+  (catalogue rules plus description and status readiness) and position its
+  price against comparable products in the same category.
+- **Input:** `sku`, `name`, `category` (`Audio`, `Computing`, `Home`,
+  `Wearables`), `price` (1-9999), `status` (`active`, `draft`, `archived`) -
+  all required; `description` (up to 1200 characters), `comparable_count`,
+  `comparable_avg_price`, `comparable_min_price`, `comparable_max_price` -
+  optional. The caller grounds the comparable facts from its own database
+  (the other products in the category, excluding this one); the tool never
+  reaches back into the catalogue service.
+- **Output:** `tool`, `sku`, `listing_status` (`ready`, `needs_attention`,
+  or `invalid`), `price_position` (`below_range`, `within_range`,
+  `above_range`, `no_comparables`, or `unknown`), nullable
+  `price_vs_average_pct`, `comparable_count`, `description_word_count`, and
+  string lists `issues` (fix before publishing), `warnings` (informational)
+  and `errors` (input contract violations).
+- **Policy class:** read-only, deterministic, no side effects. The tool
+  never writes a product, never changes a price and holds no database
+  address or credential; the result is advice the administrator reviews.
+- **MCP tool name:** `check_product_listing`.
+
+## check_stock_reorder
+
+- **Owner:** Student 4 - Inventory and Stock
+- **Purpose:** determine whether one stock item is at or below its restock
+  threshold and calculate a bounded reorder quantity.
+- **Input:** `sku` (string), `quantity` (non-negative integer), and
+  `restock_threshold` (non-negative integer). The caller supplies the values
+  from its own database; the tool never reaches into the inventory service.
+- **Output:** `tool`, `sku`, `reorder_required`, the validated quantity and
+  threshold, `recommended_order_quantity` (null when no reorder is needed,
+  otherwise 10-1000), `reason`, and `errors`.
+- **Policy class:** read-only, deterministic, no side effects. The suggested
+  quantity targets twice the threshold, bounded to the configured order range.
+- **MCP tool name:** `check_stock_reorder`.
+
+## check_order_fulfilment
+
+- **Owner:** Student 2 - Customer Orders
+- **Purpose:** deterministic shipment-readiness check grounded with facts from
+  the caller's order record.
+- **Input:** `order_number` (string), `status` (string), `line_count` (int),
+  `total_quantity` (int), `order_total` (number), and `inventory_committed`
+  (boolean). All fields are required.
+- **Output:** `{"ready_to_ship": bool, "blockers": [string, ...],
+  "checked_rules": [string, ...], "summary": string}`.
+- **Policy class:** read-only, no side effects. The tool never reads another
+  service and never calls an LLM.
+- **HTTP:** `POST /tools/check_order_fulfilment` on `http_server.py`.
+- **MCP tool name:** `check_order_fulfilment` on `server.py`.
 
 ## Adding your own tool
 
 1. Add a pure function to `tools.py` (grounding facts as arguments, no calls
    to other microservices).
-2. Register it with `@mcp.tool()` in `server.py`.
-3. Add a matching `POST /tools/<name>` route in `http_server.py`, and an
-   entry in its `TOOL_CONTRACTS` dict.
+2. Register it with an exact explicit name using `@mcp.tool()` in `server.py`.
+3. Add a compatibility REST route only when an existing non-MCP consumer
+   requires one; new integrations must use `/mcp`.
 4. Document the contract here, following the shape above.
 5. Add tests to `tests/test_tools.py` (pure function) and
    `tests/test_http_server.py` (HTTP route) - both run offline, no LLM

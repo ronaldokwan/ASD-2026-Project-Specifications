@@ -1,0 +1,28 @@
+{
+  "created": {
+    "category": "Audio",
+    "created_at": "2026-10-01 15:09:37",
+    "description": "Temporary product created and deleted by the validation script.",
+    "id": 34,
+    "name": "Release 1 Validation Earbuds",
+    "price": 79.95,
+    "sku": "SKU-AUD-1005",
+    "status": "active",
+    "updated_at": "2026-10-01 15:09:37"
+  },
+  "updated": {
+    "category": "Audio",
+    "created_at": "2026-10-01 15:09:37",
+    "description": "Temporary product created and deleted by the validation script.",
+    "id": 34,
+    "name": "Release 1 Validation Earbuds",
+    "price": 74.95,
+    "sku": "SKU-AUD-1005",
+    "status": "active",
+    "updated_at": "2026-10-01 15:09:37"
+  },
+  "deleted": {
+    "deleted": 34
+  },
+  "get_after_delete": 404
+}

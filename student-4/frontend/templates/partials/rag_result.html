@@ -1,0 +1,23 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% elif outcome.status == 'insufficient_context' %}
+  <div class="alert info" id="rag-insufficient">{{ outcome.message }}</div>
+{% else %}
+  <div class="field" id="rag-answer">
+    <p class="ai-output">{{ outcome.answer }}</p>
+    <p class="muted">{{ outcome.confidence }} confidence</p>
+  </div>
+  {% if outcome.sources %}
+    <div class="field" id="rag-sources">
+      <label>Sources</label>
+      <ul>
+        {% for source in outcome.sources %}
+          <li>
+            <strong>{{ source.source }}{% if source.section %} · {{ source.section }}{% endif %}</strong>
+            <div class="muted">{{ source.snippet }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endif %}

@@ -1,5 +1,8 @@
 package com.smartshop.orders.frontend.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,5 +38,53 @@ public final class FrontendModels {
         BigDecimal orderTotal
     ) {}
 
-    public record AiResponse(String content, boolean generatedByOllama) {}
+    public record AiResponse(String content, boolean generatedByAiMode) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record McpToolResponse(
+        boolean ok,
+        String tool,
+        FulfilmentResult result,
+        String error
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record FulfilmentResult(
+        @JsonProperty("ready_to_ship") boolean readyToShip,
+        List<String> blockers,
+        @JsonProperty("checked_rules") List<String> checkedRules,
+        String summary
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RagWriteResponse(
+        boolean ok,
+        @JsonProperty("documents_indexed") Integer documentsIndexed,
+        @JsonProperty("chunks_indexed") Integer chunksIndexed,
+        String error
+    ) {}
+
+    public record RagQuestionRequest(String question) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RagAnswerResponse(
+        String status,
+        String answer,
+        String message,
+        String confidence,
+        List<RagSource> sources,
+        String error
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RagSource(
+        @JsonProperty("doc_id") String docId,
+        String snippet
+    ) {}
+
+    public record RagSourceView(
+        String docId,
+        String label,
+        List<String> snippets
+    ) {}
 }

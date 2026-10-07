@@ -1,20 +1,13 @@
-# ---------------------------------------------------------------------------
-# Run: docker compose up --build
-# ---------------------------------------------------------------------------
+# Run with: docker compose up --build
 
 name: asd2026-group40
 
-# Release 1: AI-Mode, the shared MCP server and the shared RAG server all run
-# as native host processes (see scripts/run-ai-services.sh) - they are
-# explicitly NOT containerised. Only Ollama stays in this Compose file, since
-# it isn't named alongside them in the brief and every teammate already has
-# it here for the model-pull automation below. Containers reach all three
-# host-native services through the Docker-provided host.docker.internal
-# alias (extra_hosts on each backend makes this resolve on Linux CI runners
-# too, not just Docker Desktop).
+# AI-Mode, MCP and RAG run as host processes via scripts/run-ai-services.sh.
+# Containers reach them through host.docker.internal; the host-gateway mapping
+# also supports Linux. Ollama remains in Compose for model management.
 x-ai-env: &ai-env
   OLLAMA_URL: http://ollama:11434
-  LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+  LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
   LLM_TIMEOUT: ${LLM_TIMEOUT:-120}
   AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
   MCP_SERVER_URL: ${MCP_SERVER_URL:-http://host.docker.internal:7002}
@@ -63,16 +56,15 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      LLM_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     entrypoint: ["/bin/sh", "-c"]
     command: >
       'echo "Pulling $${LLM_MODEL} ..." && ollama pull "$${LLM_MODEL}" && ollama list'
     networks: [asd-net]
     restart: "no"
 
-  # AI-Mode, the shared MCP server and the shared RAG server are NOT run by
-  # Compose in Release 1 - start them natively with
-  # `bash scripts/run-ai-services.sh` (they need Ollama, above, already up).
+  # Start the host AI services after Ollama is ready:
+  # bash scripts/run-ai-services.sh
 
   # =================== STUDENT 1 - Ronaldo Kwan ============================
   # Feature: Product Catalogue
@@ -103,13 +95,17 @@ services:
       <<: *ai-env
       DATABASE_URL: http://student-1-db:9001
       SERVICE_PORT: "8001"
+      AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      RAG_ENABLED: ${RAG_ENABLED:-true}
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "8001:8001"
     depends_on:
       student-1-db:
         condition: service_healthy
-      # ai-mode:
-      #   condition: service_started
+    <<: *host-gateway
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -126,10 +122,12 @@ services:
       BACKEND_URL: http://student-1-backend:8001
       HOME_URL: http://localhost:3000
       SERVICE_PORT: "3001"
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "3001:3001"
     volumes:
-      - ./shared:/app/shared:ro 
+      - ./shared:/app/shared:ro
     depends_on:
       student-1-backend:
         condition: service_started
@@ -166,18 +164,20 @@ services:
       dockerfile: backend/Dockerfile
     container_name: asd-student2-api
     environment:
+      <<: *ai-env
       SERVER_PORT: "8002"
       DATABASE_API_URL: http://student2-db:9002
       PRODUCT_API_URL: http://student-1-backend:8001
       STOCK_API_URL: http://student-4-backend:8004
-      OLLAMA_URL: http://ollama:11434
-      AI_MODE_URL: http://ai-mode:7000
-      OLLAMA_MODEL: ${LLM_MODEL:-qwen2.5:0.5b}
+      AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      RAG_ENABLED: ${RAG_ENABLED:-true}
     ports:
       - "8002:8002"
     depends_on:
       student2-db:
         condition: service_healthy
+    <<: *host-gateway
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -240,13 +240,17 @@ services:
       <<: *ai-env
       DATABASE_URL: http://student-3-db:9003
       SERVICE_PORT: "8003"
+      AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      RAG_ENABLED: ${RAG_ENABLED:-true}
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "8003:8003"
     depends_on:
       student-3-db:
         condition: service_healthy
-      # ai-mode:                  # TEMP: commented out for local testing only, do not commit -
-      #   condition: service_started  # ai-mode service removed from Compose in Release 1
+    <<: *host-gateway
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:
@@ -308,13 +312,17 @@ services:
       <<: *ai-env
       DATABASE_URL: http://student-4-db:9004
       SERVICE_PORT: "8004"
+      AI_MODE_ENABLED: ${AI_MODE_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
+      RAG_ENABLED: ${RAG_ENABLED:-true}
+      MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
+      RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
     ports:
       - "8004:8004"
     depends_on:
       student-4-db:
         condition: service_healthy
-      # ai-mode:                  # TEMP: commented out for local testing only, do not commit -
-      #   condition: service_started  # ai-mode service removed from Compose in Release 1
+    <<: *host-gateway
     networks: [asd-net]
     restart: unless-stopped
     healthcheck:

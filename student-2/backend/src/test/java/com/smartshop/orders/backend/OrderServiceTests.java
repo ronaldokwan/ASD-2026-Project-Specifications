@@ -10,6 +10,7 @@ import com.smartshop.orders.backend.dto.OrderModels.ProductInfo;
 import com.smartshop.orders.backend.dto.OrderModels.StockCheckResult;
 import com.smartshop.orders.backend.dto.OrderModels.StockUpdateResult;
 import com.smartshop.orders.backend.service.OrderService;
+import com.smartshop.orders.backend.service.OrderRagService;
 import com.smartshop.orders.backend.service.ProductService;
 import com.smartshop.orders.backend.service.StockService;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,7 @@ class OrderServiceTests {
     private DatabaseApiClient databaseApi;
     private ProductService productService;
     private StockService stockService;
+    private OrderRagService ragService;
     private OrderService orderService;
 
     @BeforeEach
@@ -46,7 +48,8 @@ class OrderServiceTests {
         databaseApi = mock(DatabaseApiClient.class);
         productService = mock(ProductService.class);
         stockService = mock(StockService.class);
-        orderService = new OrderService(databaseApi, productService, stockService);
+        ragService = mock(OrderRagService.class);
+        orderService = new OrderService(databaseApi, productService, stockService, ragService);
     }
 
     @Test

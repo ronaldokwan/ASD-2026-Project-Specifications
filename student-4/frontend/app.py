@@ -11,7 +11,9 @@ talks to the backend/API microservice directly.
     POST /stock                     create
     POST /stock/<id>                update
     POST /stock/<id>/delete         delete
+    POST /stock/<id>/mcp-check      shared MCP reorder assessment
     POST /ai/recommend              AI restock recommendation
+    POST /rag/ask                   inventory-grounded RAG answer
     GET  /health                    frontend liveness + downstream health
     GET  /shared/<path>             the team's shared CSS/JS (read-only volume)
 """
@@ -266,6 +268,34 @@ def ai_recommend():
 @app.post("/ai/suggest")
 def ai_suggest():
     return ai_recommend()
+
+
+# --------------------------------------------------------------- shared MCP
+@app.post("/stock/<int:stock_id>/mcp-check")
+def mcp_reorder_check(stock_id):
+    """Render the shared MCP tool's deterministic assessment."""
+    try:
+        outcome = api_client.check_reorder(stock_id)
+    except ApiError as exc:
+        return render_template("partials/mcp_result.html", error=exc.message), exc.status
+    return render_template("partials/mcp_result.html", outcome=outcome)
+
+
+# ---------------------------------------------------------------- shared RAG
+@app.post("/rag/ask")
+def rag_ask():
+    """Render a grounded inventory answer or its insufficient-context state."""
+    question = request.form.get("question", "").strip()
+    if len(question) < 5:
+        return render_template(
+            "partials/rag_result.html",
+            error="Enter a question with at least 5 characters.",
+        )
+    try:
+        outcome = api_client.ask_inventory(question)
+    except ApiError as exc:
+        return render_template("partials/rag_result.html", error=exc.message), exc.status
+    return render_template("partials/rag_result.html", outcome=outcome)
 
 
 # -------------------------------------------------------------------- health

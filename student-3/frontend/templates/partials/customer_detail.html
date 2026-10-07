@@ -7,4 +7,8 @@
     <dt>Loyalty tier</dt><dd>{{ customer.loyalty_tier }}</dd>
     <dt>Joined</dt><dd>{{ customer.joined_at }}</dd>
   </dl>
+  <button class="btn secondary" hx-post="/customers/{{ customer.id }}/mcp-profile"
+          hx-target="#mcp-panel" hx-disabled-elt="this">
+    Check Profile with MCP
+  </button>
 </div>

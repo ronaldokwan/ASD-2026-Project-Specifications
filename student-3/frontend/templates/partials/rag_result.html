@@ -1,0 +1,18 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% elif result.status == 'insufficient_context' %}
+  <div class="alert info"><strong>Insufficient context.</strong> {{ result.message }}</div>
+{% else %}
+  <div class="alert ok">Grounded answer ready.</div>
+  <div class="field"><label>Answer</label><p class="ai-output">{{ result.answer }}</p></div>
+  <p><strong>Confidence:</strong> <span class="badge">{{ result.confidence|title }}</span></p>
+  <div class="rag-sources">
+    <strong>Sources</strong>
+    <ul>
+      {% for source in result.sources %}
+        <li><strong>{{ source.source }}</strong> — {{ source.section }}<br><span class="muted">{{ source.snippet }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <p class="muted">This question and answer are not stored in the customer database.</p>
+{% endif %}

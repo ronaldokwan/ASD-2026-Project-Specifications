@@ -4,7 +4,7 @@ The pipeline itself is monkeypatched here (it has its own dedicated tests in
 test_rag_pipeline.py) so this file only checks routing, validation and
 status codes.
 
-Run from the repository root:  pytest ai-services/rag-server/tests -v
+Run from the repository root: pytest ai-services/rag-server/tests -v
 """
 
 import os
@@ -41,14 +41,19 @@ def test_add_documents_calls_pipeline(monkeypatch):
 
     monkeypatch.setattr(http_server, "upsert_documents", fake_upsert)
 
-    res = client().post("/rag/documents", json={"documents": [{"id": "r1", "text": "hello"}]})
+    res = client().post(
+        "/rag/documents", json={"documents": [{"id": "r1", "text": "hello"}]}
+    )
     assert res.status_code == 200
     assert res.get_json()["ok"] is True
     assert calls["docs"][0]["id"] == "r1"
 
 
 def test_delete_document(monkeypatch):
-    monkeypatch.setattr(http_server, "delete_document", lambda doc_id: {"ok": True, "chunks_removed": 1})
+    monkeypatch.setattr(
+        http_server, "delete_document",
+        lambda doc_id: {"ok": True, "chunks_removed": 1},
+    )
     res = client().delete("/rag/documents/r1")
     assert res.status_code == 200
     assert res.get_json()["chunks_removed"] == 1
@@ -75,8 +80,26 @@ def test_query_returns_grounded_answer(monkeypatch):
         "sources": [{"doc_id": "r1", "chunk_id": "r1::0", "snippet": "...", "metadata": {}}],
         "confidence": "high", "retrieved_count": 1,
     })
-    res = client().post("/rag/query", json={"query": "How is the battery?", "filters": {"product_sku": "SKU-1"}})
+    res = client().post(
+        "/rag/query",
+        json={"query": "How is the battery?", "filters": {"product_sku": "SKU-1"}},
+    )
     body = res.get_json()
     assert res.status_code == 200
     assert body["confidence"] == "high"
     assert body["sources"]
+
+
+def test_query_rejects_invalid_top_k():
+    res = client().post("/rag/query", json={"query": "valid question", "top_k": "many"})
+    assert res.status_code == 400
+
+
+def test_query_returns_503_when_model_is_unavailable(monkeypatch):
+    monkeypatch.setattr(http_server, "answer_question", lambda q, top_k=5, filters=None: {
+        "status": "service_unavailable", "answer": "", "sources": [],
+        "confidence": "unavailable", "message": "The local language model is unavailable.",
+    })
+    res = client().post("/rag/query", json={"query": "What are Gold benefits?"})
+    assert res.status_code == 503
+    assert res.get_json()["status"] == "service_unavailable"

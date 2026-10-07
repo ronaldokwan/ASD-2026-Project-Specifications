@@ -106,3 +106,65 @@ td.timestamps {
   white-space: nowrap;
   font-size: 13px;
 }
+
+#product-table td:first-child code {
+  white-space: nowrap;
+}
+
+td.actions .btn {
+  margin: 2px 0;
+}
+
+.result-panel {
+  margin-top: 8px;
+}
+
+.result-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+.result-list dt {
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.result-list dd {
+  margin: 0;
+}
+
+.result-panel ul,
+.result-panel ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.rag-sources li {
+  margin-bottom: 8px;
+}
+
+.badge.listing-ready,
+.badge.confidence-high {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.badge.listing-needs_attention,
+.badge.confidence-medium {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge.listing-invalid,
+.badge.confidence-low {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.result-panel pre {
+  max-height: 220px;
+  overflow: auto;
+}

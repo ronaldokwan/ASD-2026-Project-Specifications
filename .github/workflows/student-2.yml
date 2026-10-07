@@ -13,6 +13,9 @@ on:
 jobs:
   build-test-and-validate-containers:
     runs-on: ubuntu-latest
+    env:
+      MCP_ENABLED: "false"
+      RAG_ENABLED: "false"
     defaults:
       run:
         working-directory: student-2

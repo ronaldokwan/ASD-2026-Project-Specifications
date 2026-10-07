@@ -2,98 +2,128 @@
 
 {% block content %}
 
-  {% if error %}
-    <div class="alert error">{{ error }}</div>
-  {% endif %}
+{% if error %}
+<div class="alert error">{{ error }}</div>
+{% endif %}
 
-  <!-- Alerts raised by create / update / delete are swapped in here -->
-  <div id="alerts"></div>
+<!-- Alerts raised by create / update / delete are swapped in here -->
+<div id="alerts"></div>
 
-  <div class="layout">
+<div class="layout">
 
-    <!-- ============================ LEFT: create / edit + AI ============ -->
-    <section>
-      <div class="card">
-        <h2>Add or edit a product</h2>
-        <p class="hint">
-          Fill the form manually, or enter a name and category and let the AI draft the
-          description and suggest a price.
+  <!-- ============================ LEFT: create / edit + AI ============ -->
+  <section>
+    <div class="card">
+      <h2>Add or edit a product</h2>
+      <p class="hint">
+        Fill the form manually, or enter a name and category and let the AI draft the
+        description and suggest a price.
+      </p>
+      {% include "partials/product_form.html" %}
+    </div>
+
+    <div class="card">
+      <h2>AI assistant</h2>
+      <p class="hint">
+        Runs the team's <strong>Plan &rarr; Act &rarr; Observe &rarr; Adapt</strong> loop
+        through the shared AI-Mode service and an approved open-source LLM.
+      </p>
+      <div id="ai-panel">
+        <p class="muted">
+          No suggestion yet. Enter a product name and category above, then press
+          <em>Generate with AI</em>.
         </p>
-        {% include "partials/product_form.html" %}
       </div>
+    </div>
 
-      <div class="card">
-        <h2>AI assistant</h2>
-        <p class="hint">
-          Runs the team's <strong>Plan &rarr; Act &rarr; Observe &rarr; Adapt</strong> loop
-          through the shared AI-Mode service and an approved open-source LLM.
-        </p>
-        <div id="ai-panel">
-          <p class="muted">
-            No suggestion yet. Enter a product name and category above, then press
-            <em>Generate with AI</em>.
-          </p>
+    <div class="card" id="mcp-card">
+      <h2>MCP listing check</h2>
+      <p class="hint">
+        Press <em>Check</em> on any product. The backend grounds the shared MCP tool
+        <code>check_product_listing</code> with comparable prices from the database, and the
+        tool reports whether the listing is ready to publish. Read-only: nothing is saved.
+      </p>
+      <div id="mcp-panel" class="result-panel" tabindex="-1" aria-live="polite">
+        <p class="muted">No listing checked yet.</p>
+      </div>
+    </div>
+
+    <div class="card" id="rag-card">
+      <h2>Ask the catalogue</h2>
+      <p class="hint">
+        Answers come from the shared RAG server and are grounded only in the catalogue
+        policy and the live product records, with citations and a confidence category.
+      </p>
+      <form hx-post="/catalogue/ask" hx-target="#rag-panel" hx-disabled-elt="find button">
+        <div class="field">
+          <label for="rag-question">Question</label>
+          <textarea id="rag-question" name="question" required minlength="5" maxlength="500" rows="2"
+            placeholder="Which headphones have active noise cancelling?"></textarea>
         </div>
+        <div class="form-actions">
+          <button class="btn ai" type="submit">Ask with RAG</button>
+          <span class="htmx-indicator muted">Retrieving and grounding&hellip;</span>
+        </div>
+      </form>
+      <div id="rag-panel" class="result-panel" tabindex="-1" aria-live="polite">
+        <p class="muted">Ask about products, prices, categories or catalogue rules.</p>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ============================ RIGHT: catalogue =================== -->
-    <section>
-      <div class="card">
-        <h2>Catalogue</h2>
-        <p class="hint">Filter the catalogue, then read, edit or delete any product.</p>
+  <!-- ============================ RIGHT: catalogue =================== -->
+  <section>
+    <div class="card">
+      <h2>Catalogue</h2>
+      <p class="hint">Filter the catalogue, then read, edit or delete any product.</p>
 
-        <form id="filters"
-              hx-get="/partials/products"
-              hx-target="#product-table"
-              hx-swap="outerHTML"
-              hx-trigger="submit, change from:#category, change from:#status, change from:#sort,
+      <form id="filters" hx-get="/partials/products" hx-target="#product-table" hx-swap="outerHTML" hx-trigger="submit, change from:#category, change from:#status, change from:#sort,
                           keyup changed delay:350ms from:#search">
-          <div class="row">
-            <div class="field">
-              <label for="search">Search</label>
-              <input type="search" id="search" name="search" value="{{ filters.search }}"
-                     placeholder="name, SKU or description">
-            </div>
-            <div class="field">
-              <label for="category">Category</label>
-              <select id="category" name="category">
-                <option value="">All categories</option>
-                {% for category in categories %}
-                  <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>
-                    {{ category }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="field">
-              <label for="status">Status</label>
-              <select id="status" name="status">
-                <option value="">Any status</option>
-                {% for status in statuses %}
-                  <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>
-                    {{ status }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="field">
-              <label for="sort">Sort by</label>
-              <select id="sort" name="sort">
-                {% for value, label in sort_options %}
-                  <option value="{{ value }}" {% if filters.sort == value %}selected{% endif %}>
-                    {{ label }}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
+        <div class="row">
+          <div class="field">
+            <label for="search">Search</label>
+            <input type="search" id="search" name="search" value="{{ filters.search }}"
+              placeholder="name, SKU or description">
           </div>
-          <span class="htmx-indicator muted">Loading…</span>
-        </form>
-      </div>
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category">
+              <option value="">All categories</option>
+              {% for category in categories %}
+              <option value="{{ category }}" {% if filters.category==category %}selected{% endif %}>
+                {{ category }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="">Any status</option>
+              {% for status in statuses %}
+              <option value="{{ status }}" {% if filters.status==status %}selected{% endif %}>
+                {{ status }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label for="sort">Sort by</label>
+            <select id="sort" name="sort">
+              {% for value, label in sort_options %}
+              <option value="{{ value }}" {% if filters.sort==value %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <span class="htmx-indicator muted">Loading…</span>
+      </form>
+    </div>
 
-      {% include "partials/product_table.html" %}
-    </section>
+    {% include "partials/product_table.html" %}
+  </section>
 
-  </div>
+</div>
 {% endblock %}

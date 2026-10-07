@@ -1,0 +1,25 @@
+{
+  "endpoint": "http://localhost:7002/mcp",
+  "tools/list": [
+    "check_review_quality",
+    "review_quality_check",
+    "check_customer_profile",
+    "check_product_listing"
+  ],
+  "tools/call check_product_listing": {
+    "tool": "check_product_listing",
+    "sku": "SKU-AUD-1001",
+    "listing_status": "ready",
+    "price_position": "above_range",
+    "price_vs_average_pct": 96.0,
+    "comparable_count": 2,
+    "description_word_count": 12,
+    "issues": [],
+    "warnings": [
+      "price is 96.0% above the category average of 102.00"
+    ],
+    "errors": []
+  },
+  "is_error": false,
+  "out-of-contract call is_error": true
+}

@@ -1,0 +1,18 @@
+NAME                     STATUS                        PORTS
+asd-ollama               Up 2 hours (healthy)          0.0.0.0:11434->11434/tcp, [::]:11434->11434/tcp
+asd-shared-home          Up 2 hours                    0.0.0.0:3000->80/tcp, [::]:3000->80/tcp
+asd-student-1-backend    Up About a minute (healthy)   0.0.0.0:8001->8001/tcp, [::]:8001->8001/tcp
+asd-student-1-db         Up About a minute (healthy)   0.0.0.0:9001->9001/tcp, [::]:9001->9001/tcp
+asd-student-1-frontend   Up About a minute             0.0.0.0:3001->3001/tcp, [::]:3001->3001/tcp
+asd-student-3-backend    Up About an hour (healthy)    0.0.0.0:8003->8003/tcp, [::]:8003->8003/tcp
+asd-student-3-db         Up About an hour (healthy)    0.0.0.0:9003->9003/tcp, [::]:9003->9003/tcp
+asd-student-3-frontend   Up About an hour (healthy)    0.0.0.0:3003->3003/tcp, [::]:3003->3003/tcp
+asd-student-4-backend    Up About an hour (healthy)    0.0.0.0:8004->8004/tcp, [::]:8004->8004/tcp
+asd-student-4-db         Up About an hour (healthy)    0.0.0.0:9004->9004/tcp, [::]:9004->9004/tcp
+asd-student-4-frontend   Up About an hour              0.0.0.0:3004->3004/tcp, [::]:3004->3004/tcp
+asd-student-5-backend    Up About an hour (healthy)    0.0.0.0:8005->8005/tcp, [::]:8005->8005/tcp
+asd-student-5-db         Up About an hour (healthy)    0.0.0.0:9005->9005/tcp, [::]:9005->9005/tcp
+asd-student-5-frontend   Up About an hour              0.0.0.0:3005->3005/tcp, [::]:3005->3005/tcp
+asd-student2-api         Up About an hour (healthy)    0.0.0.0:8002->8002/tcp, [::]:8002->8002/tcp
+asd-student2-db          Up About an hour (healthy)    0.0.0.0:9002->9002/tcp, [::]:9002->9002/tcp
+asd-student2-frontend    Up About an hour (healthy)    0.0.0.0:3002->3002/tcp, [::]:3002->3002/tcp

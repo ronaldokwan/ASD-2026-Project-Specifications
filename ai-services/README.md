@@ -34,7 +34,7 @@ Response:
   "result": { "description": "…", "price": 129.95 },
   "attempts": 1,
   "fallback_used": false,
-  "model": "qwen2.5:0.5b",
+  "model": "qwen2.5:3b",
   "elapsed_ms": 1840,
   "trace": [ { "step": "Plan", "detail": "…" }, { "step": "Act", "…": "…" } ]
 }
