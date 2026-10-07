@@ -261,7 +261,7 @@ def test_moderate_requires_product_and_review_text(backend, fake_db):
 
 def test_mcp_service_outage_returns_503(backend, fake_db, monkeypatch):
     def boom(**_kwargs):
-        raise mcp_client.MCPServiceError("connection refused")
+        raise mcp_client.MCPServiceUnavailable("connection refused")
 
     monkeypatch.setattr(mcp_client, "check_review_quality", boom)
     response = backend.post("/api/reviews/moderate", json={
