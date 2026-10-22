@@ -24,30 +24,39 @@ public class RagClient {
 
     private final RestClient client;
     private final boolean enabled;
+    private final String serviceToken;
 
     @Autowired
     public RagClient(
         RestClient.Builder builder,
         @Value("${services.rag-server-url}") String serverUrl,
         @Value("${services.rag-enabled:true}") boolean enabled,
-        @Value("${services.rag-timeout-seconds:120}") int timeoutSeconds
+        @Value("${services.rag-timeout-seconds:120}") int timeoutSeconds,
+        @Value("${services.rag-service-token:}") String serviceToken
     ) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(timeoutSeconds));
         requestFactory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
         this.client = builder.clone().baseUrl(serverUrl).requestFactory(requestFactory).build();
         this.enabled = enabled;
+        this.serviceToken = serviceToken;
     }
 
     RagClient(RestClient client, boolean enabled) {
+        this(client, enabled, "");
+    }
+
+    RagClient(RestClient client, boolean enabled, String serviceToken) {
         this.client = client;
         this.enabled = enabled;
+        this.serviceToken = serviceToken;
     }
 
     public RagWriteResponse upsertDocuments(List<RagDocument> documents) {
         requireEnabled();
         RagWriteResponse response = client.post()
             .uri("/rag/documents")
+            .header("X-RAG-Service-Token", serviceToken)
             .contentType(MediaType.APPLICATION_JSON)
             .body(new RagDocumentsRequest(documents))
             .retrieve()
@@ -62,6 +71,7 @@ public class RagClient {
         requireEnabled();
         RagWriteResponse response = client.delete()
             .uri("/rag/documents/{id}", documentId)
+            .header("X-RAG-Service-Token", serviceToken)
             .retrieve()
             .body(RagWriteResponse.class);
         if (response == null || !response.ok()) {

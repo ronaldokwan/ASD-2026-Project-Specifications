@@ -38,6 +38,7 @@ class Config:
         "RAG_SERVER_URL", "http://host.docker.internal:7003"
     ).rstrip("/")
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+    RAG_SERVICE_TOKEN = os.getenv("RAG_SERVICE_TOKEN", "")
     RAG_ENABLED = _enabled("RAG_ENABLED")
     # Tag documents and filter retrieval so inventory questions cannot cite other features.
     RAG_FEATURE = "inventory_stock"

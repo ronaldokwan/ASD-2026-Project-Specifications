@@ -10,10 +10,15 @@ Run from the repository root: pytest ai-services/rag-server/tests -v
 import os
 import sys
 
+import pytest
+
 SERVICE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SERVICE_ROOT)
 
 import http_server  # noqa: E402
+
+TEST_AUTH_VALUE = "test-rag-service-token"
+AUTH_HEADERS = {http_server.AUTH_HEADER: TEST_AUTH_VALUE}
 
 
 def client():
@@ -27,12 +32,33 @@ def test_health():
     assert res.get_json()["status"] == "ok"
 
 
-def test_add_documents_requires_id_and_text():
-    res = client().post("/rag/documents", json={"documents": [{"id": "r1"}]})
+def test_add_documents_requires_id_and_text(monkeypatch):
+    monkeypatch.setenv("RAG_SERVICE_TOKEN", TEST_AUTH_VALUE)
+    res = client().post(
+        "/rag/documents", json={"documents": [{"id": "r1"}]}, headers=AUTH_HEADERS
+    )
     assert res.status_code == 400
 
 
+@pytest.mark.parametrize("headers", [{}, {http_server.AUTH_HEADER: "wrong"}])
+def test_add_documents_rejects_missing_or_wrong_credential(monkeypatch, headers):
+    monkeypatch.setenv("RAG_SERVICE_TOKEN", TEST_AUTH_VALUE)
+    monkeypatch.setattr(
+        http_server,
+        "upsert_documents",
+        lambda _docs: pytest.fail("write reached pipeline"),
+    )
+    res = client().post(
+        "/rag/documents",
+        json={"documents": [{"id": "r1", "text": "hello"}]},
+        headers=headers,
+    )
+    assert res.status_code == 401
+    assert "credential" in res.get_json()["error"]
+
+
 def test_add_documents_calls_pipeline(monkeypatch):
+    monkeypatch.setenv("RAG_SERVICE_TOKEN", TEST_AUTH_VALUE)
     calls = {}
 
     def fake_upsert(docs):
@@ -42,21 +68,47 @@ def test_add_documents_calls_pipeline(monkeypatch):
     monkeypatch.setattr(http_server, "upsert_documents", fake_upsert)
 
     res = client().post(
-        "/rag/documents", json={"documents": [{"id": "r1", "text": "hello"}]}
+        "/rag/documents", json={"documents": [{"id": "r1", "text": "hello"}]},
+        headers=AUTH_HEADERS,
     )
     assert res.status_code == 200
     assert res.get_json()["ok"] is True
     assert calls["docs"][0]["id"] == "r1"
 
 
-def test_delete_document(monkeypatch):
+@pytest.mark.parametrize("headers", [{}, {http_server.AUTH_HEADER: "wrong"}])
+def test_delete_rejects_missing_or_wrong_credential(monkeypatch, headers):
+    monkeypatch.setenv("RAG_SERVICE_TOKEN", TEST_AUTH_VALUE)
     monkeypatch.setattr(
-        http_server, "delete_document",
+        http_server,
+        "delete_document",
+        lambda _doc_id: pytest.fail("delete reached pipeline"),
+    )
+    res = client().delete("/rag/documents/r1", headers=headers)
+    assert res.status_code == 401
+    assert "credential" in res.get_json()["error"]
+
+
+def test_delete_document(monkeypatch):
+    monkeypatch.setenv("RAG_SERVICE_TOKEN", TEST_AUTH_VALUE)
+    monkeypatch.setattr(
+        http_server,
+        "delete_document",
         lambda doc_id: {"ok": True, "chunks_removed": 1},
     )
-    res = client().delete("/rag/documents/r1")
+    res = client().delete("/rag/documents/r1", headers=AUTH_HEADERS)
     assert res.status_code == 200
     assert res.get_json()["chunks_removed"] == 1
+
+
+def test_document_writes_fail_closed_when_service_token_is_unset(monkeypatch):
+    monkeypatch.delenv("RAG_SERVICE_TOKEN", raising=False)
+    res = client().post(
+        "/rag/documents",
+        json={"documents": [{"id": "r1", "text": "hello"}]},
+        headers=AUTH_HEADERS,
+    )
+    assert res.status_code == 401
 
 
 def test_query_requires_a_question():

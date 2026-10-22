@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start all shared host AI services after Compose starts Ollama.
 # Usage: bash scripts/run-ai-services.sh
-# Stop: Ctrl+C stops all three services through the trap below.
+# Stop: Ctrl+C stops all four services through the trap below.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
@@ -23,7 +23,8 @@ fi
 if [ -f .env ]; then
   for key in LLM_MODEL LLM_TIMEOUT MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \
              MULTI_AGENT_REVIEWER_MODEL MULTI_AGENT_OLLAMA_URL MULTI_AGENT_STAGE_TIMEOUT \
-             MULTI_AGENT_MAX_REVISIONS MULTI_AGENT_NUM_PREDICT; do
+             MULTI_AGENT_MAX_REVISIONS MULTI_AGENT_NUM_PREDICT MCP_BIND_ADDRESS \
+             RAG_BIND_ADDRESS RAG_SERVICE_TOKEN; do
     if [ -z "${!key:-}" ]; then
       value=$(sed -n "s/^${key}=//p" .env | tr -d '\r' | tail -n 1)
       if [ -n "${value}" ]; then export "${key}=${value}"; fi
@@ -31,12 +32,18 @@ if [ -f .env ]; then
   done
 fi
 
+: "${RAG_SERVICE_TOKEN:?Set RAG_SERVICE_TOKEN in .env before starting shared services}"
+
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
 export MULTI_AGENT_OLLAMA_URL="${MULTI_AGENT_OLLAMA_URL:-http://127.0.0.1:11434}"
 export MULTI_AGENT_PLANNER_MODEL="${MULTI_AGENT_PLANNER_MODEL:-llama3.1:8b}"
 export MULTI_AGENT_WORKER_MODEL="${MULTI_AGENT_WORKER_MODEL:-qwen2.5:3b}"
 export MULTI_AGENT_REVIEWER_MODEL="${MULTI_AGENT_REVIEWER_MODEL:-deepseek-r1:8b}"
+# Docker backends call the host services through host.docker.internal. Their
+# native listeners therefore need the host-facing interface, not loopback.
+export MCP_BIND_ADDRESS="${MCP_BIND_ADDRESS:-0.0.0.0}"
+export RAG_BIND_ADDRESS="${RAG_BIND_ADDRESS:-0.0.0.0}"
 
 # Refuse to start a second copy: on Windows a running service also locks its
 # venv's python.exe, so recreating the venv would fail with "Permission denied".

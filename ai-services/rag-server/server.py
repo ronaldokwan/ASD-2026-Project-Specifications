@@ -4,6 +4,8 @@ Student backends use the native RAG HTTP API on port 7003. This process is for
 MCP-aware local clients and uses the same validated pipeline functions.
 """
 
+import hmac
+import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -22,13 +24,25 @@ AVAILABLE_TOOLS = [
 ]
 
 
+def _authorize_write(service_token: str) -> None:
+    expected = os.getenv("RAG_SERVICE_TOKEN", "")
+    if not expected or not hmac.compare_digest(
+        service_token.encode("utf-8"), expected.encode("utf-8")
+    ):
+        raise ValueError("valid RAG service credential required")
+
+
 @mcp.tool(name="upsert_documents", structured_output=True)
-def upsert_documents_tool(documents: list[dict[str, Any]]) -> dict[str, Any]:
+def upsert_documents_tool(
+    documents: list[dict[str, Any]], service_token: str
+) -> dict[str, Any]:
+    _authorize_write(service_token)
     return upsert_documents(documents)
 
 
 @mcp.tool(name="delete_document", structured_output=True)
-def delete_document_tool(doc_id: str) -> dict[str, Any]:
+def delete_document_tool(doc_id: str, service_token: str) -> dict[str, Any]:
+    _authorize_write(service_token)
     return delete_document(doc_id)
 
 

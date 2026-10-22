@@ -53,6 +53,7 @@ def mcp_on(monkeypatch, fake_db):
 def rag_server(monkeypatch):
     """RAG enabled, with an in-memory stand-in for the shared RAG server."""
     monkeypatch.setattr(Config, "RAG_ENABLED", True)
+    monkeypatch.setattr(Config, "RAG_SERVICE_TOKEN", "test-rag-service-token")
     state = {
         "documents": {},
         "deleted": [],
@@ -61,7 +62,9 @@ def rag_server(monkeypatch):
         "fail": False,
     }
 
-    def post(url, json=None, timeout=None):
+    def post(url, json=None, headers=None, timeout=None):
+        if url.endswith("/rag/documents"):
+            assert headers == {"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN}
         if state["fail"]:
             raise rag_client.requests.ConnectionError("connection refused")
         if url.endswith("/rag/documents"):
@@ -82,7 +85,8 @@ def rag_server(monkeypatch):
             )
         raise AssertionError("unexpected RAG url " + url)
 
-    def delete(url, timeout=None):
+    def delete(url, headers=None, timeout=None):
+        assert headers == {"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN}
         state["deleted"].append(url.rsplit("/", 1)[-1])
         return FakeResponse({"ok": True, "chunks_removed": 1})
 

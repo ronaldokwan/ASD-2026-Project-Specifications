@@ -40,6 +40,7 @@ class Config:
         "RAG_SERVER_URL", "http://host.docker.internal:7003"
     ).rstrip("/")
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+    RAG_SERVICE_TOKEN = os.getenv("RAG_SERVICE_TOKEN", "")
     RAG_ENABLED = _enabled("RAG_ENABLED")
     RAG_FEATURE = "product_catalogue"
     RAG_TOP_K = 5

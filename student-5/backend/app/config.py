@@ -41,6 +41,7 @@ class Config:
     MCP_ENABLED = _enabled("MCP_ENABLED")
     MCP_TOOL = "check_review_quality"
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+    RAG_SERVICE_TOKEN = os.getenv("RAG_SERVICE_TOKEN", "")
 
     PORT = int(os.getenv("SERVICE_PORT", "8005"))
 

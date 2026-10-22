@@ -237,6 +237,7 @@ def _review_subject_summary(mode, subject):
             "post_commit_backend_endpoint_tests": [{"endpoint": item.get("endpoint"),
                                                     "test_ref": item.get("test_ref"),
                                                     "phase": item.get("phase"),
+                                                    "origin": item.get("origin", "local"),
                                                     "status": item.get("status"),
                                                     "exit_code": item.get("exit_code")}
                                                    for item in endpoint_tests if isinstance(item, dict)],

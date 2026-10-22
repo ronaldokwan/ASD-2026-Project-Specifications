@@ -271,7 +271,11 @@ def run():
     )
     mcp.run(
         transport="streamable-http",
-        host=os.getenv("MCP_BIND_ADDRESS", "0.0.0.0"),
+        # Direct invocation is loopback-only. The shared startup script opts
+        # into a host-reachable bind because Docker backends call
+        # host.docker.internal; a specific address can be configured when the
+        # host's Docker-facing interface is known and stable.
+        host=os.getenv("MCP_BIND_ADDRESS", "127.0.0.1"),
         port=port,
         streamable_http_path="/mcp",
         json_response=True,

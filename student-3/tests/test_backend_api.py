@@ -26,6 +26,22 @@ def test_health_and_list_customers(backend, fake_db, monkeypatch):
     assert body["count"] == 2
 
 
+def test_endpoint_list_customers_returns_collection(backend, fake_db):
+    response = backend.get("/api/customers")
+    body = response.get_json()
+
+    assert response.status_code == 200
+    assert body["count"] == 2
+    assert [customer["id"] for customer in body["customers"]] == [1, 2]
+
+
+def test_endpoint_get_customer_returns_requested_record(backend, fake_db):
+    response = backend.get("/api/customers/2")
+
+    assert response.status_code == 200
+    assert response.get_json() == fake_db.rows[2]
+
+
 def test_search_by_name_and_email(backend, fake_db):
     assert backend.get("/api/customers?search=avery").get_json()["count"] == 1
     assert backend.get("/api/customers?search=jordan@example").get_json()["count"] == 1

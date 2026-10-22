@@ -42,6 +42,19 @@ env:
   MULTI_AGENT_ENABLED: "false"
 
 jobs:
+  security:
+    name: Security hooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install pre-commit runner
+        run: python -m pip install pre-commit==4.3.0
+      - name: Run configured security hooks
+        run: pre-commit run --all-files
+
   test:
     name: Unit tests (frontend, backend/API, database)
     runs-on: ubuntu-latest
@@ -61,9 +74,6 @@ jobs:
           pip install -r ai-services/rag-server/requirements.txt
           pip install -r ai-services/multi-agent/requirements.txt
           pip install flake8
-          pip install pre-commit==4.3.0
-      - name: Local security hooks
-        run: pre-commit run --all-files
       - name: Lint
         run: |
           flake8 student-3 --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -71,6 +81,18 @@ jobs:
           flake8 student-3 --count --max-line-length=100 --exit-zero --statistics
       - name: JavaScript syntax
         run: node --check student-3/frontend/static/js/customers.js
+      - name: Student 3 backend endpoint tests (list_customers, get_customer)
+        run: |
+          mkdir -p reports
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## Student 3 backend endpoint tests
+          - Execution origin: GitHub Actions post-push
+          - Endpoint functions: `list_customers` (`GET /api/customers`), `get_customer` (`GET /api/customers/{id}`)
+          - Test functions: `test_endpoint_list_customers_returns_collection`, `test_endpoint_get_customer_returns_requested_record`
+          EOF
+          pytest student-3/tests/test_backend_api.py -v \
+            -k 'test_endpoint_list_customers_returns_collection or test_endpoint_get_customer_returns_requested_record' \
+            --junitxml=reports/student-3-backend-endpoints.xml
       - name: Student 3 tests
         run: pytest student-3/tests -v --junitxml=reports/student-3-tests.xml
       - name: Shared MCP and RAG tests
@@ -91,7 +113,7 @@ jobs:
   docker:
     name: Build containers and smoke test
     runs-on: ubuntu-latest
-    needs: test
+    needs: [security, test]
     steps:
       - uses: actions/checkout@v4
       - name: Validate shared Compose configuration

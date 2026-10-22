@@ -410,26 +410,25 @@ def _reviewer_output(output, evidence, worker_result=None, request_data=None):
         raise WorkflowError("Reviewer action must be ready_for_human, revise, or not_supported")
 
     claim_assessment = output.get("claim_assessment")
-    if claim_assessment is not None:
-        allowed = {
-            "recommendation": {"supported", "unsupported", "evidence_unavailable", "not_applicable"},
-            "rationale": {"supported", "unsupported", "evidence_unavailable", "not_applicable"},
-            "consistency": {"consistent", "contradictory", "evidence_unavailable", "not_applicable"},
+    allowed = {
+        "recommendation": {"supported", "unsupported", "evidence_unavailable", "not_applicable"},
+        "rationale": {"supported", "unsupported", "evidence_unavailable", "not_applicable"},
+        "consistency": {"consistent", "contradictory", "evidence_unavailable", "not_applicable"},
+    }
+    if not isinstance(claim_assessment, dict) or any(
+        claim_assessment.get(field) not in values for field, values in allowed.items()
+    ):
+        raise WorkflowError("Reviewer claim_assessment must classify recommendation, rationale, and consistency")
+    requested_policy_ids = set((request_data or {}).get("worker_policy_evidence_ids", []))
+    if requested_policy_ids:
+        available_policy_ids = {
+            item["id"] for item in evidence
+            if item.get("id") in requested_policy_ids and item.get("status") == "available"
         }
-        if not isinstance(claim_assessment, dict) or any(
-            claim_assessment.get(field) not in values for field, values in allowed.items()
-        ):
-            raise WorkflowError("Reviewer claim_assessment must classify recommendation, rationale, and consistency")
-        requested_policy_ids = set((request_data or {}).get("worker_policy_evidence_ids", []))
-        if requested_policy_ids:
-            available_policy_ids = {
-                item["id"] for item in evidence
-                if item.get("id") in requested_policy_ids and item.get("status") == "available"
-            }
-            if available_policy_ids and "evidence_unavailable" in claim_assessment.values():
-                raise WorkflowError("Reviewer classified available policy evidence as unavailable")
-            if not available_policy_ids and claim_assessment["recommendation"] != "evidence_unavailable":
-                raise WorkflowError("Reviewer did not classify the policy-dependent recommendation as evidence_unavailable")
+        if available_policy_ids and claim_assessment["recommendation"] == "evidence_unavailable":
+            raise WorkflowError("Reviewer classified available policy evidence as unavailable")
+        if not available_policy_ids and claim_assessment["recommendation"] != "evidence_unavailable":
+            raise WorkflowError("Reviewer did not classify the policy-dependent recommendation as evidence_unavailable")
 
     findings = output.get("findings")
     if not isinstance(findings, list) or len(findings) > 5:
@@ -451,31 +450,44 @@ def _reviewer_output(output, evidence, worker_result=None, request_data=None):
             } if item.get("classification") in ("unsupported_claim", "contradiction", "missing_evidence", "source_misuse", "other")
               and item.get("claim_field") in ("recommendation", "rationale", "policy_basis", "multiple", "evidence") else {}),
         })
-        if claim_assessment is not None and (
+        if (
             item.get("classification") not in ("unsupported_claim", "contradiction", "missing_evidence", "source_misuse", "other")
             or item.get("claim_field") not in ("recommendation", "rationale", "policy_basis", "multiple", "evidence")
         ):
             raise WorkflowError("Reviewer finding must classify its issue and Worker field")
 
-    if claim_assessment is not None:
-        for finding in clean_findings:
-            classification, field = finding.get("classification"), finding.get("claim_field")
-            if classification == "contradiction" and claim_assessment["consistency"] != "contradictory":
-                raise WorkflowError("Reviewer finding and claim_assessment disagree about a contradiction")
-            if (classification == "contradiction"
-                    and claim_assessment["recommendation"] != "unsupported"
-                    and claim_assessment["rationale"] != "unsupported"):
-                raise WorkflowError("Reviewer contradiction finding has no unsupported Worker claim")
-            if classification == "unsupported_claim":
-                relevant = {
-                    "recommendation": ["recommendation"],
-                    "rationale": ["rationale"],
-                    "policy_basis": ["rationale"],
-                    "multiple": ["recommendation", "rationale"],
-                    "evidence": ["recommendation", "rationale"],
-                }[field]
-                if not any(claim_assessment[name] == "unsupported" for name in relevant):
-                    raise WorkflowError("Reviewer finding and claim_assessment disagree about unsupported claims")
+    for finding in clean_findings:
+        classification, field = finding.get("classification"), finding.get("claim_field")
+        if classification == "contradiction" and claim_assessment["consistency"] != "contradictory":
+            raise WorkflowError("Reviewer finding and claim_assessment disagree about a contradiction")
+        if (classification == "contradiction"
+                and claim_assessment["recommendation"] != "unsupported"
+                and claim_assessment["rationale"] != "unsupported"):
+            raise WorkflowError("Reviewer contradiction finding has no unsupported Worker claim")
+        if classification == "unsupported_claim":
+            relevant = {
+                "recommendation": ["recommendation"],
+                "rationale": ["rationale"],
+                "policy_basis": ["rationale"],
+                "multiple": ["recommendation", "rationale"],
+                "evidence": ["recommendation", "rationale"],
+            }[field]
+            if not any(claim_assessment[name] == "unsupported" for name in relevant):
+                raise WorkflowError("Reviewer finding and claim_assessment disagree about unsupported claims")
+
+    unsupported_claim = any(
+        claim_assessment[field] == "unsupported"
+        for field in ("recommendation", "rationale")
+    )
+    if action == "ready_for_human" and (
+        unsupported_claim or claim_assessment["consistency"] == "contradictory"
+    ):
+        raise WorkflowError(
+            "Reviewer action conflicts with its unsupported or contradictory claim assessment"
+        )
+    if (action == "ready_for_human"
+            and claim_assessment["recommendation"] == "evidence_unavailable"):
+        raise WorkflowError("Reviewer cannot mark a policy-dependent recommendation ready when policy evidence is unavailable")
 
     missing_information = _string_list(output.get("missing_information", []), "missing_information")
     recommendations = _string_list(output.get("recommendations", []), "recommendations")
@@ -483,35 +495,36 @@ def _reviewer_output(output, evidence, worker_result=None, request_data=None):
         raise WorkflowError("Reviewer returned not_supported without a concrete finding or missing-information item")
     if any(item in ("ready_for_human", "revise", "not_supported") for item in recommendations):
         raise WorkflowError("Reviewer put an action code in recommendations instead of the action field")
-    unavailable = [item for item in evidence if item.get("status") != "available"]
-    if unavailable:
-        action = "not_supported"
-        for item in unavailable:
-            missing_information.append("{} evidence is {} and cannot support the recommendation.".format(
+    required_evidence_ids = set((request_data or {}).get("worker_required_evidence_ids", []))
+    application_added_findings = [
+        {
+            "source": "application",
+            "severity": "high",
+            "finding": "Required evidence {} is {} and was not available to support the recommendation.".format(
                 item["id"], item.get("status", "unavailable")
-            ))
-            clean_findings.append({
-                "severity": "high",
-                "finding": "{} evidence was {} and was excluded from Worker support.".format(
-                    item["id"], item.get("status", "unavailable")
-                ),
-                "evidence_ref": item["id"],
-                "classification": "missing_evidence",
-                "claim_field": "evidence",
-            })
+            ),
+            "evidence_ref": item["id"],
+            "classification": "missing_evidence",
+            "claim_field": "evidence",
+        }
+        for item in evidence
+        if item["id"] in required_evidence_ids and item.get("status") != "available"
+    ]
 
     result = {
         "action": action,
         "findings": clean_findings,
         "missing_information": missing_information,
         "recommendations": recommendations,
+        "application_added_findings": application_added_findings,
     }
     if claim_assessment is not None:
         result["claim_assessment"] = {field: claim_assessment[field] for field in allowed}
     return result
 
 
-def _prompt(role, request_data, evidence, plan=None, worker=None, findings=None, revision=0):
+def _prompt(role, request_data, evidence, plan=None, worker=None, findings=None, revision=0,
+            validation_feedback=None):
     if role == "planner":
         # Keep application-owned criteria out of the model-generated plan.
         role_request = {"goal": request_data.get("goal")}
@@ -551,6 +564,12 @@ def _prompt(role, request_data, evidence, plan=None, worker=None, findings=None,
         sections.append("WORKER RESULT:\n" + json.dumps(worker, ensure_ascii=False))
     if findings is not None:
         sections.append("REVIEW FINDINGS TO ADDRESS:\n" + json.dumps(findings, ensure_ascii=False))
+    if validation_feedback:
+        sections.append(
+            "APPLICATION VALIDATION FEEDBACK (not evidence or a model finding):\n"
+            + json.dumps(validation_feedback, ensure_ascii=False)
+            + "\nReassess the original claims against the evidence independently. Correct the invalid structure or internal contradiction; do not treat this application feedback as policy evidence."
+        )
     if role == "worker":
         sections.append("REVISION NUMBER: {}".format(revision))
     return "\n\n".join(sections)
@@ -590,15 +609,48 @@ def _run_workflow(workflow_id):
             _save(workflow, "stage_completed", {"role": "worker", "revision": revision, "result": workflow["worker_result"]})
 
             workflow["status"], workflow["stage"] = "reviewing", "reviewer"
-            _save(workflow, "stage_started", {"role": "reviewer", "model": ROLE_MODELS["reviewer"]})
-            model, raw = _call_model("reviewer", _prompt(
-                "reviewer", workflow["request"], workflow["evidence"], workflow["plan"],
-                workflow["worker_result"], revision=revision,
-            ))
-            workflow["roles"].append({"role": "reviewer", "model": model, "completed_at": _now()})
-            workflow["reviewer_result"] = _reviewer_output(
-                raw, workflow["evidence"], workflow["worker_result"], workflow["request"]
-            )
+            workflow["reviewer_result"] = None
+            validation_feedback = None
+            while True:
+                _save(workflow, "stage_started", {
+                    "role": "reviewer", "model": ROLE_MODELS["reviewer"],
+                    "validation_retry": workflow["reviewer_validation_retries"],
+                })
+                model, raw = _call_model("reviewer", _prompt(
+                    "reviewer", workflow["request"], workflow["evidence"], workflow["plan"],
+                    workflow["worker_result"], revision=revision,
+                    validation_feedback=validation_feedback,
+                ))
+                try:
+                    reviewed = _reviewer_output(
+                        raw, workflow["evidence"], workflow["worker_result"], workflow["request"]
+                    )
+                except WorkflowError as exc:
+                    workflow["roles"].append({
+                        "role": "reviewer", "model": model, "completed_at": _now(),
+                        "validation_status": "failed", "validation_error": str(exc)[:500],
+                    })
+                    if workflow["reviewer_validation_retries"] >= workflow["max_revisions"]:
+                        raise WorkflowError(
+                            "Reviewer response remained invalid after the configured retry: {}".format(exc)
+                        ) from exc
+                    workflow["reviewer_validation_retries"] += 1
+                    validation_feedback = {"error": str(exc)[:500]}
+                    workflow["reviewer_validation_log"].append({
+                        "attempt": workflow["reviewer_validation_retries"],
+                        "error": str(exc)[:500], "model": model, "at": _now(),
+                    })
+                    _save(workflow, "reviewer_validation_failed", {
+                        "model": model, "error": str(exc)[:500],
+                        "retry": workflow["reviewer_validation_retries"],
+                    })
+                    continue
+                workflow["roles"].append({
+                    "role": "reviewer", "model": model, "completed_at": _now(),
+                    "validation_status": "passed",
+                })
+                workflow["reviewer_result"] = reviewed
+                break
             workflow["revision_count"] = revision
             _save(workflow, "stage_completed", {"role": "reviewer", "result": workflow["reviewer_result"]})
             if workflow["reviewer_result"]["action"] != "revise" or revision >= workflow["max_revisions"]:
@@ -731,6 +783,8 @@ def create_app():
                 "human_decision": None,
                 "roles": [],
                 "revision_count": 0,
+                "reviewer_validation_retries": 0,
+                "reviewer_validation_log": [],
                 "max_revisions": revision_limit,
                 "completion_gate": {"planner_completed": False, "worker_completed": False,
                                     "reviewer_completed": False, "human_decision_recorded": False},

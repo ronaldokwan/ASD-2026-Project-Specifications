@@ -39,10 +39,26 @@ def _output_for(role, action="ready_for_human"):
         }
     return {
         "action": action,
-        "findings": [{"severity": "low", "finding": "The result cites the supplied policy.", "evidence_ref": "policy"}],
+        "claim_assessment": {
+            "recommendation": "supported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [{"severity": "low", "finding": "The result cites the supplied policy.",
+                      "evidence_ref": "policy", "classification": "other", "claim_field": "multiple"}],
         "missing_information": [],
         "recommendations": ["Administrator should review before use."],
     }
+
+
+def _reviewer_output(output, *args, **kwargs):
+    """Keep legacy-preservation unit cases valid under the required reviewer schema."""
+    output = dict(output)
+    output.setdefault("claim_assessment", {
+        "recommendation": "supported", "rationale": "supported", "consistency": "consistent",
+    })
+    for finding in output.get("findings", []):
+        finding.setdefault("classification", "other")
+        finding.setdefault("claim_field", "multiple")
+    return service._reviewer_output(output, *args, **kwargs)
 
 
 def _start(client, max_revisions=1):
@@ -81,6 +97,68 @@ def test_planner_worker_reviewer_handoff_and_human_acceptance(client, monkeypatc
     assert accepted.get_json()["completion_gate"]["human_decision_recorded"] is True
     assert client.get("/workflow/history?subject_ref=student-3-customer:7").get_json()["count"] == 1
     assert (service.AUDIT_PATH.read_text().count("human_decision_recorded")) == 1
+
+
+def test_invalid_reviewer_output_uses_one_bounded_validation_retry(client, monkeypatch):
+    reviewer_calls = []
+    invalid = {
+        "action": "ready_for_human",
+        "claim_assessment": {
+            "recommendation": "unsupported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [], "missing_information": [], "recommendations": [],
+    }
+    valid = {
+        "action": "ready_for_human",
+        "claim_assessment": {
+            "recommendation": "supported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [], "missing_information": [], "recommendations": [],
+    }
+
+    def call_model(role, prompt):
+        if role == "reviewer":
+            reviewer_calls.append(prompt)
+            return "deepseek-r1:8b", invalid if len(reviewer_calls) == 1 else valid
+        return "model", _output_for(role)
+
+    monkeypatch.setattr(service, "_call_model", call_model)
+    workflow_id = _start(client).get_json()["workflow_id"]
+    workflow = client.get("/workflow/" + workflow_id).get_json()
+
+    assert workflow["status"] == "human_review"
+    assert len(reviewer_calls) == 2
+    assert "APPLICATION VALIDATION FEEDBACK" in reviewer_calls[1]
+    assert workflow["reviewer_validation_retries"] == 1
+    assert workflow["reviewer_validation_log"][0]["error"].startswith("Reviewer action conflicts")
+    assert [role["validation_status"] for role in workflow["roles"] if role["role"] == "reviewer"] == [
+        "failed", "passed",
+    ]
+    assert workflow["reviewer_result"]["action"] == "ready_for_human"
+
+
+def test_reviewer_remains_failed_after_bounded_validation_retry(client, monkeypatch):
+    invalid = {
+        "action": "ready_for_human",
+        "claim_assessment": {
+            "recommendation": "unsupported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [], "missing_information": [], "recommendations": [],
+    }
+    monkeypatch.setattr(service, "_call_model", lambda role, _prompt: (
+        "deepseek-r1:8b" if role == "reviewer" else "model",
+        invalid if role == "reviewer" else _output_for(role),
+    ))
+
+    workflow_id = _start(client, max_revisions=1).get_json()["workflow_id"]
+    workflow = client.get("/workflow/" + workflow_id).get_json()
+
+    assert workflow["status"] == "failed"
+    assert workflow["completion_gate"]["reviewer_completed"] is False
+    assert workflow["completion_gate"]["human_decision_recorded"] is False
+    assert workflow["reviewer_result"] is None
+    assert "remained invalid after the configured retry" in workflow["failure"]
+    assert client.post("/workflow/{}/review".format(workflow_id), json={"decision": "accept"}).status_code == 409
 
 
 @pytest.mark.parametrize("decision", ["partial_accept", "reject"])
@@ -395,7 +473,7 @@ def test_role_schemas_allow_full_policy_quote_and_actionable_reviewer_finding():
 def test_reviewer_output_is_preserved_for_human_review_without_application_rewriting():
     evidence = _loyalty_evidence("Gold")
     recommendation = "Gold customers may receive fifteen percent off the next purchase or early access to the next seasonal sale."
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [
             {"severity": "high", "finding": "The tier and approved benefits were not provided.", "evidence_ref": "customer_facts"},
@@ -413,7 +491,7 @@ def test_reviewer_output_is_preserved_for_human_review_without_application_rewri
 
 def test_genuinely_unsupported_benefit_finding_is_preserved():
     evidence = _loyalty_evidence("Silver")
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high", "finding": "The claimed 99% discount is not supported by loyalty policy.",
                       "evidence_ref": "loyalty_policy"}],
@@ -427,17 +505,32 @@ def test_genuinely_unsupported_benefit_finding_is_preserved():
 
 def test_missing_policy_evidence_remains_a_real_negative_finding():
     evidence = _loyalty_evidence("Bronze", policy_status="insufficient")
-    result = service._reviewer_output({
-        "action": "ready_for_human", "findings": [], "missing_information": [], "recommendations": [],
-    }, evidence, {"recommendation": "Consider a benefit.", "rationale": "Policy unavailable.", "policy_basis": "None"})
+    result = _reviewer_output({
+        "action": "not_supported",
+        "claim_assessment": {
+            "recommendation": "evidence_unavailable", "rationale": "supported",
+            "consistency": "consistent",
+        },
+        "findings": [],
+        "missing_information": ["A benefit cannot be checked without the policy."],
+        "recommendations": [],
+    }, evidence, {"recommendation": "Consider a benefit.", "rationale": "Policy unavailable.", "policy_basis": "None"}, {
+        "worker_required_evidence_ids": ["customer_facts", "loyalty_policy"],
+        "worker_policy_evidence_ids": ["loyalty_policy"],
+    })
     assert result["action"] == "not_supported"
-    assert any("loyalty_policy evidence is insufficient" in item for item in result["missing_information"])
-    assert any(item["evidence_ref"] == "loyalty_policy" for item in result["findings"])
+    assert result["findings"] == []
+    assert result["missing_information"] == ["A benefit cannot be checked without the policy."]
+    assert result["application_added_findings"] == [{
+        "source": "application", "severity": "high",
+        "finding": "Required evidence loyalty_policy is insufficient and was not available to support the recommendation.",
+        "evidence_ref": "loyalty_policy", "classification": "missing_evidence", "claim_field": "evidence",
+    }]
 
 
 def test_reviewer_negative_result_is_not_relabelled_as_approval():
     evidence = _loyalty_evidence("Silver")
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high", "finding": "Evidence does not establish the Silver benefits.",
                       "evidence_ref": "loyalty_policy"}],
@@ -452,7 +545,7 @@ def test_reviewer_negative_result_is_not_relabelled_as_approval():
 def test_reviewer_instruction_regurgitation_is_preserved_for_human_review():
     evidence = _loyalty_evidence("Gold")
     instruction = "The worker should identify the tier recorded in customer_facts and use only matching policy."
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high", "finding": instruction, "evidence_ref": "customer_facts"}],
         "missing_information": [instruction], "recommendations": [instruction],
@@ -467,7 +560,7 @@ def test_reviewer_policy_claims_are_preserved_without_string_matching():
     evidence = _loyalty_evidence("Gold")
     quote = "Gold customers may receive either fifteen percent off the next purchase or early access to the next seasonal sale."
     finding = "The recommendation is not supported by evidence. The evidence states that {}".format(quote)
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high", "finding": finding, "evidence_ref": "loyalty_policy"}],
         "missing_information": ["Gold Membership"],
@@ -481,7 +574,7 @@ def test_reviewer_policy_claims_are_preserved_without_string_matching():
 def test_reviewer_missing_policy_claim_is_preserved_for_human_assessment():
     evidence = _loyalty_evidence("Gold")
     recommendation = json.loads(evidence[-1]["content"])["answer"]
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high",
                       "finding": "The loyalty policy does not provide any details about Gold loyalty benefits.",
@@ -497,7 +590,7 @@ def test_reviewer_missing_policy_claim_is_preserved_for_human_assessment():
 def test_reviewer_missing_information_is_not_inferred_from_phrase_matching():
     evidence = _loyalty_evidence("Gold")
     quote = json.loads(evidence[-1]["content"])["answer"]
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high", "finding": "The recommendation is unsupported.",
                       "evidence_ref": "loyalty_policy"}],
@@ -511,7 +604,7 @@ def test_reviewer_missing_information_is_not_inferred_from_phrase_matching():
 def test_reviewer_finding_is_not_rewritten_by_policy_phrase_matching():
     evidence = _loyalty_evidence("Gold")
     recommendation = json.loads(evidence[-1]["content"])["answer"]
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high",
                       "finding": "The loyalty policy does not explicitly state the approved benefits for Gold.",
@@ -526,7 +619,7 @@ def test_reviewer_finding_is_not_rewritten_by_policy_phrase_matching():
 def test_reviewer_can_preserve_negative_policy_judgment_without_string_matching():
     evidence = _loyalty_evidence("Bronze")
     quote = json.loads(evidence[-1]["content"])["answer"]
-    result = service._reviewer_output({
+    result = _reviewer_output({
         "action": "not_supported",
         "findings": [{"severity": "high",
                       "finding": "The requested benefit options are not supported by the evidence provided.",
@@ -545,10 +638,10 @@ def test_reviewer_contradictory_not_supported_output_fails_closed():
         "findings": [], "missing_information": [], "recommendations": ["ready_for_human"],
     }
     with pytest.raises(service.WorkflowError, match="without a concrete finding"):
-        service._reviewer_output(output, evidence, {"recommendation": "Supported by evidence."})
+        _reviewer_output(output, evidence, {"recommendation": "Supported by evidence."})
     output["findings"] = [{"severity": "low", "finding": "A problem was found.", "evidence_ref": "loyalty_policy"}]
     with pytest.raises(service.WorkflowError, match="action code in recommendations"):
-        service._reviewer_output(output, evidence, {"recommendation": "Supported by evidence."})
+        _reviewer_output(output, evidence, {"recommendation": "Supported by evidence."})
 
 
 def test_reviewer_receives_full_evidence_and_contradiction_check_instructions():
@@ -592,19 +685,27 @@ def test_reviewer_structured_claim_assessment_distinguishes_support_and_contradi
         "missing_information": [],
         "recommendations": [],
     }
-    result = service._reviewer_output(base, evidence)
+    result = _reviewer_output(base, evidence)
     assert result["claim_assessment"] == base["claim_assessment"]
 
     base["claim_assessment"]["consistency"] = "made_up"
     with pytest.raises(service.WorkflowError, match="claim_assessment"):
-        service._reviewer_output(base, evidence)
+        _reviewer_output(base, evidence)
 
     base["claim_assessment"] = {
         "recommendation": "supported", "rationale": "supported", "consistency": "contradictory",
     }
     base["findings"][0]["classification"] = "contradiction"
     with pytest.raises(service.WorkflowError, match="no unsupported Worker claim"):
-        service._reviewer_output(base, evidence)
+        _reviewer_output(base, evidence)
+
+
+def test_reviewer_missing_required_claim_assessment_is_rejected():
+    with pytest.raises(service.WorkflowError, match="claim_assessment must classify"):
+        service._reviewer_output({
+            "action": "ready_for_human", "findings": [], "missing_information": [],
+            "recommendations": [],
+        }, _loyalty_evidence("Silver"))
 
 
 def test_reviewer_cannot_call_available_policy_unavailable():
@@ -622,7 +723,7 @@ def test_reviewer_cannot_call_available_policy_unavailable():
         "missing_information": [], "recommendations": [],
     }
     with pytest.raises(service.WorkflowError, match="available policy evidence as unavailable"):
-        service._reviewer_output(output, evidence, request_data={
+        _reviewer_output(output, evidence, request_data={
             "worker_policy_evidence_ids": ["loyalty_policy"],
         })
 
@@ -640,11 +741,48 @@ def test_reviewer_identifies_genuinely_unavailable_policy_separately():
         "findings": [], "missing_information": ["Approved benefits cannot be checked."],
         "recommendations": [],
     }
-    result = service._reviewer_output(output, evidence, request_data={
+    result = _reviewer_output(output, evidence, request_data={
+        "worker_required_evidence_ids": ["customer_facts", "loyalty_policy"],
         "worker_policy_evidence_ids": ["loyalty_policy"],
     })
     assert result["claim_assessment"]["recommendation"] == "evidence_unavailable"
-    assert any("loyalty_policy evidence was unavailable" in item["finding"] for item in result["findings"])
+    assert result["findings"] == []
+    assert result["application_added_findings"][0]["source"] == "application"
+    assert "loyalty_policy is unavailable" in result["application_added_findings"][0]["finding"]
+
+
+def test_optional_unavailable_mcp_does_not_force_policy_rejection():
+    evidence = _loyalty_evidence("Silver")
+    evidence[1]["status"] = "unavailable"
+    output = {
+        "action": "ready_for_human",
+        "claim_assessment": {
+            "recommendation": "supported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [], "missing_information": [], "recommendations": [],
+    }
+    result = _reviewer_output(output, evidence, request_data={
+        "worker_required_evidence_ids": ["customer_facts", "loyalty_policy"],
+        "worker_policy_evidence_ids": ["loyalty_policy"],
+    })
+
+    assert result["action"] == "ready_for_human"
+    assert result["application_added_findings"] == []
+
+
+def test_reviewer_ready_action_conflicts_with_unsupported_assessment():
+    evidence = _loyalty_evidence("Silver")
+    output = {
+        "action": "ready_for_human",
+        "claim_assessment": {
+            "recommendation": "unsupported", "rationale": "supported", "consistency": "consistent",
+        },
+        "findings": [], "missing_information": [], "recommendations": [],
+    }
+    with pytest.raises(service.WorkflowError, match="action conflicts"):
+        _reviewer_output(output, evidence, request_data={
+            "worker_policy_evidence_ids": ["loyalty_policy"],
+        })
 
 
 def test_jsonl_appends_are_valid_lines_under_concurrent_writes(client):

@@ -32,10 +32,10 @@ REVIEW_MODES = {
             "Review test code separately from actual test execution results. Check coverage, "
             "meaningful assertions, endpoint identity, reported exit codes and contradictions. "
             "Review pre-commit Ruff security, detect-secrets and pip-audit results separately "
-            "from backend endpoint-test results. The endpoint tests must be explicitly identified "
-        "as post-commit local executions, and review the GitHub Actions result as a separate "
-        "evidence source. State whether GitHub Actions has run; local results are not hosted "
-        "CI results. Execution evidence is authoritative: never mark failed, "
+            "from backend endpoint-test results. Each endpoint test must be identified as a "
+            "post-commit local run or a hosted GitHub Actions post-push run. Review hosted CI "
+            "as a separate evidence source and state whether it has run; local results are not "
+            "hosted CI results. Execution evidence is authoritative: never mark failed, "
             "skipped, missing, pre-commit-only or unexecuted required checks as passed."
         ),
     },
@@ -80,6 +80,14 @@ def _status(item):
     return "unknown"
 
 
+def _endpoint_origin(item):
+    """Return a recognized origin for an endpoint test run, if it is post-commit."""
+    if not isinstance(item, dict) or item.get("phase") != "post_commit":
+        return None
+    origin = item.get("origin", "local")  # Backward-compatible evidence defaults to local.
+    return origin if origin in ("local", "github_actions") else None
+
+
 def evidence_gate(mode, subject):
     """Return the authoritative state from supplied deterministic evidence."""
     if mode == "testing_report":
@@ -105,20 +113,19 @@ def evidence_gate(mode, subject):
 
         if not isinstance(endpoint_tests, list):
             endpoint_tests = []
-        post_commit_tests = [item for item in endpoint_tests
-                             if isinstance(item, dict) and item.get("phase") == "post_commit"]
+        post_commit_tests = [item for item in endpoint_tests if _endpoint_origin(item)]
         endpoint_names = {item.get("endpoint") or item.get("name") for item in post_commit_tests}
         endpoint_names.discard(None)
         failed_tests = sorted(str(item.get("endpoint") or item.get("name") or "unnamed endpoint test")
-                              for item in post_commit_tests if _status(item) == "failed")
+                              for item in endpoint_tests if isinstance(item, dict) and _status(item) == "failed")
         unknown_tests = sorted(str(item.get("endpoint") or item.get("name") or "unnamed endpoint test")
-                               for item in post_commit_tests if _status(item) != "passed"
+                               for item in endpoint_tests if isinstance(item, dict) and _status(item) != "passed"
                                and str(item.get("endpoint") or item.get("name") or "unnamed endpoint test") not in failed_tests)
         unexecuted_hooks = sorted(name for name in required_hooks & set(observed_hooks)
                                   if observed_hooks[name] in ("skipped", "unavailable", "not_run"))
         missing_test_evidence = not endpoint_tests
         too_few_endpoint_tests = len(endpoint_names) < 2
-        pre_commit_only = bool(endpoint_tests) and not post_commit_tests
+        unqualified_tests = bool(endpoint_tests) and not post_commit_tests
 
         failures = []
         if failed_hooks:
@@ -129,7 +136,7 @@ def evidence_gate(mode, subject):
             details = "; ".join(failures)
             if missing_hooks:
                 details += "; missing security results: " + ", ".join(missing_hooks)
-            if missing_test_evidence or pre_commit_only or too_few_endpoint_tests:
+            if missing_test_evidence or unqualified_tests or too_few_endpoint_tests:
                 details += "; post-commit evidence is incomplete"
             return "failed", details + "."
 
@@ -144,8 +151,8 @@ def evidence_gate(mode, subject):
             incomplete.append("security hooks without a pass result: " + ", ".join(sorted(set(unknown_hooks + unexecuted_hooks))))
         if missing_test_evidence:
             incomplete.append("post-commit backend endpoint-test results are missing")
-        elif pre_commit_only:
-            incomplete.append("backend endpoint tests are not identified as post-commit")
+        elif unqualified_tests:
+            incomplete.append("backend endpoint tests are not identified as post-commit local or hosted post-push runs")
         if too_few_endpoint_tests:
             incomplete.append("at least two distinct post-commit backend endpoint tests are required")
         if unknown_tests:
@@ -223,10 +230,14 @@ def finalize_review(mode, subject, outcome):
         corrections = ["Authoritative testing evidence: " + explanation]
         supplied_endpoint_tests = subject.get("post_commit_backend_endpoint_tests")
         if isinstance(supplied_endpoint_tests, list) and any(
-            isinstance(item, dict) and item.get("phase") != "post_commit"
+            isinstance(item, dict) and _endpoint_origin(item) is None
             for item in supplied_endpoint_tests
         ):
-            corrections.append("The supplied backend endpoint tests are local results, not post-commit executions.")
+            corrections.append("Some backend endpoint results are not identified as post-commit local or hosted post-push executions.")
+        elif isinstance(supplied_endpoint_tests, list) and supplied_endpoint_tests and all(
+            _endpoint_origin(item) == "local" for item in supplied_endpoint_tests if isinstance(item, dict)
+        ):
+            corrections.append("These endpoint results are local executions, not GitHub Actions post-push results.")
         if _status(subject.get("hosted_ci")) != "passed":
             corrections.append("GitHub Actions has not passed; local test results are not hosted CI results.")
         gate_finding = " ".join(corrections)
