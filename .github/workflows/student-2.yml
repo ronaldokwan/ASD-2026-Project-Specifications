@@ -14,8 +14,10 @@ jobs:
   build-test-and-validate-containers:
     runs-on: ubuntu-latest
     env:
+      AI_MODE_ENABLED: "false"
       MCP_ENABLED: "false"
       RAG_ENABLED: "false"
+      MULTI_AGENT_ENABLED: "false"
     defaults:
       run:
         working-directory: student-2
@@ -31,8 +33,22 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Test two Student 2 backend endpoint functions
+        run: >-
+          mvn --batch-mode --projects backend
+          --define test=OrderEndpointTests test
+
       - name: Build and test all modules
         run: mvn --batch-mode clean verify
+
+      - name: Upload Student 2 endpoint test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-2-r2-endpoint-test-results
+          path: student-2/backend/target/surefire-reports/TEST-*OrderEndpointTests.xml
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Validate Compose configuration
         run: docker compose config -q
