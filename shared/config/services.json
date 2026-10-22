@@ -7,6 +7,9 @@
   "shared": {
     "home": "http://localhost:3000",
     "aiMode": "http://localhost:7001",
+    "mcpServer": "http://localhost:7002",
+    "ragServer": "http://localhost:7003",
+    "multiAgent": "http://localhost:7004",
     "ollama": "http://localhost:11434"
   },
   "features": [

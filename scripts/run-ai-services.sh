@@ -35,7 +35,7 @@ export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
 # Refuse to start a second copy: on Windows a running service also locks its
 # venv's python.exe, so recreating the venv would fail with "Permission denied".
 busy=""
-for port in 7001 7002 7003; do
+for port in 7001 7002 7003 7004; do
   if curl -s -m 2 -o /dev/null "http://localhost:${port}/health"; then
     busy="${busy} ${port}"
   fi
@@ -66,16 +66,18 @@ start_service() {
   ) &
 }
 
-start_service "AI-Mode"           ai-services/ai-mode    7001 app.py
-start_service "shared MCP server" ai-services/mcp-server 7002 server.py
-start_service "shared RAG server" ai-services/rag-server 7003 http_server.py
+start_service "AI-Mode"           ai-services/ai-mode     7001 app.py
+start_service "shared MCP server" ai-services/mcp-server  7002 server.py
+start_service "shared RAG server" ai-services/rag-server  7003 http_server.py
+start_service "Multi-Agent Server" ai-services/multi-agent 7004 app.py
 
 trap 'echo; echo "Stopping..."; kill 0' INT TERM
 
 echo
-echo "AI-Mode      http://localhost:7001/health"
-echo "MCP server   http://localhost:7002/mcp  (health: /health)"
-echo "RAG server   http://localhost:7003/health"
+echo "AI-Mode            http://localhost:7001/health"
+echo "MCP server         http://localhost:7002/mcp  (health: /health)"
+echo "RAG server         http://localhost:7003/health"
+echo "Multi-Agent Server http://localhost:7004/health"
 echo
-echo "Press Ctrl+C to stop all three."
+echo "Press Ctrl+C to stop all four."
 wait

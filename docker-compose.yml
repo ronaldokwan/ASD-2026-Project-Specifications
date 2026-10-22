@@ -12,6 +12,7 @@ x-ai-env: &ai-env
   AI_MODE_URL: ${AI_MODE_URL:-http://host.docker.internal:7001}
   MCP_SERVER_URL: ${MCP_SERVER_URL:-http://host.docker.internal:7002}
   RAG_SERVER_URL: ${RAG_SERVER_URL:-http://host.docker.internal:7003}
+  MULTI_AGENT_URL: ${MULTI_AGENT_URL:-http://host.docker.internal:7004}
 
 x-extra-hosts: &host-gateway
   extra_hosts:
