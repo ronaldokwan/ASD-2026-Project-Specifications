@@ -12,10 +12,13 @@ services:
   ai-mode-url: ${AI_MODE_URL:http://localhost:7001}
   mcp-server-url: ${MCP_SERVER_URL:http://localhost:7002}
   rag-server-url: ${RAG_SERVER_URL:http://localhost:7003}
+  multi-agent-url: ${MULTI_AGENT_URL:http://localhost:7004}
   mcp-enabled: ${MCP_ENABLED:true}
   rag-enabled: ${RAG_ENABLED:true}
+  multi-agent-enabled: ${MULTI_AGENT_ENABLED:true}
   mcp-timeout-seconds: ${MCP_TIMEOUT:15}
   rag-timeout-seconds: ${RAG_TIMEOUT:120}
+  multi-agent-timeout-seconds: ${MULTI_AGENT_TIMEOUT:180}
 
 app:
   seed-orders: ${SEED_ORDERS:true}

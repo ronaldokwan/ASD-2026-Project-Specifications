@@ -69,6 +69,23 @@ label span, .line-total span, .stat-card > span { display:block; margin-bottom:4
 .result-meta { margin-bottom:6px; color:#4a3290; font-size:11px; font-weight:700; text-transform:uppercase; }
 .pre-line { margin:0; white-space:pre-line; }
 .back-link { display:inline-block; margin-bottom:14px; color:var(--brand-dark); font-size:13px; font-weight:600; text-decoration:none; }
+.multi-agent-panel { border-top:3px solid #5b3fa8; }
+.multi-agent-result { margin-top:14px; }
+.workflow-card, .history-card { margin-top:12px; padding:14px; border:1px solid var(--border); border-radius:8px; background:var(--surface-alt); color:var(--text); }
+.workflow-card h4, .history-card h4 { margin:16px 0 8px; }
+.workflow-card h4:first-of-type, .history-card h4:first-child { margin-top:4px; }
+.workflow-evidence { margin-top:14px; padding:10px 12px; border-left:3px solid var(--brand); background:var(--surface); }
+.workflow-evidence article { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+.workflow-evidence article span { display:block; color:var(--text-muted); font-size:12px; }
+.workflow-evidence article p { margin:4px 0 0; font-size:13px; }
+.human-review { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+.human-review form { display:grid; gap:8px; margin-top:12px; padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); }
+.human-review textarea { width:100%; min-height:72px; resize:vertical; }
+.human-review .button { justify-self:start; }
+.history-item { display:flex; width:100%; justify-content:space-between; gap:12px; margin-top:8px; padding:10px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); cursor:pointer; text-align:left; }
+.history-item:hover { border-color:var(--brand); }
+.history-item span { text-transform:capitalize; font-weight:700; }
+.history-item code { color:var(--text-muted); font-size:11px; }
 
 .two-column, .two-panel-grid, .stats-grid { display:grid; gap:18px; }
 .two-column, .two-panel-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }

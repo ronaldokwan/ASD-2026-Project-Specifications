@@ -6,6 +6,7 @@ import com.smartshop.orders.frontend.dto.FrontendModels.OrderLineRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderLineResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.MultiAgentReviewRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagAnswerResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagSource;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagSourceView;
@@ -178,6 +179,82 @@ public class OrderPageController {
         return "fragments/rag-result :: result";
     }
 
+    @PostMapping("/orders/{id}/multi-agent")
+    public String startMultiAgent(@PathVariable long id, Model model) {
+        try {
+            model.addAttribute("orderId", id);
+            model.addAttribute("workflowStart", backend.startMultiAgent(id));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/multi-agent-result :: result";
+    }
+
+    @GetMapping("/orders/{id}/multi-agent/history")
+    public String multiAgentHistory(@PathVariable long id, Model model) {
+        try {
+            model.addAttribute("orderId", id);
+            model.addAttribute("workflowHistory", backend.multiAgentHistory(id));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/multi-agent-history :: history";
+    }
+
+    @GetMapping("/orders/{id}/multi-agent/{workflowId}")
+    public String multiAgentStatus(
+        @PathVariable long id,
+        @PathVariable String workflowId,
+        Model model
+    ) {
+        try {
+            model.addAttribute("orderId", id);
+            model.addAttribute("workflow", backend.getMultiAgent(id, workflowId));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+        }
+        return "fragments/multi-agent-result :: result";
+    }
+
+    @PostMapping("/orders/{id}/multi-agent/{workflowId}/review")
+    public String reviewMultiAgent(
+        @PathVariable long id,
+        @PathVariable String workflowId,
+        @RequestParam String decision,
+        @RequestParam(required = false, defaultValue = "") String feedback,
+        @RequestParam(required = false) String correctedRecommendation,
+        @RequestParam(required = false) String correctedRationale,
+        @RequestParam(required = false) String acceptedFields,
+        @RequestParam(required = false) String unresolvedIssues,
+        Model model
+    ) {
+        try {
+            Map<String, String> correctedOutput = "partial_accept".equals(decision)
+                ? Map.of(
+                    "recommendation", nullToEmpty(correctedRecommendation).trim(),
+                    "rationale", nullToEmpty(correctedRationale).trim()
+                ) : null;
+            MultiAgentReviewRequest request = new MultiAgentReviewRequest(
+                decision,
+                feedback,
+                lines(acceptedFields),
+                lines(unresolvedIssues),
+                correctedOutput
+            );
+            model.addAttribute("orderId", id);
+            model.addAttribute("workflow", backend.reviewMultiAgent(id, workflowId, request));
+        } catch (RuntimeException exception) {
+            model.addAttribute("serviceError", readableError(exception));
+            model.addAttribute("orderId", id);
+            try {
+                model.addAttribute("workflow", backend.getMultiAgent(id, workflowId));
+            } catch (RuntimeException ignored) {
+                // Preserve the original review error when a refresh also fails.
+            }
+        }
+        return "fragments/multi-agent-result :: result";
+    }
+
     static List<RagSourceView> groupSources(List<RagSource> sources) {
         if (sources == null || sources.isEmpty()) {
             return List.of();
@@ -277,5 +354,16 @@ public class OrderPageController {
 
     private String readableError(RuntimeException exception) {
         return exception.getMessage() == null ? "The request could not be completed" : exception.getMessage();
+    }
+
+    private List<String> lines(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return value.lines().map(String::trim).filter(line -> !line.isBlank()).toList();
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

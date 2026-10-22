@@ -1,0 +1,94 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="result">
+    <div class="notice error" th:if="${serviceError}" th:text="${serviceError}">Service error</div>
+
+    <section th:if="${workflowStart != null}" class="workflow-card"
+             th:attr="hx-get=@{/orders/{id}/multi-agent/{workflowId}(id=${orderId},workflowId=${workflowStart.workflowId})}"
+             hx-trigger="load delay:1s" hx-target="this" hx-swap="outerHTML">
+        <div class="result-meta">Shared Multi-Agent · Queued</div>
+        <p>Planner, Worker and Reviewer workflow started.</p>
+        <p class="result-footnote" th:text="|Workflow ID: ${workflowStart.workflowId}|">Workflow ID</p>
+    </section>
+
+    <section th:if="${workflow != null}" class="workflow-card" aria-live="polite"
+             th:attr="hx-get=@{/orders/{id}/multi-agent/{workflowId}(id=${orderId},workflowId=${workflow.workflowId})},hx-trigger=${#lists.contains({'queued','planning','working','reviewing','revising'}, workflow.status) ? 'every 2s' : null}"
+             hx-target="this" hx-swap="outerHTML">
+        <div class="result-meta" th:text="|Shared Multi-Agent · ${#strings.toUpperCase(#strings.replace(workflow.status, '_', ' '))}|">Workflow</div>
+        <p class="result-footnote" th:text="|Workflow ID: ${workflow.workflowId} · Stage: ${workflow.stage}|">Workflow details</p>
+        <div class="notice error" th:if="${workflow.failure}" th:text="${workflow.failure}">Failure</div>
+
+        <div th:if="${workflow.plan != null}">
+            <h4>Planner</h4>
+            <ol th:if="${workflow.plan['model_generated'] != null}">
+                <li th:each="task : ${workflow.plan['model_generated']['tasks']}">
+                    <span th:text="${task['task']}">Task</span>
+                    <small th:text="| · Evidence: ${#strings.listJoin(task['evidence_refs'], ', ')}|">Evidence</small>
+                </li>
+            </ol>
+        </div>
+
+        <div th:if="${workflow.workerResult != null}">
+            <h4>Worker recommendation</h4>
+            <p><strong th:text="${workflow.workerResult['recommendation']}">Recommendation</strong></p>
+            <p th:text="${workflow.workerResult['rationale']}">Rationale</p>
+            <p class="result-footnote" th:text="|Policy basis: ${workflow.workerResult['policy_basis']} · Evidence: ${#strings.listJoin(workflow.workerResult['evidence_refs'], ', ')}|">Evidence</p>
+        </div>
+
+        <div th:if="${workflow.reviewerResult != null}">
+            <h4 th:text="|Reviewer · ${#strings.replace(workflow.reviewerResult['action'], '_', ' ')}|">Reviewer</h4>
+            <ul th:if="${workflow.reviewerResult['findings'] != null and !workflow.reviewerResult['findings'].isEmpty()}">
+                <li th:each="finding : ${workflow.reviewerResult['findings']}"
+                    th:text="|${finding['severity']}: ${finding['finding']} (${finding['evidence_ref']})|">Finding</li>
+            </ul>
+            <p th:if="${workflow.reviewerResult['missing_information'] != null and !workflow.reviewerResult['missing_information'].isEmpty()}"
+               th:text="|Missing information: ${#strings.listJoin(workflow.reviewerResult['missing_information'], '; ')}|">Missing information</p>
+        </div>
+
+        <details th:if="${workflow.evidence != null and !workflow.evidence.isEmpty()}" class="workflow-evidence">
+            <summary>Supporting evidence</summary>
+            <article th:each="item : ${workflow.evidence}">
+                <strong th:text="|${item.id} · ${item.status}|">Evidence</strong>
+                <span th:text="${item.source}">Source</span>
+                <p th:text="${item.meaning}">Meaning</p>
+            </article>
+        </details>
+
+        <div th:if="${workflow.humanDecision != null}">
+            <h4 th:text="|Recorded human decision: ${#strings.replace(workflow.humanDecision['decision'], '_', ' ')}|">Decision</h4>
+            <p th:if="${workflow.humanDecision['feedback']}" th:text="${workflow.humanDecision['feedback']}">Feedback</p>
+            <p class="result-footnote">This decision is recorded for audit only; it does not change or ship the order.</p>
+        </div>
+
+        <div th:if="${workflow.status == 'human_review'}" class="human-review">
+            <h4>Human decision</h4>
+            <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
+                  hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <input type="hidden" name="decision" value="accept">
+                <label><span>Feedback (optional)</span><textarea name="feedback" maxlength="2000"></textarea></label>
+                <button class="button primary" type="submit">Accept</button>
+            </form>
+            <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
+                  hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <input type="hidden" name="decision" value="partial_accept">
+                <label><span>Corrected recommendation</span><textarea name="correctedRecommendation" required maxlength="1200"></textarea></label>
+                <label><span>Corrected rationale</span><textarea name="correctedRationale" required maxlength="1600"></textarea></label>
+                <label><span>Accepted fields (one per line)</span><textarea name="acceptedFields" required maxlength="2000"></textarea></label>
+                <label><span>Unresolved issues (one per line)</span><textarea name="unresolvedIssues" required maxlength="6000"></textarea></label>
+                <label><span>Feedback</span><textarea name="feedback" required maxlength="2000"></textarea></label>
+                <button class="button secondary" type="submit">Partially accept</button>
+            </form>
+            <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
+                  hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <input type="hidden" name="decision" value="reject">
+                <label><span>Reason</span><textarea name="feedback" required maxlength="2000"></textarea></label>
+                <label><span>Unresolved issues (one per line)</span><textarea name="unresolvedIssues" maxlength="6000"></textarea></label>
+                <button class="button danger" type="submit">Reject</button>
+            </form>
+            <p class="result-footnote">Human review is mandatory. No action here mutates or ships the order.</p>
+        </div>
+    </section>
+</div>
+</body>
+</html>
