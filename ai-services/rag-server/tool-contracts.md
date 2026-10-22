@@ -14,21 +14,17 @@ two ways, exactly like `ai-services/mcp-server/`:
 - **Input:** `documents`: list of `{"id": str, "text": str, "metadata": dict}`.
   A document with an existing id is replaced (old chunks dropped first), so a
   feature can re-index an edited record.
-- **Authorization:** writers configure the shared `RAG_SERVICE_TOKEN` and send
-  it as `X-RAG-Service-Token` for HTTP, or the `service_token` argument for the
-  local MCP write tool.
 - **Output:** `{"ok": true, "documents_indexed": int, "chunks_indexed": int}`
 - **Policy class:** write (index update). Any feature can call this to
   contribute its own domain text (reviews, FAQs, policies, product notes).
-- **HTTP:** `POST /rag/documents` with the `X-RAG-Service-Token` header.
+- **HTTP:** `POST /rag/documents`
 
 ## delete_document
 
 - **Purpose:** remove a document (all its chunks) from the shared corpus.
 - **Input:** `doc_id` (path segment on the HTTP route).
-- **Authorization:** requires the shared service token.
 - **Output:** `{"ok": true, "chunks_removed": int}`
-- **HTTP:** `DELETE /rag/documents/<doc_id>` with the `X-RAG-Service-Token` header.
+- **HTTP:** `DELETE /rag/documents/<doc_id>`
 
 ## retrieve_context
 
@@ -78,7 +74,6 @@ Any feature can push its own text into the shared corpus:
 
 ```
 POST http://localhost:7003/rag/documents
-X-RAG-Service-Token: $RAG_SERVICE_TOKEN
 {"documents": [{"id": "review-r1", "text": "...", "metadata": {"feature": "reviews", "product_sku": "SKU-AUD-1001"}}]}
 ```
 

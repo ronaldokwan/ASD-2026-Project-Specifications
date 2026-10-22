@@ -12,7 +12,6 @@ services:
   ai-mode-url: ${AI_MODE_URL:http://localhost:7001}
   mcp-server-url: ${MCP_SERVER_URL:http://localhost:7002}
   rag-server-url: ${RAG_SERVER_URL:http://localhost:7003}
-  rag-service-token: ${RAG_SERVICE_TOKEN:}
   mcp-enabled: ${MCP_ENABLED:true}
   rag-enabled: ${RAG_ENABLED:true}
   mcp-timeout-seconds: ${MCP_TIMEOUT:15}

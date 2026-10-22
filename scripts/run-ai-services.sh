@@ -24,15 +24,13 @@ if [ -f .env ]; then
   for key in LLM_MODEL LLM_TIMEOUT MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \
              MULTI_AGENT_REVIEWER_MODEL MULTI_AGENT_OLLAMA_URL MULTI_AGENT_STAGE_TIMEOUT \
              MULTI_AGENT_MAX_REVISIONS MULTI_AGENT_NUM_PREDICT MCP_BIND_ADDRESS \
-             RAG_BIND_ADDRESS RAG_SERVICE_TOKEN; do
+             RAG_BIND_ADDRESS; do
     if [ -z "${!key:-}" ]; then
       value=$(sed -n "s/^${key}=//p" .env | tr -d '\r' | tail -n 1)
       if [ -n "${value}" ]; then export "${key}=${value}"; fi
     fi
   done
 fi
-
-: "${RAG_SERVICE_TOKEN:?Set RAG_SERVICE_TOKEN in .env before starting shared services}"
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"

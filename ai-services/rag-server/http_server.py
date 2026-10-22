@@ -13,7 +13,6 @@ Endpoints
     POST   /rag/query             retrieve + generate a grounded, cited answer
 """
 
-import hmac
 import os
 
 from flask import Flask, jsonify, request
@@ -26,15 +25,6 @@ from rag_pipeline import (
 )
 
 app = Flask(__name__)
-AUTH_HEADER = "X-RAG-Service-Token"
-
-
-def _authorized_writer():
-    expected = os.getenv("RAG_SERVICE_TOKEN", "")
-    supplied = request.headers.get(AUTH_HEADER, "")
-    return bool(expected) and hmac.compare_digest(
-        supplied.encode("utf-8"), expected.encode("utf-8")
-    )
 
 
 @app.get("/health")
@@ -48,8 +38,6 @@ def health():
 
 @app.post("/rag/documents")
 def add_documents():
-    if not _authorized_writer():
-        return jsonify({"ok": False, "error": "valid RAG service credential required"}), 401
     payload = request.get_json(silent=True) or {}
     try:
         return jsonify(upsert_documents(payload.get("documents")))
@@ -59,8 +47,6 @@ def add_documents():
 
 @app.delete("/rag/documents/<doc_id>")
 def remove_document(doc_id):
-    if not _authorized_writer():
-        return jsonify({"ok": False, "error": "valid RAG service credential required"}), 401
     try:
         return jsonify(delete_document(doc_id))
     except RAGValidationError as exc:

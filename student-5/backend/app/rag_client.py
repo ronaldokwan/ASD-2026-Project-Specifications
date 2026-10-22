@@ -28,7 +28,6 @@ def index_review(review):
     try:
         requests.post(
             "{}/rag/documents".format(Config.RAG_SERVER_URL),
-            headers={"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN},
             json={"documents": [{
                 "id": _document_id(review["review_id"]),
                 "text": review["review"],
@@ -49,7 +48,6 @@ def remove_review(review_id):
     try:
         requests.delete(
             "{}/rag/documents/{}".format(Config.RAG_SERVER_URL, _document_id(review_id)),
-            headers={"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN},
             timeout=Config.RAG_TIMEOUT,
         )
     except requests.RequestException:

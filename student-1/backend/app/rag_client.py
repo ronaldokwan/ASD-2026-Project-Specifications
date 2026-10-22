@@ -61,17 +61,11 @@ def product_document(product):
     }
 
 
-def _post(path, payload, timeout=None, authorize=False):
+def _post(path, payload, timeout=None):
     url = "{}{}".format(Config.RAG_SERVER_URL, path)
     try:
         response = requests.post(
-            url,
-            json=payload,
-            headers=(
-                {"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN}
-                if authorize else None
-            ),
-            timeout=timeout or (5, Config.RAG_TIMEOUT),
+            url, json=payload, timeout=timeout or (5, Config.RAG_TIMEOUT)
         )
     except requests.Timeout as exc:
         raise RAGServiceUnavailable("RAG request timed out") from exc
@@ -97,7 +91,6 @@ def sync_products(products):
         "/rag/documents",
         {"documents": [product_document(p) for p in products]},
         timeout=_SYNC_TIMEOUT,
-        authorize=True,
     )
     if response.status_code >= 400 or not body.get("ok"):
         raise RAGBadResponse(body.get("error", "RAG re-index was rejected"))
@@ -114,7 +107,6 @@ def sync_product(product):
             "/rag/documents",
             {"documents": [product_document(product)]},
             timeout=_SYNC_TIMEOUT,
-            authorize=True,
         )
     except (RAGServiceUnavailable, RAGBadResponse) as exc:
         log.warning("RAG sync skipped for product %s: %s", product.get("id"), exc)
@@ -125,11 +117,7 @@ def remove_product(product_id):
         return
     url = "{}/rag/documents/{}".format(Config.RAG_SERVER_URL, document_id(product_id))
     try:
-        requests.delete(
-            url,
-            headers={"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN},
-            timeout=_SYNC_TIMEOUT,
-        )
+        requests.delete(url, timeout=_SYNC_TIMEOUT)
     except requests.RequestException as exc:
         log.warning("RAG removal skipped for product %s: %s", product_id, exc)
 

@@ -54,17 +54,11 @@ def stock_document(stock):
     }
 
 
-def _post(path, payload, timeout=None, authorize=False):
+def _post(path, payload, timeout=None):
     url = "{}{}".format(Config.RAG_SERVER_URL, path)
     try:
         response = requests.post(
-            url,
-            json=payload,
-            headers=(
-                {"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN}
-                if authorize else None
-            ),
-            timeout=timeout or (5, Config.RAG_TIMEOUT),
+            url, json=payload, timeout=timeout or (5, Config.RAG_TIMEOUT)
         )
     except requests.Timeout as exc:
         raise RAGServiceUnavailable("RAG request timed out") from exc
@@ -87,8 +81,7 @@ def sync_stocks(stocks):
         _synced = True
         return {"ok": True, "documents_indexed": 0, "chunks_indexed": 0}
     response, body = _post(
-        "/rag/documents", {"documents": documents}, timeout=_SYNC_TIMEOUT,
-        authorize=True,
+        "/rag/documents", {"documents": documents}, timeout=_SYNC_TIMEOUT
     )
     if response.status_code >= 400 or not isinstance(body, dict) or not body.get("ok"):
         message = body.get("error", "RAG re-index was rejected") if isinstance(body, dict) else "RAG re-index was rejected"
@@ -107,7 +100,6 @@ def sync_stock(stock):
             "/rag/documents",
             {"documents": [stock_document(stock)]},
             timeout=_SYNC_TIMEOUT,
-            authorize=True,
         )
         if response.status_code >= 400 or not isinstance(body, dict) or not body.get("ok"):
             raise RAGBadResponse("RAG rejected stock document update")
@@ -123,11 +115,7 @@ def remove_stock(stock_id):
         Config.RAG_SERVER_URL, quote(document_id(stock_id), safe="")
     )
     try:
-        response = requests.delete(
-            url,
-            headers={"X-RAG-Service-Token": Config.RAG_SERVICE_TOKEN},
-            timeout=_SYNC_TIMEOUT,
-        )
+        response = requests.delete(url, timeout=_SYNC_TIMEOUT)
         if response.status_code >= 400:
             log.warning("RAG rejected removal for stock %s", stock_id)
     except requests.RequestException as exc:
