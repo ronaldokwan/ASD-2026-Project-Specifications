@@ -21,9 +21,17 @@ requirements=(
   student-5/database/requirements.txt
 )
 
+# Documented accepted risk, by advisory ID only so any new finding still fails:
+# chromadb 1.5.9 has no fixed release for these advisories. It backs only the
+# local, non-containerised RAG server, which is disabled and not deployed in
+# the cloud baseline. Remove an ID as soon as a fixed chromadb is released.
+accepted=(PYSEC-2026-311 PYSEC-2026-3813 PYSEC-2026-3814 PYSEC-2026-3815)
+ignore_args=()
+for id in "${accepted[@]}"; do ignore_args+=(--ignore-vuln "$id"); done
+
 status=0
 for requirement in "${requirements[@]}"; do
-  if ! pip-audit --strict --requirement "${requirement}"; then
+  if ! pip-audit --strict "${ignore_args[@]}" --requirement "${requirement}"; then
     status=1
   fi
 done

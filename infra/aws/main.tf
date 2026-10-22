@@ -22,10 +22,11 @@ locals {
       role          = "backend", port = 8001, health_path = "/health", health_kind = "python"
       listener_port = null, discovery_name = "student-1-backend", persistent = false, db_file = ""
       environment = {
-        DATABASE_URL    = "http://student-1-db.${local.namespace}:9001", SERVICE_PORT = "8001"
-        AI_MODE_ENABLED = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
-        AI_MODE_URL     = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
-        RAG_SERVER_URL  = "http://127.0.0.1:7003"
+        DATABASE_URL        = "http://student-1-db.${local.namespace}:9001", SERVICE_PORT = "8001"
+        AI_MODE_ENABLED     = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
+        MULTI_AGENT_ENABLED = "false", MULTI_AGENT_URL = "http://127.0.0.1:7004"
+        AI_MODE_URL         = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
+        RAG_SERVER_URL      = "http://127.0.0.1:7003"
       }
     }
     "student-1-frontend" = {

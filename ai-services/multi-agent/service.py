@@ -22,11 +22,14 @@ OLLAMA_URL = os.getenv("MULTI_AGENT_OLLAMA_URL", "http://127.0.0.1:11434").rstri
 ROLE_MODELS = {
     "planner": os.getenv("MULTI_AGENT_PLANNER_MODEL", "llama3.1:8b"),
     "worker": os.getenv("MULTI_AGENT_WORKER_MODEL", "qwen2.5:3b"),
-    "reviewer": os.getenv("MULTI_AGENT_REVIEWER_MODEL", "deepseek-r1:8b"),
+    "reviewer": os.getenv("MULTI_AGENT_REVIEWER_MODEL", "llama3.1:8b"),
 }
 STAGE_TIMEOUT = int(os.getenv("MULTI_AGENT_STAGE_TIMEOUT", os.getenv("LLM_TIMEOUT", "120")))
 MAX_REVISIONS = max(0, min(2, int(os.getenv("MULTI_AGENT_MAX_REVISIONS", "1"))))
 MAX_WORKERS = int(os.getenv("MULTI_AGENT_MAX_WORKERS", "4"))
+# Each role gets this many calls when its output fails validation; the rejection
+# reason is fed back so the model can correct itself.
+STAGE_ATTEMPTS = max(1, min(4, int(os.getenv("MULTI_AGENT_STAGE_ATTEMPTS", "3"))))
 CONTEXT_SIZE = max(4096, int(os.getenv("MULTI_AGENT_NUM_CTX", "8192")))
 NUM_PREDICT = max(512, min(4096, int(os.getenv("MULTI_AGENT_NUM_PREDICT", "1024"))))
 
@@ -36,6 +39,16 @@ _executor = None
 
 class WorkflowError(RuntimeError):
     """A workflow cannot safely continue from its current stage."""
+
+
+class StageOutputRejected(WorkflowError):
+    """Every attempt of one role produced output that failed validation."""
+
+    def __init__(self, role, error, raw):
+        super().__init__("{} output rejected after {} attempt(s): {}".format(role, STAGE_ATTEMPTS, error))
+        self.role = role
+        self.error = error
+        self.raw = raw
 
 
 OUTPUT_SCHEMAS = {
@@ -59,7 +72,7 @@ OUTPUT_SCHEMAS = {
         "type": "object",
         "properties": {
             "recommendation": {"type": "string", "minLength": 1, "maxLength": 480},
-            "rationale": {"type": "string", "minLength": 1, "maxLength": 300},
+            "rationale": {"type": "string", "minLength": 1, "maxLength": 600},
             "policy_basis": {"type": "string", "minLength": 1},
             "evidence_refs": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"type": "string"}},
         },
@@ -295,7 +308,7 @@ def _call_model(role, prompt):
         "keep_alive": 0,
         "options": {"temperature": 0.2, "num_predict": NUM_PREDICT, "num_ctx": CONTEXT_SIZE},
     }
-    if role == "reviewer":
+    if model.startswith("deepseek-r1"):
         # DeepSeek R1 otherwise spends the constrained JSON output budget on a
         # private reasoning trace before emitting the required object.
         payload["think"] = False
@@ -384,7 +397,7 @@ def _worker_output(output, available_evidence_ids):
         raise WorkflowError("Worker policy_basis must be one supplied evidence ID")
     return {
         "recommendation": _required_text(output.get("recommendation"), "recommendation", 480),
-        "rationale": _required_text(output.get("rationale"), "rationale", 300),
+        "rationale": _required_text(output.get("rationale"), "rationale", 600),
         "policy_basis": policy_basis,
         "evidence_refs": list(dict.fromkeys(refs)),
         "application_added_evidence_refs": [],
@@ -556,6 +569,89 @@ def _prompt(role, request_data, evidence, plan=None, worker=None, findings=None,
     return "\n\n".join(sections)
 
 
+def _call_validated(workflow, role, prompt, validate):
+    """Call one role and validate its output, retrying with the rejection reason fed back.
+
+    Returns (model, validated output). Raises StageOutputRejected, carrying the
+    last raw output, when every attempt is rejected.
+    """
+    error, raw = None, None
+    for attempt in range(1, STAGE_ATTEMPTS + 1):
+        attempt_prompt = prompt
+        if error is not None:
+            attempt_prompt += (
+                "\n\nYOUR PREVIOUS OUTPUT WAS REJECTED: {}\n"
+                "Return a corrected object that satisfies every rule above.".format(error)
+            )
+        try:
+            model, raw = _call_model(role, attempt_prompt)
+            return model, validate(raw)
+        except (WorkflowError, ValueError, KeyError, TypeError) as exc:
+            error = str(exc)[:300]
+            _save(workflow, "stage_output_rejected", {"role": role, "attempt": attempt, "error": error})
+    raise StageOutputRejected(role, error, raw)
+
+
+def _reconciled_review(raw, evidence, request_data, error):
+    """Conservative Reviewer result when its output stayed internally inconsistent.
+
+    Nothing is upgraded: every Worker claim is treated as unsupported, the
+    Reviewer's own findings are kept for the human, and the inconsistency is
+    recorded as a high-severity finding.
+    """
+    raw = raw if isinstance(raw, dict) else {}
+    evidence_ids = {item["id"] for item in evidence}
+    classifications = ("unsupported_claim", "contradiction", "missing_evidence", "source_misuse", "other")
+    fields = ("recommendation", "rationale", "policy_basis", "multiple", "evidence")
+    findings = []
+    for item in raw.get("findings") or []:
+        if not isinstance(item, dict) or not isinstance(item.get("finding"), str) or not item["finding"].strip():
+            continue
+        findings.append({
+            "severity": item.get("severity") if item.get("severity") in ("low", "medium", "high") else "medium",
+            "finding": item["finding"].strip()[:300],
+            "evidence_ref": item.get("evidence_ref") if item.get("evidence_ref") in evidence_ids else None,
+            "classification": item.get("classification") if item.get("classification") in classifications else "other",
+            "claim_field": item.get("claim_field") if item.get("claim_field") in fields else "multiple",
+        })
+    findings = findings[:3] + [{
+        "severity": "high",
+        "finding": "Reviewer output stayed internally inconsistent after {} attempts ({}); "
+                   "treat every Worker claim as unchecked.".format(STAGE_ATTEMPTS, error)[:300],
+        "evidence_ref": None,
+        "classification": "other",
+        "claim_field": "multiple",
+    }]
+
+    def strings(key):
+        values = raw.get(key) if isinstance(raw.get(key), list) else []
+        return [value.strip()[:160] for value in values if isinstance(value, str) and value.strip()][:3]
+
+    policy_ids = set((request_data or {}).get("worker_policy_evidence_ids", []))
+    policy_available = any(item["id"] in policy_ids and item.get("status") == "available" for item in evidence)
+    missing_information = strings("missing_information")
+    for item in evidence:
+        if item.get("status") != "available":
+            missing_information.append("{} evidence is {} and cannot support the recommendation.".format(
+                item["id"], item.get("status", "unavailable")
+            ))
+    return {
+        "action": "not_supported",
+        "claim_assessment": {
+            "recommendation": "unsupported" if policy_available or not policy_ids else "evidence_unavailable",
+            "rationale": "unsupported",
+            "consistency": "not_applicable",
+        },
+        "findings": findings,
+        "missing_information": missing_information,
+        "recommendations": strings("recommendations") or [
+            "Check the Worker recommendation against the evidence before deciding."
+        ],
+        "reconciled": True,
+        "validation_error": error,
+    }
+
+
 def _run_workflow(workflow_id):
     workflow = _history(workflow_id=workflow_id)[0]
     evidence_ids = {item["id"] for item in workflow["evidence"]}
@@ -563,42 +659,57 @@ def _run_workflow(workflow_id):
     allowed_worker_ids = workflow["request"].get("worker_evidence_ids")
     if allowed_worker_ids is not None:
         available_evidence_ids &= set(allowed_worker_ids)
+
+    def planner_result(raw):
+        plan = _planner_output(raw, evidence_ids, workflow["request"])
+        if not _plan_is_complete(plan, evidence_ids, workflow["request"]):
+            raise WorkflowError("Planner did not produce a complete required plan")
+        return plan
+
+    def worker_result(raw):
+        result = _worker_output(raw, available_evidence_ids)
+        return _validate_worker_contract(result, workflow["evidence"], workflow["request"])
+
     try:
         workflow["status"], workflow["stage"] = "planning", "planner"
         _save(workflow, "stage_started", {"role": "planner", "model": ROLE_MODELS["planner"]})
-        model, raw = _call_model("planner", _prompt("planner", workflow["request"], workflow["evidence"]))
+        model, workflow["plan"] = _call_validated(
+            workflow, "planner", _prompt("planner", workflow["request"], workflow["evidence"]), planner_result,
+        )
         workflow["roles"].append({"role": "planner", "model": model, "completed_at": _now()})
-        workflow["plan"] = _planner_output(raw, evidence_ids, workflow["request"])
-        if not _plan_is_complete(workflow["plan"], evidence_ids, workflow["request"]):
-            raise WorkflowError("Planner did not produce a complete required plan")
         _save(workflow, "stage_completed", {"role": "planner", "model": model, "plan": workflow["plan"]})
 
         for revision in range(workflow["max_revisions"] + 1):
             workflow["status"], workflow["stage"] = ("revising" if revision else "working"), "worker"
             _save(workflow, "stage_started", {"role": "worker", "revision": revision, "model": ROLE_MODELS["worker"]})
-            worker_plan = workflow["plan"]
-            model, raw = _call_model("worker", _prompt(
-                "worker", workflow["request"], workflow["evidence"], worker_plan,
+            model, workflow["worker_result"] = _call_validated(workflow, "worker", _prompt(
+                "worker", workflow["request"], workflow["evidence"], workflow["plan"],
                 workflow.get("worker_result"),
                 (workflow.get("reviewer_result") or {}).get("findings"), revision,
-            ))
+            ), worker_result)
             workflow["roles"].append({"role": "worker", "model": model, "revision": revision, "completed_at": _now()})
-            workflow["worker_result"] = _worker_output(raw, available_evidence_ids)
-            workflow["worker_result"] = _validate_worker_contract(
-                workflow["worker_result"], workflow["evidence"], workflow["request"]
-            )
             _save(workflow, "stage_completed", {"role": "worker", "revision": revision, "result": workflow["worker_result"]})
 
             workflow["status"], workflow["stage"] = "reviewing", "reviewer"
             _save(workflow, "stage_started", {"role": "reviewer", "model": ROLE_MODELS["reviewer"]})
-            model, raw = _call_model("reviewer", _prompt(
-                "reviewer", workflow["request"], workflow["evidence"], workflow["plan"],
-                workflow["worker_result"], revision=revision,
-            ))
+            try:
+                model, workflow["reviewer_result"] = _call_validated(workflow, "reviewer", _prompt(
+                    "reviewer", workflow["request"], workflow["evidence"], workflow["plan"],
+                    workflow["worker_result"], revision=revision,
+                ), lambda raw: _reviewer_output(
+                    raw, workflow["evidence"], workflow["worker_result"], workflow["request"]
+                ))
+            except StageOutputRejected as exc:
+                if exc.raw is None:
+                    raise
+                # The Reviewer answered but contradicted itself: hand its findings
+                # to the human as unchecked rather than discarding the workflow.
+                model = ROLE_MODELS["reviewer"]
+                workflow["reviewer_result"] = _reconciled_review(
+                    exc.raw, workflow["evidence"], workflow["request"], exc.error,
+                )
+                _save(workflow, "reviewer_output_reconciled", {"error": exc.error})
             workflow["roles"].append({"role": "reviewer", "model": model, "completed_at": _now()})
-            workflow["reviewer_result"] = _reviewer_output(
-                raw, workflow["evidence"], workflow["worker_result"], workflow["request"]
-            )
             workflow["revision_count"] = revision
             _save(workflow, "stage_completed", {"role": "reviewer", "result": workflow["reviewer_result"]})
             if workflow["reviewer_result"]["action"] != "revise" or revision >= workflow["max_revisions"]:

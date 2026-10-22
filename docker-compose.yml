@@ -100,6 +100,9 @@ services:
       RAG_ENABLED: ${RAG_ENABLED:-true}
       MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
       RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
+      MULTI_AGENT_URL: ${MULTI_AGENT_URL:-http://host.docker.internal:7004}
+      MULTI_AGENT_ENABLED: ${MULTI_AGENT_ENABLED:-true}
+      MULTI_AGENT_TIMEOUT: ${MULTI_AGENT_TIMEOUT:-180}
     ports:
       - "8001:8001"
     depends_on:
@@ -124,6 +127,7 @@ services:
       SERVICE_PORT: "3001"
       MCP_TIMEOUT: ${MCP_TIMEOUT:-15}
       RAG_TIMEOUT: ${RAG_TIMEOUT:-120}
+      MULTI_AGENT_TIMEOUT: ${MULTI_AGENT_TIMEOUT:-180}
     ports:
       - "3001:3001"
     volumes:

@@ -69,6 +69,18 @@
         <p class="muted">Ask about products, prices, categories or catalogue rules.</p>
       </div>
     </div>
+
+    <div class="card" id="multi-agent-card">
+      <h2>Multi-Agent listing review</h2>
+      <p class="hint">
+        Press <em>Review</em> on any product. The shared Multi-Agent server runs a
+        <strong>Planner &rarr; Worker &rarr; Reviewer</strong> workflow over the product record, the MCP
+        listing check and the RAG catalogue policy, then you accept, correct or reject the result.
+      </p>
+      <div id="multi-agent-panel" class="result-panel" tabindex="-1" aria-live="polite">
+        <p class="muted">No listing review started yet.</p>
+      </div>
+    </div>
   </section>
 
   <!-- ============================ RIGHT: catalogue =================== -->

@@ -21,7 +21,7 @@ fi
 # in .env are container addresses (ollama, host.docker.internal). Exported
 # values win.
 if [ -f .env ]; then
-  for key in LLM_MODEL LLM_TIMEOUT MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \
+  for key in LLM_MODEL LLM_TIMEOUT REVIEW_MODEL MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \
              MULTI_AGENT_REVIEWER_MODEL MULTI_AGENT_OLLAMA_URL MULTI_AGENT_STAGE_TIMEOUT \
              MULTI_AGENT_MAX_REVISIONS MULTI_AGENT_NUM_PREDICT; do
     if [ -z "${!key:-}" ]; then
@@ -33,10 +33,11 @@ fi
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
+export REVIEW_MODEL="${REVIEW_MODEL:-llama3.1:8b}"
 export MULTI_AGENT_OLLAMA_URL="${MULTI_AGENT_OLLAMA_URL:-http://127.0.0.1:11434}"
 export MULTI_AGENT_PLANNER_MODEL="${MULTI_AGENT_PLANNER_MODEL:-llama3.1:8b}"
 export MULTI_AGENT_WORKER_MODEL="${MULTI_AGENT_WORKER_MODEL:-qwen2.5:3b}"
-export MULTI_AGENT_REVIEWER_MODEL="${MULTI_AGENT_REVIEWER_MODEL:-deepseek-r1:8b}"
+export MULTI_AGENT_REVIEWER_MODEL="${MULTI_AGENT_REVIEWER_MODEL:-llama3.1:8b}"
 
 # Refuse to start a second copy: on Windows a running service also locks its
 # venv's python.exe, so recreating the venv would fail with "Permission denied".

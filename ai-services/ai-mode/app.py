@@ -69,6 +69,11 @@ def _append_review(record):
 client = OllamaClient()
 loop = AgenticLoop(client=client)
 
+# Report reviews read long, mixed evidence; the small default model (fine for
+# product copy) returns fallbacks or noise there, so they use their own model.
+review_client = OllamaClient(model=os.getenv("REVIEW_MODEL", "llama3.1:8b"))
+review_loop = AgenticLoop(client=review_client)
+
 # Validation modes reuse the agentic loop with mode-specific schemas and
 # deterministic fallbacks for MCP tool results and RAG answers.
 _VALIDATION_MODES = {
@@ -204,7 +209,7 @@ def agent_validate():
         fallback=spec["fallback"],
         mode="{}_validation".format(mode),
     )
-    outcome = loop.run(agent_request)
+    outcome = (review_loop if report_review else loop).run(agent_request)
     if report_review:
         outcome = review_modes.finalize_review(mode, subject, outcome)
         at = datetime.now(timezone.utc).isoformat()

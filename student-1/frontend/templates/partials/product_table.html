@@ -61,6 +61,9 @@ afterwards - out of band when the response's primary target is #alerts. #}
             <button class="btn ai" hx-post="/products/{{ product.id }}/mcp-check" hx-target="#mcp-panel"
               hx-swap="innerHTML show:#mcp-card:top"
               title="Run the shared MCP tool check_product_listing">Check</button>
+            <button class="btn ai" hx-post="/products/{{ product.id }}/multi-agent" hx-target="#multi-agent-panel"
+              hx-swap="innerHTML show:#multi-agent-card:top" hx-disabled-elt="this"
+              title="Planner, Worker and Reviewer agents assess listing readiness for your decision">Review</button>
             <button class="btn danger" hx-post="/products/{{ product.id }}/delete" hx-target="#alerts"
               hx-swap="innerHTML" hx-confirm="Delete &quot;{{ product.name }}&quot;? This cannot be undone.">
               Delete

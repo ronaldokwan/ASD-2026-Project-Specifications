@@ -90,4 +90,4 @@ def not_found(_):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7002")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7002")), debug=False)

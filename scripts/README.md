@@ -12,6 +12,8 @@ Only commands that do more than wrap a single Docker call live here.
 
 Student 3 terminal workflow: `python scripts/multi-agent-workflow.py start --customer-id 1 --wait`, then use the printed workflow ID with `status` or `review`.
 
+Student 1 terminal workflow: `python scripts/student-1-multi-agent.py start --product-id 1 --wait`, then `review --product-id 1 --workflow-id <id> --decision accept` (or `history --product-id 1`).
+
 Run them from Git Bash on Windows: `bash scripts/run-local.sh`.
 
 Things that need no script:

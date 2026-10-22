@@ -1,0 +1,162 @@
+{
+  "application_check": {
+    "agrees": false,
+    "expected": "not ready",
+    "failed_checks": [
+      "status_is_active"
+    ],
+    "worker_verdict": "ready"
+  },
+  "completion_gate": {
+    "human_decision_recorded": true,
+    "planner_completed": true,
+    "reviewer_completed": true,
+    "worker_completed": true
+  },
+  "created_at": "2026-10-22T14:23:59.866419+00:00",
+  "evidence": [
+    {
+      "content": "{\"sku\": \"SKU-COM-2004\", \"name\": \"Dual Port USB-C Charger\", \"category\": \"Computing\", \"price_aud\": 69.9, \"status\": \"draft\", \"description_word_count\": 13, \"description\": \"Compact 65W gallium nitride charger that fast-charges a laptop and a phone together.\", \"readiness_checks\": {\"status_is_active\": false, \"category_is_valid\": true, \"price_within_1_to_9999_aud\": true, \"description_has_at_least_8_words\": true}, \"failed_checks\": [\"status_is_active\"]}",
+      "id": "product_facts",
+      "meaning": "Authoritative stored product fields. readiness_checks is the application's exact check of each Listing Readiness rule; failed_checks lists the rules not met.",
+      "source": "student-1-product-api",
+      "status": "available"
+    },
+    {
+      "content": "{\"tool\": \"check_product_listing\", \"sku\": \"SKU-COM-2004\", \"listing_status\": \"needs_attention\", \"description_word_count\": 13, \"issues\": [\"status is draft, so shoppers cannot see the product yet\"], \"warnings\": [], \"errors\": []}",
+      "id": "mcp_listing",
+      "meaning": "Independent cross-check from the shared MCP listing tool: listing_status and any issues, warnings or errors. Validation evidence, not policy.",
+      "source": "shared-mcp-check_product_listing",
+      "status": "available"
+    },
+    {
+      "content": "{\"status\": \"ok\", \"answer\": \"A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"sources\": [{\"source\": \"product-catalogue-policy.md\", \"section\": \"Listing Readiness\", \"snippet\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"text\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\"}], \"confidence\": \"medium\", \"retrieved_count\": 1, \"elapsed_ms\": 7116}",
+      "id": "catalogue_policy",
+      "meaning": "Catalogue policy retrieved by the shared RAG server. Authoritative for listing readiness only when a Listing Readiness section is cited.",
+      "source": "shared-rag-product-catalogue-policy",
+      "status": "available"
+    }
+  ],
+  "human_decision": {
+    "decision": "reject",
+    "feedback": "Worker said ready, but the listing is a draft: the status_is_active readiness check failed (application cross-check). Not ready to publish.",
+    "reviewed_at": "2026-10-22T14:25:02.041173+00:00",
+    "unresolved_issues": [
+      "Set status to active before publishing"
+    ]
+  },
+  "max_revisions": 1,
+  "plan": {
+    "application_enforced": {
+      "acceptance_criteria": [
+        "Base readiness on readiness_checks and failed_checks in product_facts.",
+        "Cite catalogue_policy as the source of the readiness rules.",
+        "Name every failed check as a fix, or state that none failed."
+      ],
+      "constraints": [
+        "product_facts is authoritative for stored product fields and rule results.",
+        "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+        "Do not invent prices, stock, sales or competitor data.",
+        "Do not edit, publish, archive or delete the product."
+      ]
+    },
+    "model_generated": {
+      "tasks": [
+        {
+          "evidence_refs": [
+            "product_facts"
+          ],
+          "task": "Check product facts for failed checks"
+        },
+        {
+          "evidence_refs": [
+            "catalogue_policy"
+          ],
+          "task": "Check catalogue policy for listing readiness rules"
+        },
+        {
+          "evidence_refs": [
+            "mcp_listing",
+            "product_facts",
+            "catalogue_policy"
+          ],
+          "task": "Compare MCP listing with product facts and catalogue policy"
+        }
+      ]
+    }
+  },
+  "request": {
+    "goal": "Say whether this product listing is ready to publish under the catalogue policy, for administrator review. It is ready only if failed_checks in product_facts is empty; otherwise name each failed check as the fix. Write the recommendation as one sentence and the rationale as one short sentence.",
+    "plan_contract": {
+      "acceptance_criteria": [
+        "Base readiness on readiness_checks and failed_checks in product_facts.",
+        "Cite catalogue_policy as the source of the readiness rules.",
+        "Name every failed check as a fix, or state that none failed."
+      ],
+      "constraints": [
+        "product_facts is authoritative for stored product fields and rule results.",
+        "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+        "Do not invent prices, stock, sales or competitor data.",
+        "Do not edit, publish, archive or delete the product."
+      ]
+    },
+    "worker_evidence_ids": [
+      "product_facts",
+      "catalogue_policy"
+    ],
+    "worker_policy_evidence_ids": [
+      "catalogue_policy"
+    ],
+    "worker_required_evidence_ids": [
+      "product_facts",
+      "catalogue_policy"
+    ]
+  },
+  "reviewer_result": {
+    "action": "ready_for_human",
+    "claim_assessment": {
+      "consistency": "not_applicable",
+      "rationale": "unsupported",
+      "recommendation": "supported"
+    },
+    "findings": [],
+    "missing_information": [],
+    "recommendations": [
+      "Check the catalogue policy for listing readiness rules and ensure that all required criteria are met. Review the product facts to confirm that there are no new,"
+    ]
+  },
+  "revision_count": 0,
+  "roles": [
+    {
+      "completed_at": "2026-10-22T14:24:11.435368+00:00",
+      "model": "llama3.1:8b",
+      "role": "planner"
+    },
+    {
+      "completed_at": "2026-10-22T14:24:20.955121+00:00",
+      "model": "qwen2.5:3b",
+      "revision": 0,
+      "role": "worker"
+    },
+    {
+      "completed_at": "2026-10-22T14:24:29.732425+00:00",
+      "model": "llama3.1:8b",
+      "role": "reviewer"
+    }
+  ],
+  "stage": "completed",
+  "status": "rejected",
+  "subject_ref": "student-1-product:7",
+  "updated_at": "2026-10-22T14:25:02.041173+00:00",
+  "worker_result": {
+    "application_added_evidence_refs": [],
+    "evidence_refs": [
+      "product_facts",
+      "catalogue_policy"
+    ],
+    "policy_basis": "catalogue_policy",
+    "rationale": "product_facts indicates that all required criteria (active status, valid category, and description length) have been met, aligning with the Listing Readiness section of the shared-rag-product-catalogue-policy.md policy. No failed checks necessitate any fixes as per the catalogue_policy content provided in product_facts.",
+    "recommendation": "The product listing for SKU-COM-2004 is ready to publish under the catalogue policy as there are no failed checks in product_facts."
+  },
+  "workflow_id": "af1c5713-1cc2-4bf0-8a14-0f1558cdcea0"
+}

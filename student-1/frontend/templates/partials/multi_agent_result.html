@@ -1,0 +1,178 @@
+{# Release 2: one Planner -> Worker -> Reviewer -> Human Review workflow.
+   Polls itself while a model stage is running, then offers the human decision. #}
+
+{% if error and not workflow %}
+  <div class="alert error">
+    {{ error }}
+    <div class="muted">The shared Multi-Agent server runs outside Docker &mdash; start it with
+      <code>bash scripts/run-ai-services.sh</code>.</div>
+  </div>
+
+{% elif workflow %}
+  {% set running = workflow.status in RUNNING_STAGES %}
+  {# While running, the section refreshes only itself: if another workflow has
+     been opened in the meantime, this element is gone and the poll stops. #}
+  <section class="multi-agent-result" aria-live="polite"
+    {% if running %}
+      hx-get="/products/{{ product_id }}/multi-agent/{{ workflow.workflow_id }}"
+      hx-trigger="load delay:2s" hx-target="this" hx-swap="outerHTML"
+    {% endif %}>
+
+    <div class="alert {{ 'error' if workflow.status in ('failed', 'rejected') else 'info' if running or workflow.status == 'human_review' else 'ok' }}">
+      Product #{{ product_id }} &middot; workflow
+      <strong>{{ workflow.status|replace('_', ' ') }}</strong>
+      {% if running %}<span class="muted">({{ workflow.stage }} stage running&hellip;)</span>{% endif %}
+    </div>
+    {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+
+    <p class="muted"><small>Workflow <code>{{ workflow.workflow_id }}</code>
+      {% if workflow.roles %} &middot; models:
+        {% for role in workflow.roles %}{{ role.role }}={{ role.model }}{% if not loop.last %}, {% endif %}{% endfor %}
+        &middot; revisions {{ workflow.revision_count }}/{{ workflow.max_revisions }}{% endif %}</small></p>
+
+    {% if workflow.failure %}<div class="alert error">{{ workflow.failure }}</div>{% endif %}
+
+    {% if workflow.plan %}
+      <h3>1. Planner</h3>
+      <ol>
+        {% for task in workflow.plan.model_generated.tasks %}
+          <li>{{ task.task }} <small class="muted">[{{ task.evidence_refs|join(', ') }}]</small></li>
+        {% endfor %}
+      </ol>
+      <details><summary>Application-enforced criteria and constraints</summary>
+        <ul>
+          {% for item in workflow.plan.application_enforced.acceptance_criteria %}<li>{{ item }}</li>{% endfor %}
+          {% for item in workflow.plan.application_enforced.constraints %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+    {% if workflow.worker_result %}
+      <h3>2. Worker</h3>
+      <p><strong>{{ workflow.worker_result.recommendation }}</strong></p>
+      <p>{{ workflow.worker_result.rationale }}</p>
+      <p class="muted"><small>Policy basis: {{ workflow.worker_result.policy_basis }}
+        &middot; cites {{ workflow.worker_result.evidence_refs|join(', ') }}
+        {% if workflow.worker_result.application_added_evidence_refs %}
+          &middot; application-added {{ workflow.worker_result.application_added_evidence_refs|join(', ') }}
+        {% endif %}</small></p>
+    {% endif %}
+
+    {% if workflow.reviewer_result %}
+      {% set review = workflow.reviewer_result %}
+      <h3>3. Reviewer &middot; {{ review.action|replace('_', ' ') }}</h3>
+      {% if review.reconciled %}
+        <div class="alert error">The Reviewer's output contradicted itself on every attempt, so the
+          Worker's claims are treated as unchecked. Verify them against the evidence below before deciding.</div>
+      {% endif %}
+      {% if review.claim_assessment %}
+        <p class="muted"><small>Recommendation {{ review.claim_assessment.recommendation|replace('_', ' ') }};
+          rationale {{ review.claim_assessment.rationale|replace('_', ' ') }};
+          consistency {{ review.claim_assessment.consistency|replace('_', ' ') }}.</small></p>
+      {% endif %}
+      {% if review.findings %}
+        <ul>
+          {% for finding in review.findings %}
+            <li><span class="badge">{{ finding.severity }}</span> {{ finding.finding }}
+              {% if finding.evidence_ref %}<small class="muted">[{{ finding.evidence_ref }}]</small>{% endif %}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">No findings.</p>
+      {% endif %}
+      {% if review.missing_information %}<p><strong>Missing:</strong> {{ review.missing_information|join('; ') }}</p>{% endif %}
+      {% if review.recommendations %}<p><strong>Recommendations:</strong> {{ review.recommendations|join('; ') }}</p>{% endif %}
+    {% endif %}
+
+    {% set check = workflow.application_check %}
+    {% if check %}
+      <h3>Application cross-check</h3>
+      <div class="alert {{ 'ok' if check.agrees else 'error' }}">
+        The readiness rules say <strong>{{ check.expected }}</strong>
+        {% set problems = {
+          'status_is_active': 'status is not active',
+          'category_is_valid': 'category is not valid',
+          'price_within_1_to_9999_aud': 'price is outside 1 to 9999 AUD',
+          'description_has_at_least_8_words': 'description has fewer than 8 words',
+        } %}
+        {% if check.failed_checks %}because the {% for name in check.failed_checks %}{{ problems.get(name, name|replace('_', ' ')) }}{% if not loop.last %} and {% endif %}{% endfor %}{% endif %}.
+        {% if check.agrees %}The Worker's verdict matches.
+        {% elif check.worker_verdict %}The Worker said <strong>{{ check.worker_verdict }}</strong> &mdash; it is wrong.
+        {% else %}The Worker gave no clear ready / not-ready verdict.{% endif %}
+      </div>
+    {% endif %}
+
+    {% if workflow.evidence %}
+      <details><summary>Evidence supplied to the agents</summary>
+        <ul>
+          {% for item in workflow.evidence %}
+            <li><strong>{{ item.id }}</strong> &middot; {{ item.source }} &middot; {{ item.status }}
+              <pre>{{ item.content }}</pre></li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+
+    {% if workflow.human_decision %}
+      {% set decision = workflow.human_decision %}
+      <h3>4. Human review &middot; {{ decision.decision|replace('_', ' ') }}</h3>
+      {% if decision.feedback %}<p>{{ decision.feedback }}</p>{% endif %}
+      {% if decision.corrected_output %}
+        <p><strong>Corrected recommendation:</strong> {{ decision.corrected_output.recommendation }}</p>
+        <p>{{ decision.corrected_output.rationale }}</p>
+      {% endif %}
+      {% if decision.unresolved_issues %}<p><strong>Unresolved:</strong> {{ decision.unresolved_issues|join('; ') }}</p>{% endif %}
+      <p class="muted"><small>Recorded {{ decision.reviewed_at }}. The decision is advisory: the product
+        itself is only changed through the catalogue form.</small></p>
+
+    {% elif workflow.status == 'human_review' %}
+      {% set form = request.form if error else {} %}
+      <h3>4. Human review</h3>
+      <form class="review-form" hx-post="/products/{{ product_id }}/multi-agent/{{ workflow.workflow_id }}/review"
+            hx-target="#multi-agent-panel" hx-swap="innerHTML show:#multi-agent-card:top"
+            hx-disabled-elt="find button">
+        <input type="hidden" name="decision" value="accept">
+        <div class="field"><label>Feedback (optional)</label>
+          <textarea name="feedback" rows="2" maxlength="2000"></textarea></div>
+        <button class="btn" type="submit">Accept</button>
+      </form>
+      <details>
+        <summary>Partially accept with corrections</summary>
+        <form class="review-form" hx-post="/products/{{ product_id }}/multi-agent/{{ workflow.workflow_id }}/review"
+              hx-target="#multi-agent-panel" hx-swap="innerHTML show:#multi-agent-card:top"
+            hx-disabled-elt="find button">
+          <input type="hidden" name="decision" value="partial_accept">
+          <div class="field"><label>Corrected recommendation</label>
+            <textarea name="corrected_recommendation" rows="2" required maxlength="1200">{{ form.get('corrected_recommendation', '') }}</textarea></div>
+          <div class="field"><label>Corrected rationale</label>
+            <textarea name="corrected_rationale" rows="2" required maxlength="1600">{{ form.get('corrected_rationale', '') }}</textarea></div>
+          <div class="field"><label>Accepted fields (one per line)</label>
+            <textarea name="accepted_fields" rows="2" required>{{ form.get('accepted_fields', '') }}</textarea></div>
+          <div class="field"><label>Unresolved issues (one per line)</label>
+            <textarea name="unresolved_issues" rows="2" required>{{ form.get('unresolved_issues', '') }}</textarea></div>
+          <div class="field"><label>Feedback</label>
+            <textarea name="feedback" rows="2" required maxlength="2000">{{ form.get('feedback', '') }}</textarea></div>
+          <button class="btn secondary" type="submit">Partially accept</button>
+        </form>
+      </details>
+      <details>
+        <summary>Reject</summary>
+        <form class="review-form" hx-post="/products/{{ product_id }}/multi-agent/{{ workflow.workflow_id }}/review"
+              hx-target="#multi-agent-panel" hx-swap="innerHTML show:#multi-agent-card:top"
+            hx-disabled-elt="find button">
+          <input type="hidden" name="decision" value="reject">
+          <div class="field"><label>Reason</label>
+            <textarea name="feedback" rows="2" required maxlength="2000"></textarea></div>
+          <div class="field"><label>Unresolved issues (one per line, optional)</label>
+            <textarea name="unresolved_issues" rows="2"></textarea></div>
+          <button class="btn danger" type="submit">Reject</button>
+        </form>
+      </details>
+    {% endif %}
+
+    {% if not running %}
+      <div hx-get="/products/{{ product_id }}/multi-agent/history?current={{ workflow.workflow_id }}"
+           hx-trigger="load" hx-swap="innerHTML"></div>
+    {% endif %}
+  </section>
+{% endif %}

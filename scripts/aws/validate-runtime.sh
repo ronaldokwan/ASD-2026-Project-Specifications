@@ -23,10 +23,16 @@ student3_url="$scheme://$hostport:3003"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 email="release2-check-$run_id@example.invalid"
 customer_id=""
+student1_url="$scheme://$hostport:3001"
+product_id=""
 cleanup() {
   if [[ -n "$customer_id" ]]; then
     curl --silent --show-error --output /dev/null -X POST \
       "$student3_url/customers/$customer_id/delete" || true
+  fi
+  if [[ -n "$product_id" ]]; then
+    curl --silent --show-error --output /dev/null -X POST \
+      "$student1_url/products/$product_id/delete" || true
   fi
 }
 trap cleanup EXIT
@@ -55,6 +61,33 @@ table="$(curl --fail --silent --show-error --get "$student3_url/partials/custome
   --data-urlencode "search=$email")"
 grep -q "No customers match" <<<"$table"
 
+# Student 1 Product Catalogue CRUD through its public frontend proxy, then the
+# Release 1/2 AI services must be reported disabled by the cloud backend.
+sku="SKU-AWS-$(date -u +%H%M%S)$$"
+product_form=(--data-urlencode "sku=$sku" --data-urlencode "name=Release 2 cloud check"
+  --data-urlencode "category=Audio" --data-urlencode "status=draft"
+  --data-urlencode "description=Created by validate-runtime.sh to verify cloud CRUD.")
+curl --fail --silent --show-error -X POST "$student1_url/products" \
+  "${product_form[@]}" --data-urlencode "price=42.00" >/dev/null
+table="$(curl --fail --silent --show-error --get "$student1_url/partials/products" \
+  --data-urlencode "search=$sku")"
+product_id="$(python3 -c 'import re,sys; m=re.search("product-row-([0-9]+)",sys.stdin.read()); print(m.group(1) if m else "")' <<<"$table")"
+[[ -n "$product_id" ]] || { echo "Student 1 create/list through database failed." >&2; exit 1; }
+updated="$(curl --fail --silent --show-error -X POST "$student1_url/products/$product_id" \
+  "${product_form[@]}" --data-urlencode "price=43.50")"
+grep -q "Updated" <<<"$updated"
+curl --fail --silent --show-error -X POST "$student1_url/products/$product_id/delete" >/dev/null
+product_id=""
+table="$(curl --fail --silent --show-error --get "$student1_url/partials/products" \
+  --data-urlencode "search=$sku")"
+grep -q "No products match" <<<"$table"
+curl --fail --silent --show-error "$student1_url/health" | python3 -c '
+import json, sys
+backend = json.load(sys.stdin)["backend"]
+for key in ("ai_mode", "mcp_server", "rag_server", "multi_agent_server"):
+    assert backend[key] == {"status": "disabled"}, key
+'
+
 if [[ "${EXERCISE_RECOVERY:-no}" == "yes" ]]; then
   # A nonexistent path gives a reversible 404 check without changing a service or data.
   status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url/__release2-controlled-invalid-endpoint")"
@@ -64,6 +97,6 @@ if [[ "${EXERCISE_RECOVERY:-no}" == "yes" ]]; then
 fi
 
 mkdir -p "$root/reports"
-printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","controlled_recovery":"%s"}\n' \
+printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"disabled","controlled_recovery":"%s"}\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$url" "${EXERCISE_RECOVERY:-no}" \
   | tee "$root/reports/aws-runtime-validation.json"
