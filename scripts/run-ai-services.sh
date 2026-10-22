@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start host AI-Mode, MCP and RAG services after Compose starts Ollama.
+# Start all shared host AI services after Compose starts Ollama.
 # Usage: bash scripts/run-ai-services.sh
 # Stop: Ctrl+C stops all three services through the trap below.
 set -euo pipefail
@@ -21,7 +21,9 @@ fi
 # in .env are container addresses (ollama, host.docker.internal). Exported
 # values win.
 if [ -f .env ]; then
-  for key in LLM_MODEL LLM_TIMEOUT; do
+  for key in LLM_MODEL LLM_TIMEOUT MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \
+             MULTI_AGENT_REVIEWER_MODEL MULTI_AGENT_OLLAMA_URL MULTI_AGENT_STAGE_TIMEOUT \
+             MULTI_AGENT_MAX_REVISIONS MULTI_AGENT_NUM_PREDICT; do
     if [ -z "${!key:-}" ]; then
       value=$(sed -n "s/^${key}=//p" .env | tr -d '\r' | tail -n 1)
       if [ -n "${value}" ]; then export "${key}=${value}"; fi
@@ -31,11 +33,15 @@ fi
 
 export OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 export LLM_MODEL="${LLM_MODEL:-qwen2.5:3b}"
+export MULTI_AGENT_OLLAMA_URL="${MULTI_AGENT_OLLAMA_URL:-http://127.0.0.1:11434}"
+export MULTI_AGENT_PLANNER_MODEL="${MULTI_AGENT_PLANNER_MODEL:-llama3.1:8b}"
+export MULTI_AGENT_WORKER_MODEL="${MULTI_AGENT_WORKER_MODEL:-qwen2.5:3b}"
+export MULTI_AGENT_REVIEWER_MODEL="${MULTI_AGENT_REVIEWER_MODEL:-deepseek-r1:8b}"
 
 # Refuse to start a second copy: on Windows a running service also locks its
 # venv's python.exe, so recreating the venv would fail with "Permission denied".
 busy=""
-for port in 7001 7002 7003; do
+for port in 7001 7002 7003 7004; do
   if curl -s -m 2 -o /dev/null "http://localhost:${port}/health"; then
     busy="${busy} ${port}"
   fi
@@ -69,6 +75,7 @@ start_service() {
 start_service "AI-Mode"           ai-services/ai-mode    7001 app.py
 start_service "shared MCP server" ai-services/mcp-server 7002 server.py
 start_service "shared RAG server" ai-services/rag-server 7003 http_server.py
+start_service "shared Multi-Agent server" ai-services/multi-agent 7004 server.py
 
 trap 'echo; echo "Stopping..."; kill 0' INT TERM
 
@@ -76,6 +83,7 @@ echo
 echo "AI-Mode      http://localhost:7001/health"
 echo "MCP server   http://localhost:7002/mcp  (health: /health)"
 echo "RAG server   http://localhost:7003/health"
+echo "Multi-Agent  http://localhost:7004/health"
 echo
-echo "Press Ctrl+C to stop all three."
+echo "Press Ctrl+C to stop the shared host services."
 wait

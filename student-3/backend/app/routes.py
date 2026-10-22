@@ -2,7 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client, mcp_client, rag_client
+from . import ai_agent, db_client, mcp_client, rag_client, multi_agent_client
 from .config import Config
 from .validation import ValidationError, clean_customer
 
@@ -69,6 +69,33 @@ def mcp_profile(customer_id):
     return jsonify(mcp_client.check_customer_profile(customer))
 
 
+@api.post("/api/customers/<int:customer_id>/multi-agent")
+def start_multi_agent(customer_id):
+    customer = db_client.get_customer(customer_id)
+    return jsonify(multi_agent_client.start_loyalty_review(customer)), 202
+
+
+@api.get("/api/customers/<int:customer_id>/multi-agent/history")
+def multi_agent_history(customer_id):
+    db_client.get_customer(customer_id)
+    return jsonify(multi_agent_client.list_workflows(customer_id))
+
+
+@api.get("/api/customers/<int:customer_id>/multi-agent/<workflow_id>")
+def multi_agent_status(customer_id, workflow_id):
+    db_client.get_customer(customer_id)
+    return jsonify(multi_agent_client.get_workflow(customer_id, workflow_id))
+
+
+@api.post("/api/customers/<int:customer_id>/multi-agent/<workflow_id>/review")
+def multi_agent_review(customer_id, workflow_id):
+    db_client.get_customer(customer_id)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    return jsonify(multi_agent_client.review_workflow(customer_id, workflow_id, payload))
+
+
 @api.post("/api/loyalty-benefits/ask")
 def ask_loyalty_benefits():
     """Ask the shared RAG server about the checked-in loyalty policy."""
@@ -112,6 +139,17 @@ def handle_mcp_unavailable(exc):
 @api.app_errorhandler(mcp_client.MCPBadResponse)
 def handle_mcp_bad_response(exc):
     return jsonify({"error": "MCP server returned an invalid result", "detail": str(exc)}), 502
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentUnavailable)
+def handle_multi_agent_unavailable(exc):
+    return jsonify({"error": "Multi-Agent workflow unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentBadResponse)
+def handle_multi_agent_bad_response(exc):
+    status = exc.status if exc.status in (400, 404, 409) else 502
+    return jsonify({"error": str(exc)}), status
 
 
 @api.app_errorhandler(rag_client.RAGServiceUnavailable)

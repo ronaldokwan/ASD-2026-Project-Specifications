@@ -1,0 +1,38 @@
+minimum_pre_commit_version: "4.2.0"
+default_stages: [pre-commit]
+exclude: >-
+  (?x)^(\.venv|venv|env|node_modules|\.terraform|reports|build|dist|\.pytest_cache|\.git)/
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-security
+        name: Ruff security rules
+        entry: >-
+          ruff check --select S
+          --per-file-ignores '**/tests/**/*.py:S101'
+          --per-file-ignores 'ai-services/ai-mode/app.py:S104'
+          --per-file-ignores 'ai-services/multi-agent/server.py:S104'
+          --per-file-ignores 'student-3/backend/wsgi.py:S104'
+          --per-file-ignores 'student-3/database/app.py:S104'
+          --per-file-ignores 'student-3/frontend/app.py:S104'
+        language: python
+        additional_dependencies: [ruff==0.12.10]
+        types: [python]
+        files: ^(ai-services/(ai-mode|mcp-server|rag-server|multi-agent)/|student-3/|scripts/).+\.py$
+
+      - id: detect-secrets
+        name: detect-secrets staged-file scan
+        entry: detect-secrets-hook
+        language: python
+        additional_dependencies: [detect-secrets==1.5.0]
+        types: [file]
+        exclude: ^(\.env(?:$|\.(?!example(?:$|\.)))|.*\.(?:db|sqlite|sqlite3|log)|reports/|\.terraform/)
+
+      - id: pip-audit
+        name: pip-audit relevant Python requirements
+        entry: bash scripts/security/pip-audit.sh
+        language: python
+        additional_dependencies: [pip-audit==2.9.0]
+        pass_filenames: false
+        always_run: true

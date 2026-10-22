@@ -8,6 +8,9 @@ Only commands that do more than wrap a single Docker call live here.
 | `pull-model.sh` | Pull an approved LLM (defaults to `$LLM_MODEL`) into the running Ollama container |
 | `run-tests.sh` | Run every implemented pytest suite and write JUnit evidence to `reports/` for the technical report |
 | `run-ai-services.sh` | Start native AI-Mode (7001), genuine MCP Streamable HTTP (7002/mcp), and RAG (7003) |
+| `run-multi-agent.sh` | Start only the native Multi-Agent workflow service (7004), preserving other running services |
+
+Student 3 terminal workflow: `python scripts/multi-agent-workflow.py start --customer-id 1 --wait`, then use the printed workflow ID with `status` or `review`.
 
 Run them from Git Bash on Windows: `bash scripts/run-local.sh`.
 

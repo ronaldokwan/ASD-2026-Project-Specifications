@@ -33,3 +33,12 @@ build/
 
 # Generated test evidence
 reports/
+
+# Terraform plans/state and local cloud configuration
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+crash.log

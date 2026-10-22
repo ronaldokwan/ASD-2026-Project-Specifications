@@ -1,0 +1,77 @@
+{% if error and not workflow %}
+  <div class="alert error">{{ error }}</div>
+{% elif workflow %}
+  {% set review_form = workflow.review_form or {} %}
+  <section class="multi-agent-result" aria-live="polite"
+    {% if workflow.status in ['queued', 'planning', 'working', 'reviewing', 'revising'] %}
+      hx-get="/customers/{{ customer_id }}/multi-agent/{{ workflow.workflow_id }}"
+      hx-trigger="load, every 2s" hx-target="this" hx-swap="outerHTML"
+    {% endif %}>
+    <div class="alert {{ 'error' if workflow.status == 'failed' else 'info' if workflow.status in ['queued', 'planning', 'working', 'reviewing', 'revising', 'human_review'] else 'ok' }}">
+      Workflow {{ workflow.status|replace('_', ' ')|title }}{% if workflow.stage %} · {{ workflow.stage|title }}{% endif %}
+    </div>
+    {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+    {% if workflow.review_notice %}<div class="alert info" role="status">{{ workflow.review_notice }}</div>{% endif %}
+    <p><small>Workflow ID: {{ workflow.workflow_id }}</small></p>
+    {% if workflow.roles %}<p><small>Model roles: {% for role in workflow.roles %}{{ role.role }}={{ role.model }}{% if not loop.last %}; {% endif %}{% endfor %}. Revisions: {{ workflow.revision_count }}/{{ workflow.max_revisions }}.</small></p>{% endif %}
+    {% if workflow.failure %}<div class="alert error">{{ workflow.failure }}</div>{% endif %}
+    {% if workflow.plan %}
+      <h4>Model-generated plan</h4>
+      <ol>{% for task in workflow.plan.model_generated.tasks %}<li>{{ task.task }} <small>Evidence: {{ task.evidence_refs|join(', ') }}</small></li>{% endfor %}</ol>
+      <h4>Application-enforced requirements</h4>
+      <p><strong>Acceptance criteria:</strong> {{ workflow.plan.application_enforced.acceptance_criteria|join('; ') }}</p>
+      <p><strong>Constraints:</strong> {{ workflow.plan.application_enforced.constraints|join('; ') }}</p>
+    {% endif %}
+    {% if workflow.worker_result %}
+      <h4>Worker recommendation</h4>
+      <p><strong>{{ workflow.worker_result.recommendation }}</strong></p>
+      <p>{{ workflow.worker_result.rationale }}</p>
+      <p><strong>Policy basis:</strong> {{ workflow.worker_result.policy_basis }}</p>
+      <p><strong>Model citations:</strong> {{ workflow.worker_result.evidence_refs|join(', ') }}</p>
+      {% if workflow.worker_result.application_added_evidence_refs %}<p><strong>Application-added evidence:</strong> {{ workflow.worker_result.application_added_evidence_refs|join(', ') }}</p>{% endif %}
+    {% endif %}
+    {% if workflow.reviewer_result %}
+      <h4>Reviewer findings · {{ workflow.reviewer_result.action|replace('_', ' ')|title }}</h4>
+      {% if workflow.reviewer_result.claim_assessment %}
+        <p><strong>Claim assessment:</strong> Recommendation {{ workflow.reviewer_result.claim_assessment.recommendation|replace('_', ' ') }}; rationale {{ workflow.reviewer_result.claim_assessment.rationale|replace('_', ' ') }}; consistency {{ workflow.reviewer_result.claim_assessment.consistency|replace('_', ' ') }}.</p>
+      {% endif %}
+      {% if workflow.reviewer_result.findings %}<ul>{% for finding in workflow.reviewer_result.findings %}<li><strong>{{ finding.severity|title }}:</strong> {{ finding.finding }}{% if finding.evidence_ref %} <small>({{ finding.evidence_ref }})</small>{% endif %}</li>{% endfor %}</ul>{% endif %}
+      {% if workflow.reviewer_result.missing_information %}<p><strong>Missing information:</strong> {{ workflow.reviewer_result.missing_information|join('; ') }}</p>{% endif %}
+      {% if workflow.reviewer_result.recommendations %}<p><strong>Reviewer recommendations:</strong> {{ workflow.reviewer_result.recommendations|join('; ') }}</p>{% endif %}
+    {% endif %}
+    {% if workflow.evidence %}
+      <details><summary>Supporting evidence</summary>
+        <ul>{% for item in workflow.evidence %}<li><strong>{{ item.id }}</strong> · {{ item.source }} · {{ item.status }}<pre>{{ item.content }}</pre></li>{% endfor %}</ul>
+      </details>
+    {% endif %}
+    {% if workflow.human_decision %}
+      <h4>Recorded administrator decision: {{ workflow.human_decision.decision|replace('_', ' ')|title }}</h4>
+      {% if workflow.human_decision.feedback %}<p>{{ workflow.human_decision.feedback }}</p>{% endif %}
+      {% if workflow.human_decision.corrected_output %}<p><strong>Corrected recommendation:</strong> {{ workflow.human_decision.corrected_output.recommendation }}</p><p>{{ workflow.human_decision.corrected_output.rationale }}</p>{% endif %}
+      {% if workflow.human_decision.unresolved_issues %}<p><strong>Unresolved issues:</strong> {{ workflow.human_decision.unresolved_issues|join('; ') }}</p>{% endif %}
+      <p class="muted">This review is informational; it does not change the customer tier or redeem a benefit.</p>
+    {% elif workflow.status == 'human_review' %}
+      <h4>Administrator decision</h4>
+      <form hx-post="/customers/{{ customer_id }}/multi-agent/{{ workflow.workflow_id }}/review" hx-target="#multi-agent-panel" hx-swap="innerHTML">
+        <input type="hidden" name="decision" value="accept">
+        <div class="field"><label>Feedback (optional)</label><textarea name="feedback" maxlength="2000"></textarea></div>
+        <button class="btn" type="submit">Accept recommendation</button>
+      </form>
+      <form hx-post="/customers/{{ customer_id }}/multi-agent/{{ workflow.workflow_id }}/review" hx-target="#multi-agent-panel" hx-swap="innerHTML">
+        <input type="hidden" name="decision" value="partial_accept">
+        <div class="field"><label>Corrected recommendation</label><textarea name="corrected_recommendation" required maxlength="1200">{{ review_form.get('corrected_recommendation', '') }}</textarea></div>
+        <div class="field"><label>Corrected rationale</label><textarea name="corrected_rationale" required maxlength="1600">{{ review_form.get('corrected_rationale', '') }}</textarea></div>
+        <div class="field"><label>Accepted fields (one per line)</label><textarea name="accepted_fields" required maxlength="2003">{{ review_form.get('accepted_fields', '') }}</textarea></div>
+        <div class="field"><label>Unresolved issues (one per line)</label><textarea name="unresolved_issues" required maxlength="6011">{{ review_form.get('unresolved_issues', '') }}</textarea></div>
+        <div class="field"><label>Feedback (required)</label><textarea name="feedback" required maxlength="2000">{{ review_form.get('feedback', '') }}</textarea></div>
+        <button class="btn secondary" type="submit">Partially accept / correct</button>
+      </form>
+      <form hx-post="/customers/{{ customer_id }}/multi-agent/{{ workflow.workflow_id }}/review" hx-target="#multi-agent-panel" hx-swap="innerHTML">
+        <input type="hidden" name="decision" value="reject">
+        <div class="field"><label>Reason and unresolved issues</label><textarea name="feedback" required maxlength="2000"></textarea></div>
+        <button class="btn secondary" type="submit">Reject recommendation</button>
+      </form>
+      <p class="muted">No benefit is applied or redeemed by this decision.</p>
+    {% endif %}
+  </section>
+{% endif %}

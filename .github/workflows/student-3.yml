@@ -8,7 +8,13 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/multi-agent-workflow.py"
+      - "scripts/run-ai-services.sh"
+      - "scripts/run-multi-agent.sh"
+      - ".pre-commit-config.yaml"
+      - "scripts/security/**"
       - "docker-compose.yml"
       - ".github/workflows/student-3.yml"
   pull_request:
@@ -17,7 +23,13 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/multi-agent-workflow.py"
+      - "scripts/run-ai-services.sh"
+      - "scripts/run-multi-agent.sh"
+      - ".pre-commit-config.yaml"
+      - "scripts/security/**"
       - "docker-compose.yml"
       - ".github/workflows/student-3.yml"
   workflow_dispatch:
@@ -27,6 +39,7 @@ env:
   AI_MODE_ENABLED: "false"
   MCP_ENABLED: "false"
   RAG_ENABLED: "false"
+  MULTI_AGENT_ENABLED: "false"
 
 jobs:
   test:
@@ -46,7 +59,11 @@ jobs:
           pip install -r student-3/frontend/requirements.txt
           pip install -r ai-services/mcp-server/requirements.txt
           pip install -r ai-services/rag-server/requirements.txt
+          pip install -r ai-services/multi-agent/requirements.txt
           pip install flake8
+          pip install pre-commit==4.3.0
+      - name: Local security hooks
+        run: pre-commit run --all-files
       - name: Lint
         run: |
           flake8 student-3 --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -60,6 +77,10 @@ jobs:
         run: |
           pytest ai-services/mcp-server/tests -v --junitxml=reports/mcp-server-tests.xml
           pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
+      - name: Shared Multi-Agent workflow tests
+        run: pytest ai-services/multi-agent/tests -v --junitxml=reports/multi-agent-tests.xml
+      - name: Shared agentic review mode tests
+        run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -110,6 +131,11 @@ jobs:
           id=$(echo "$created" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
           curl -fs -X PUT "http://localhost:8003/api/customers/$id" \
             -H 'Content-Type: application/json' -d '{"loyalty_tier":"Silver"}' | grep -q Silver
+          disabled_code=$(curl -s -o multi-agent-disabled.json -w '%{http_code}' -X POST \
+            "http://localhost:8003/api/customers/$id/multi-agent" \
+            -H 'Content-Type: application/json' -d '{}')
+          test "$disabled_code" = "503"
+          grep -q 'Multi-Agent integration is disabled' multi-agent-disabled.json
           curl -fs -X DELETE "http://localhost:8003/api/customers/$id" >/dev/null
           test "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8003/api/customers/$id")" = "404"
           curl -fs http://localhost:3003/ | grep -q "Customer Account Management"
