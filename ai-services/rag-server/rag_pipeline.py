@@ -737,24 +737,6 @@ def answer_question(query, top_k=5, filters=None):
         )
         return output
 
-    if (
-        answer.strip().lower().startswith("insufficient evidence")
-        and not comparison_tiers
-    ):
-        output = {
-            "status": "insufficient_context",
-            "answer": "",
-            "confidence": "insufficient",
-            "sources": [],
-            "message": "Insufficient relevant context was found.",
-        }
-        append_audit(
-            "answer_question",
-            {"query": query, "filters": filters},
-            output,
-            "insufficient",
-        )
-        return output
     answer = _remove_leading_section_heading(answer, relevant)
     answer_mode = "generated"
     if not _is_extractive_answer(answer, relevant):

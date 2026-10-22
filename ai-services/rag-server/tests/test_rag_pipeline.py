@@ -447,7 +447,7 @@ def test_ollama_unavailable_is_not_reported_as_grounded(monkeypatch):
     }
 
 
-def test_model_insufficient_evidence_is_an_insufficient_context_result(monkeypatch):
+def test_model_insufficient_evidence_uses_grounded_extractive_fallback(monkeypatch):
     seed_reviews()
     monkeypatch.setattr(
         rag_pipeline,
@@ -458,9 +458,9 @@ def test_model_insufficient_evidence_is_an_insufficient_context_result(monkeypat
         "How is the battery life?",
         filters={"feature": "reviews"},
     )
-    assert output["status"] == "insufficient_context"
-    assert output["answer"] == ""
-    assert output["sources"] == []
+    assert output["status"] == "ok"
+    assert "battery" in output["answer"].lower()
+    assert output["sources"]
 
 
 @pytest.mark.parametrize(

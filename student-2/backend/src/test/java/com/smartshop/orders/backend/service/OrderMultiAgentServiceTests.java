@@ -26,6 +26,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,6 +91,10 @@ class OrderMultiAgentServiceTests {
             .containsExactly("shipping_policy");
         assertThat(request.getValue().request().planContract().constraints())
             .anyMatch(value -> value.contains("must not mutate"));
+        verify(ragService).ask(
+            any(),
+            eq("Under the internal shipping policy, when may an order proceed to shipment?")
+        );
     }
 
     @Test

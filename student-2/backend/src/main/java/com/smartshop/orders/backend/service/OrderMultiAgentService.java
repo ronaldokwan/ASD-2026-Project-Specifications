@@ -30,6 +30,8 @@ public class OrderMultiAgentService {
     private static final String ORDER_FACTS = "order_facts";
     private static final String MCP_FULFILMENT = "mcp_fulfilment";
     private static final String SHIPPING_POLICY = "shipping_policy";
+    private static final String SHIPPING_POLICY_QUESTION =
+        "Under the internal shipping policy, when may an order proceed to shipment?";
 
     private final OrderService orderService;
     private final McpClient mcpClient;
@@ -153,7 +155,7 @@ public class OrderMultiAgentService {
         try {
             RagAnswerResponse response = ragService.ask(
                 order,
-                "Can this order be shipped, and which shipping policy rules support the decision?"
+                SHIPPING_POLICY_QUESTION
             );
             boolean policyFound = "ok".equals(response.status())
                 && response.sources() != null
