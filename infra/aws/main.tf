@@ -310,6 +310,8 @@ resource "aws_ecr_repository" "services" {
   for_each             = local.services
   name                 = "${var.name_prefix}/${each.key}"
   image_tag_mutability = "IMMUTABLE"
+  # Images are rebuilt from git on every deploy; allow destroy to remove a non-empty repository.
+  force_delete = true
   image_scanning_configuration { scan_on_push = true }
   encryption_configuration { encryption_type = "AES256" }
   tags = { Application = "asd-group-application", Service = each.key }
@@ -562,6 +564,8 @@ resource "aws_ecs_service" "database" {
   depends_on = [aws_efs_mount_target.private, aws_vpc_endpoint.interface]
 }
 
+# Backends and frontends replace each task in place (minimum 0%, maximum 100%): a new
+# account's 6-vCPU Fargate quota cannot run old and new tasks side by side during a redeploy.
 resource "aws_ecs_service" "backend" {
   for_each                           = local.backends
   name                               = "${var.name_prefix}-${each.key}"
@@ -569,8 +573,8 @@ resource "aws_ecs_service" "backend" {
   task_definition                    = aws_ecs_task_definition.service[each.key].arn
   desired_count                      = var.desired_count
   launch_type                        = "FARGATE"
-  deployment_minimum_healthy_percent = 50
-  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   health_check_grace_period_seconds  = 60
   deployment_circuit_breaker {
     enable   = true
@@ -596,8 +600,8 @@ resource "aws_ecs_service" "frontend" {
   task_definition                    = aws_ecs_task_definition.service[each.key].arn
   desired_count                      = var.desired_count
   launch_type                        = "FARGATE"
-  deployment_minimum_healthy_percent = 50
-  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   health_check_grace_period_seconds  = 60
   deployment_circuit_breaker {
     enable   = true

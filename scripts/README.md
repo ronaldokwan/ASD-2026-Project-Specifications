@@ -9,6 +9,8 @@ Only commands that do more than wrap a single Docker call live here.
 | `run-tests.sh` | Run every implemented pytest suite and write JUnit evidence to `reports/` for the technical report |
 | `run-ai-services.sh` | Start native AI-Mode (7001), genuine MCP Streamable HTTP (7002/mcp), and RAG (7003) |
 | `run-multi-agent.sh` | Start only the native Multi-Agent workflow service (7004), preserving other running services |
+| `aws/deploy.sh` | Build, push and deploy the whole group application to AWS (ECS Fargate), then validate it; needs `AWS_REGION` and `TF_STATE_BUCKET` |
+| `aws/destroy.sh` | Remove the whole AWS deployment so it stops costing money (same two variables) |
 
 Student 3 terminal workflow: `python scripts/multi-agent-workflow.py start --customer-id 1 --wait`, then use the printed workflow ID with `status` or `review`.
 
