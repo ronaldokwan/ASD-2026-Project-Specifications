@@ -19,6 +19,24 @@
         <p class="result-footnote" th:text="|Workflow ID: ${workflow.workflowId} · Stage: ${workflow.stage}|">Workflow details</p>
         <div class="notice error" th:if="${workflow.failure}" th:text="${workflow.failure}">Failure</div>
 
+        <div class="agent-progress" aria-label="Agent execution progress">
+            <article th:classappend="${workflow.plan != null ? ' complete' : (workflow.stage == 'planning' ? ' active' : '')}">
+                <span>Planner</span>
+                <strong>llama3.1:8b</strong>
+                <small th:text="${workflow.plan != null ? 'Plan completed' : (workflow.stage == 'planning' ? 'Creating plan…' : 'Waiting')}">Status</small>
+            </article>
+            <article th:classappend="${workflow.workerResult != null ? ' complete' : (workflow.stage == 'working' or workflow.stage == 'revising' ? ' active' : '')}">
+                <span>Worker</span>
+                <strong>qwen2.5:3b</strong>
+                <small th:text="${workflow.workerResult != null ? 'Recommendation completed' : (workflow.stage == 'working' or workflow.stage == 'revising' ? 'Preparing recommendation…' : 'Waiting')}">Status</small>
+            </article>
+            <article th:classappend="${workflow.reviewerResult != null ? ' complete' : (workflow.stage == 'reviewing' ? ' active' : '')}">
+                <span>Reviewer</span>
+                <strong>deepseek-r1:8b</strong>
+                <small th:text="${workflow.reviewerResult != null ? 'Validation completed' : (workflow.stage == 'reviewing' ? 'Validating evidence…' : 'Waiting')}">Status</small>
+            </article>
+        </div>
+
         <div th:if="${workflow.plan != null}">
             <h4>Planner</h4>
             <ol th:if="${workflow.plan['model_generated'] != null}">
@@ -62,15 +80,18 @@
         </div>
 
         <div th:if="${workflow.status == 'human_review'}" class="human-review">
-            <h4>Human decision</h4>
+            <h4>Human Review · Final decision required</h4>
+            <p>The agents provide a recommendation only. Select one review mode to complete the auditable workflow.</p>
             <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
                   hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <h5>Accept recommendation</h5>
                 <input type="hidden" name="decision" value="accept">
                 <label><span>Feedback (optional)</span><textarea name="feedback" maxlength="2000"></textarea></label>
                 <button class="button primary" type="submit">Accept</button>
             </form>
             <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
                   hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <h5>Partially accept with corrections</h5>
                 <input type="hidden" name="decision" value="partial_accept">
                 <label><span>Corrected recommendation</span><textarea name="correctedRecommendation" required maxlength="1200"></textarea></label>
                 <label><span>Corrected rationale</span><textarea name="correctedRationale" required maxlength="1600"></textarea></label>
@@ -81,6 +102,7 @@
             </form>
             <form th:attr="hx-post=@{/orders/{id}/multi-agent/{workflowId}/review(id=${orderId},workflowId=${workflow.workflowId})}"
                   hx-target="#multi-agent-result" hx-swap="innerHTML">
+                <h5>Reject recommendation</h5>
                 <input type="hidden" name="decision" value="reject">
                 <label><span>Reason</span><textarea name="feedback" required maxlength="2000"></textarea></label>
                 <label><span>Unresolved issues (one per line)</span><textarea name="unresolvedIssues" maxlength="6000"></textarea></label>

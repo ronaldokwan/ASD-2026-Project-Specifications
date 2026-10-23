@@ -71,6 +71,16 @@ label span, .line-total span, .stat-card > span { display:block; margin-bottom:4
 .back-link { display:inline-block; margin-bottom:14px; color:var(--brand-dark); font-size:13px; font-weight:600; text-decoration:none; }
 .multi-agent-panel { border-top:3px solid #5b3fa8; }
 .multi-agent-result { margin-top:14px; }
+.agent-role-overview, .agent-progress { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin:14px 0; }
+.agent-role-overview article, .agent-progress article { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-alt); }
+.agent-role-overview article > div, .agent-progress article { min-width:0; }
+.agent-role-overview strong, .agent-role-overview small, .agent-progress span, .agent-progress strong, .agent-progress small { display:block; }
+.agent-role-overview small, .agent-progress small { margin-top:3px; color:var(--text-muted); font-size:11px; line-height:1.4; }
+.agent-step { display:grid; flex:none; place-items:center; width:24px; height:24px; border-radius:50%; background:#ede8fa; color:#4a3290; font-size:11px; font-weight:700; }
+.agent-progress article { flex-direction:column; gap:2px; border-top:3px solid var(--border); }
+.agent-progress article.active { border-top-color:#5b3fa8; background:#f4f0ff; }
+.agent-progress article.complete { border-top-color:var(--ok); background:var(--ok-soft); }
+.agent-progress span { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
 .workflow-card, .history-card { margin-top:12px; padding:14px; border:1px solid var(--border); border-radius:8px; background:var(--surface-alt); color:var(--text); }
 .workflow-card h4, .history-card h4 { margin:16px 0 8px; }
 .workflow-card h4:first-of-type, .history-card h4:first-child { margin-top:4px; }
@@ -80,6 +90,7 @@ label span, .line-total span, .stat-card > span { display:block; margin-bottom:4
 .workflow-evidence article p { margin:4px 0 0; font-size:13px; }
 .human-review { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
 .human-review form { display:grid; gap:8px; margin-top:12px; padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); }
+.human-review h5 { margin:0 0 2px; font-size:14px; }
 .human-review textarea { width:100%; min-height:72px; resize:vertical; }
 .human-review .button { justify-self:start; }
 .history-item { display:flex; width:100%; justify-content:space-between; gap:12px; margin-top:8px; padding:10px 12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); cursor:pointer; text-align:left; }
@@ -113,6 +124,7 @@ label span, .line-total span, .stat-card > span { display:block; margin-bottom:4
   .order-line { grid-template-columns:1fr 1fr; }
   .intelligence-grid { grid-template-columns:1fr; }
   .intelligence-grid > article + article { padding:20px 0 0; border-left:0; border-top:1px solid var(--border); }
+  .agent-role-overview, .agent-progress { grid-template-columns:1fr; }
   .sku-field { grid-column:1 / -1; }
 }
 
