@@ -226,6 +226,18 @@ resource "aws_security_group" "tasks" {
     protocol    = "tcp"
     self        = true
   }
+  # Load balancer to every public listener, including the home page on port 80.
+  # Kept inline: separate aws_security_group_rule resources on a group that also has
+  # inline rules are removed again by every apply, which made all frontends return 503.
+  dynamic "ingress" {
+    for_each = local.frontends
+    content {
+      from_port       = ingress.value.port
+      to_port         = ingress.value.port
+      protocol        = "tcp"
+      security_groups = [aws_security_group.alb.id]
+    }
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -235,14 +247,13 @@ resource "aws_security_group" "tasks" {
   tags = { Name = "${var.name_prefix}-tasks" }
 }
 
-resource "aws_security_group_rule" "tasks_frontend_from_alb" {
-  for_each                 = { for key, value in local.frontends : key => value if value.role == "frontend" }
-  type                     = "ingress"
-  security_group_id        = aws_security_group.tasks.id
-  source_security_group_id = aws_security_group.alb.id
-  from_port                = each.value.port
-  to_port                  = each.value.port
-  protocol                 = "tcp"
+# The former separate load-balancer rules now live inline above; forget them without
+# revoking, so the existing rules keep serving traffic.
+removed {
+  from = aws_security_group_rule.tasks_frontend_from_alb
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "aws_security_group" "endpoint" {
@@ -556,10 +567,9 @@ resource "aws_ecs_service" "database" {
     security_groups  = [aws_security_group.tasks.id]
     assign_public_ip = false
   }
+  # A records with awsvpc networking: AWS rejects container_name/container_port (SRV only).
   service_registries {
-    registry_arn   = aws_service_discovery_service.internal[each.key].arn
-    container_name = each.key
-    container_port = each.value.port
+    registry_arn = aws_service_discovery_service.internal[each.key].arn
   }
   depends_on = [aws_efs_mount_target.private, aws_vpc_endpoint.interface]
 }
@@ -585,10 +595,9 @@ resource "aws_ecs_service" "backend" {
     security_groups  = [aws_security_group.tasks.id]
     assign_public_ip = false
   }
+  # A records with awsvpc networking: AWS rejects container_name/container_port (SRV only).
   service_registries {
-    registry_arn   = aws_service_discovery_service.internal[each.key].arn
-    container_name = each.key
-    container_port = each.value.port
+    registry_arn = aws_service_discovery_service.internal[each.key].arn
   }
   depends_on = [aws_ecs_service.database, aws_vpc_endpoint.interface]
 }

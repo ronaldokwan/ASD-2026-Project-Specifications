@@ -1,0 +1,47 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 12020,
+  "fallback_used": false,
+  "mode": "cloud_deployment_report_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "ready",
+    "findings": "No issues found in infrastructure or runtime evidence.",
+    "infrastructure_review": "Resource boundaries and persistence are verified through aws-deployment-outputs.json. Expected HTTP responses are also checked.",
+    "recommendations": "No changes required at this time.",
+    "risks": "None identified.",
+    "runtime_review": "Runtime checks passed for frontend, backend_database, ai_services_disabled_by_default and crud operations.",
+    "validation_log": {
+      "authoritative_assessment": "ready",
+      "contradiction": false,
+      "evidence_assessment": "ready",
+      "evidence_gate": "All supplied infrastructure and required runtime checks passed.",
+      "mode": "cloud_deployment_report",
+      "model_assessment": "ready",
+      "model_reviewed": true,
+      "review_id": "95d8eb95-0b66-4862-809b-39c8842cba60"
+    }
+  },
+  "review_id": "95d8eb95-0b66-4862-809b-39c8842cba60",
+  "status": "reviewed",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'cloud_deployment_report_review' with 5 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n    \"infrastructure_review\": \"Resource boundaries and persistence are verified through aws-deployment-outputs.json. Expected HTTP responses are also checked.\",\n    \"runtime_review\": \"Runtime checks passed for frontend, backend_database, ai_services_disabled_by_default and crud ",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

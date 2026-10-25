@@ -88,14 +88,14 @@
     {% if check %}
       <h3>Application cross-check</h3>
       <div class="alert {{ 'ok' if check.agrees else 'error' }}">
-        The readiness rules say <strong>{{ check.expected }}</strong>
         {% set problems = {
           'status_is_active': 'status is not active',
           'category_is_valid': 'category is not valid',
           'price_within_1_to_9999_aud': 'price is outside 1 to 9999 AUD',
           'description_has_at_least_8_words': 'description has fewer than 8 words',
         } %}
-        {% if check.failed_checks %}because the {% for name in check.failed_checks %}{{ problems.get(name, name|replace('_', ' ')) }}{% if not loop.last %} and {% endif %}{% endfor %}{% endif %}.
+        The readiness rules say <strong>{{ check.expected }}</strong>
+        {%- if check.failed_checks %} because the {% for name in check.failed_checks %}{{ problems.get(name, name|replace('_', ' ')) }}{% if not loop.last %} and {% endif %}{% endfor %}{% endif %}.
         {% if check.agrees %}The Worker's verdict matches.
         {% elif check.worker_verdict %}The Worker said <strong>{{ check.worker_verdict }}</strong> &mdash; it is wrong.
         {% else %}The Worker gave no clear ready / not-ready verdict.{% endif %}

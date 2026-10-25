@@ -1,0 +1,176 @@
+{
+  "mode": "cloud_deployment_report",
+  "subject": {
+    "student": 1,
+    "feature": "Product Catalogue",
+    "platform": "AWS",
+    "infrastructure_evidence": [
+      {
+        "name": "aws-runtime-validation.json",
+        "status": "passed",
+        "content": {
+          "checked_at": "2026-10-22T16:52:40Z",
+          "base_url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com",
+          "home": "200",
+          "frontend_ports": [
+            3001,
+            3002,
+            3003,
+            3004,
+            3005
+          ],
+          "student3_crud": "create-update-delete-and-database-list-verified",
+          "student1_crud": "create-update-delete-and-database-list-verified",
+          "student1_ai_services": "disabled",
+          "controlled_recovery": "no"
+        }
+      },
+      {
+        "name": "aws-deployment-outputs.json",
+        "status": "passed",
+        "content": {
+          "database_filesystem_id": {
+            "sensitive": false,
+            "type": "string",
+            "value": "fs-082314907f2c5e769"
+          },
+          "ecr_repository_urls": {
+            "sensitive": false,
+            "type": [
+              "object",
+              {
+                "shared-home": "string",
+                "student-1-backend": "string",
+                "student-1-db": "string",
+                "student-1-frontend": "string",
+                "student-3-backend": "string",
+                "student-3-db": "string",
+                "student-3-frontend": "string",
+                "student-4-backend": "string",
+                "student-4-db": "string",
+                "student-4-frontend": "string",
+                "student-5-backend": "string",
+                "student-5-db": "string",
+                "student-5-frontend": "string",
+                "student2-api": "string",
+                "student2-db": "string",
+                "student2-frontend": "string"
+              }
+            ],
+            "value": {
+              "shared-home": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/shared-home",
+              "student-1-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-backend",
+              "student-1-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-db",
+              "student-1-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-frontend",
+              "student-3-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-backend",
+              "student-3-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-db",
+              "student-3-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-frontend",
+              "student-4-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-backend",
+              "student-4-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-db",
+              "student-4-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-frontend",
+              "student-5-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-backend",
+              "student-5-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-db",
+              "student-5-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-frontend",
+              "student2-api": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-api",
+              "student2-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-db",
+              "student2-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-frontend"
+            }
+          },
+          "frontend_urls": {
+            "sensitive": false,
+            "type": [
+              "object",
+              {
+                "home": "string",
+                "student_1": "string",
+                "student_2": "string",
+                "student_3": "string",
+                "student_4": "string",
+                "student_5": "string"
+              }
+            ],
+            "value": {
+              "home": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com",
+              "student_1": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001",
+              "student_2": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3002",
+              "student_3": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3003",
+              "student_4": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3004",
+              "student_5": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3005"
+            }
+          },
+          "load_balancer_dns_name": {
+            "sensitive": false,
+            "type": "string",
+            "value": "asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com"
+          }
+        }
+      }
+    ],
+    "runtime_checks": [
+      {
+        "check": "frontend",
+        "url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001/",
+        "http_status": 200,
+        "status": "passed",
+        "elapsed_ms": 472
+      },
+      {
+        "check": "backend_database",
+        "url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001/health",
+        "http_status": 200,
+        "status": "passed",
+        "elapsed_ms": 107
+      },
+      {
+        "check": "ai_services_disabled_by_default",
+        "status": "passed",
+        "detail": {
+          "ai_mode": {
+            "status": "disabled"
+          },
+          "mcp_server": {
+            "status": "disabled"
+          },
+          "rag_server": {
+            "status": "disabled"
+          },
+          "multi_agent_server": {
+            "status": "disabled"
+          }
+        }
+      },
+      {
+        "check": "crud",
+        "status": "passed",
+        "steps": [
+          {
+            "check": "create",
+            "url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001/products",
+            "http_status": 200,
+            "status": "passed",
+            "elapsed_ms": 340
+          },
+          {
+            "check": "read",
+            "status": "passed",
+            "product_id": "17"
+          },
+          {
+            "check": "update",
+            "url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001/products/17",
+            "http_status": 200,
+            "status": "passed",
+            "elapsed_ms": 375
+          },
+          {
+            "check": "delete",
+            "url": "http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com:3001/products/17/delete",
+            "http_status": 200,
+            "status": "passed",
+            "elapsed_ms": 272
+          }
+        ]
+      }
+    ]
+  }
+}

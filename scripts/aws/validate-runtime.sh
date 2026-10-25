@@ -13,7 +13,8 @@ scheme="${url%%://*}"
 hostport="${url#*://}"
 hostport="${hostport%%/*}"
 for port in 3001 3002 3003 3004 3005; do
-  status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$scheme://$hostport:$port/" 2>/dev/null || true)"
+  # --location: Student 2's frontend redirects / to /orders.
+  status="$(curl --silent --show-error --location --output /dev/null --write-out '%{http_code}' "$scheme://$hostport:$port/" 2>/dev/null || true)"
   [[ "$status" == "200" ]] || { echo "Frontend on port $port returned HTTP ${status:-no-response}" >&2; exit 1; }
 done
 
