@@ -16,6 +16,12 @@ variable "github_repository" {
   default     = "ronaldokwan/ASD-2026-Project-Specifications"
 }
 
+variable "github_immutable_repository" {
+  description = "owner@owner_id/name@repo_id, the subject prefix GitHub sends when the repository uses immutable OIDC subjects (gh api repos/OWNER/REPO/actions/oidc/customization/sub)."
+  type        = string
+  default     = "ronaldokwan@108158859/ASD-2026-Project-Specifications@1341443540"
+}
+
 variable "github_environment" {
   description = "GitHub environment the deploy job runs in; only that job can assume the role."
   type        = string

@@ -7,15 +7,29 @@ if [[ -z "$url" ]]; then
 fi
 url="${url%/}"
 
-status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url/")"
-[[ "$status" == "200" ]] || { echo "Home page returned HTTP $status" >&2; exit 1; }
+# Right after terraform apply the new tasks are still starting and the load balancer
+# answers 503 until they pass health checks, so wait (up to WAIT_SECONDS) for each page.
+wait_for_200() {
+  local name=$1 target=$2 status="" waited=0
+  while :; do
+    # --location: Student 2's frontend redirects / to /orders.
+    status="$(curl --silent --location --output /dev/null --write-out '%{http_code}' --max-time 10 "$target" 2>/dev/null || true)"
+    [[ "$status" == "200" ]] && return 0
+    if (( waited >= ${WAIT_SECONDS:-600} )); then
+      echo "$name returned HTTP ${status:-no-response} after ${waited}s" >&2
+      exit 1
+    fi
+    sleep 10
+    waited=$((waited + 10))
+  done
+}
+
+wait_for_200 "Home page" "$url/"
 scheme="${url%%://*}"
 hostport="${url#*://}"
 hostport="${hostport%%/*}"
 for port in 3001 3002 3003 3004 3005; do
-  # --location: Student 2's frontend redirects / to /orders.
-  status="$(curl --silent --show-error --location --output /dev/null --write-out '%{http_code}' "$scheme://$hostport:$port/" 2>/dev/null || true)"
-  [[ "$status" == "200" ]] || { echo "Frontend on port $port returned HTTP ${status:-no-response}" >&2; exit 1; }
+  wait_for_200 "Frontend on port $port" "$scheme://$hostport:$port/"
 done
 
 # Exercise Student 3 through its public frontend proxy, which reaches the

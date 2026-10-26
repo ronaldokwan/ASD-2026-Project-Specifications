@@ -38,7 +38,11 @@ resource "aws_iam_role" "github_deploy" {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com",
           # A job that names an environment gets this subject, so only the deploy job matches.
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repository}:environment:${var.github_environment}"
+          # Both the classic and the immutable (owner and repository ID) subject formats.
+          "token.actions.githubusercontent.com:sub" = [
+            "repo:${var.github_repository}:environment:${var.github_environment}",
+            "repo:${var.github_immutable_repository}:environment:${var.github_environment}",
+          ]
         }
       }
     }],
