@@ -60,5 +60,6 @@ Captured 22–23 Oct 2026 on the Student 1 laptop, branch `ronaldo`.
   security-group rules were defined twice and removed by each apply (and the home page had none);
   cloud frontend images lacked the team `shared/` theme (unstyled pages); the validator did not
   follow Student 2's `/ → /orders` redirect.
-- Not yet captured: `cloud-deployment.yml` running in GitHub Actions (criterion 6), which needs the
-  work merged to `main` and an AWS role for GitHub.
+- Not yet captured: `cloud-deployment.yml` running in GitHub Actions (criterion 6). The GitHub
+  deploy role is now in `infra/aws/github-oidc/`; the one-off setup and the run are in
+  `docs/reports/release-2-student-1.md` §6.3.

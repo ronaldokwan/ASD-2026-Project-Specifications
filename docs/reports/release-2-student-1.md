@@ -1,8 +1,10 @@
 # Release 2 – Student 1 (Ronaldo Kwan) – Product Catalogue
 
 Drop-in content for the group technical report (`group-40.pdf`). Evidence is in
-`docs/evidence/student-1/release-2/`. The only item still marked **TO CAPTURE** is the AWS
-deployment evidence, produced by the commands in §8 once the group deploys.
+`docs/evidence/student-1/release-2/` (raw logs, JUnit XML, JSON, and the screenshots indexed in
+`screenshots/README.md`). The one item still outstanding is the `cloud-deployment.yml` GitHub
+Actions run (criterion 6): the workflow and its AWS deploy role are ready, and §6.3 lists the
+one-off setup and the run.
 
 ## 1. Release 2 contribution
 
@@ -16,7 +18,8 @@ deployment evidence, produced by the commands in §8 once the group deploys.
 | Post-commit CI/CD | `student-1/endpoint-tests/`: 10 live HTTP tests of **`create_product`** and **`update_product`**, run by `student-1.yml` against the started container |
 | Pre-commit security | Ruff `S` rules extended to `student-1/`; `debug=True` removed from all three Student 1 services; shared S104/S201 findings in MCP/RAG fixed so the repository-wide scan passes |
 | Agentic-loop evidence | `student-1/validation/release2_reviews.py` builds the Testing, Multi-Agent and Cloud Deployment review subjects from real evidence and saves the review + validation log |
-| Cloud | Student 1 backend has `MULTI_AGENT_ENABLED=false` in Terraform; `validate-runtime.sh` now verifies Student 1 CRUD through the public frontend and that all four AI services report *disabled* |
+| Cloud | Student 1 backend has `MULTI_AGENT_ENABLED=false` in Terraform; `validate-runtime.sh` now verifies Student 1 CRUD through the public frontend and that all four AI services report *disabled*; deployed the group application to AWS ECS and fixed four deployment defects (§6.2) |
+| Cloud CI/CD | `infra/aws/github-oidc/` + `scripts/aws/setup-github-oidc.sh`: GitHub OIDC provider and a least-privilege deploy role that only the `aws-production` job of `cloud-deployment.yml` can assume; workflow fixes so the hosted deploy can run (§6.3) |
 
 ## 2. Release 2 design flow (Student 1 slice)
 
@@ -145,11 +148,106 @@ Worker's verdict and the application check disagreed.
 
 ## 6. Local and cloud deployment
 
-Local: Compose runs the three Student 1 containers with `MULTI_AGENT_URL=host.docker.internal:7004`;
-`bash scripts/run-ai-services.sh` starts AI-Mode, MCP, RAG and Multi-Agent natively in one
-terminal. Cloud (AWS ECS): Student 1 backend runs with AI-Mode, MCP, RAG and Multi-Agent all
-`false`; `validate-runtime.sh` proves create → list → update → delete through port 3001 and that
-`/health` reports all four as disabled. **TO CAPTURE:** `reports/aws-runtime-validation.json`.
+### 6.1 Local (multi-server)
+
+Docker Compose runs the frontends, backends and databases (Student 1: `student-1-frontend :3001`,
+`student-1-backend :8001`, `student-1-db :9001`, with `MULTI_AGENT_URL=host.docker.internal:7004`).
+AI-Mode, MCP, RAG and Multi-Agent run natively on the host. The multi-server test uses three
+terminals:
+
+| Terminal | Command | Role |
+|---|---|---|
+| 1 | `docker compose up --build` | containerised microservices |
+| 2 | `bash scripts/run-ai-services.sh` | native AI-Mode 7001, MCP 7002, RAG 7003, Multi-Agent 7004 |
+| 3 | `bash scripts/multi-server-check.sh` | probes every service, then frontend → backend → database / MCP / RAG / Multi-Agent; writes `05-multi-server-check.log` |
+
+Evidence: `c1-01`…`c1-08` screenshots (CRUD, AI-Mode, MCP, RAG, the multi-server terminal view),
+`02-student-1-unit-tests.log` (149 passed), `03-endpoint-tests-local.log/.xml` (10 passed) and
+the Multi-Agent runs in §5.
+
+### 6.2 Cloud baseline (AWS, criteria 5 and 7)
+
+Deployed 23 Oct 2026 with `bash scripts/aws/deploy.sh` (account 604707013588, `ap-southeast-2`,
+image tag `r2-202610230339`): `build-push-images.sh` published all 16 group images to ECR,
+Terraform created the VPC, ALB, ECS Fargate cluster (16 services), Cloud Map namespace and
+encrypted EFS, and `validate-runtime.sh` passed.
+
+| Check (`aws/aws-runtime-validation.json`, `aws/aws-validate.log`) | Result |
+|---|---|
+| Home page `:80` and frontends `:3001`–`:3005` | HTTP 200 |
+| Student 1 CRUD through the public frontend → private backend → EFS database | create, update, delete, list verified |
+| Student 3 CRUD | verified |
+| Student 1 `/health`: AI-Mode, MCP, RAG, Multi-Agent | all `disabled` (cloud baseline) |
+
+Screenshots `c5-01`, `c5-02` (scripts), `c7-01`…`c7-10` (cloud UI CRUD, AI disabled, ECS 16/16
+running). Raw Terraform outputs: `aws/aws-deployment-outputs.json`.
+
+`aws/deploy-run-2.log` is the earlier run that **failed** at validation (the load balancer
+refused connections). It exposed the defects fixed before the successful deploy: ECS service
+registries sent `containerPort` for A records, the ALB security-group rules were defined twice
+and removed by each apply, cloud frontend images lacked the shared team theme, and the validator
+did not follow Student 2's `/ → /orders` redirect. The stack was then torn down with
+`scripts/aws/destroy.sh`.
+
+**Cloud Deployment Review (agentic loop).** `release2_reviews.py cloud` on the live deployment:
+gate **ready**, model (`llama3.1:8b`) **ready**, no contradiction (`cloud-review/`, `c8-04`).
+**Human release decision:** _(group to confirm)_ release approved; AI services stay disabled in
+the cloud.
+
+**Bonus.** B5 endpoint security: only ports 80 and 3001–3005 are public; backends, databases and
+tasks have no public address (`bonus-b5-…png`). B6 data security: EFS encrypted at rest and in
+transit, ECR AES256 with immutable tags, state bucket encrypted, versioned, TLS-only and
+public-access-blocked (`bonus-b6-…png`); the GitHub deploy role (§6.3) replaces long-lived AWS
+keys. B1–B4 are not claimed.
+
+### 6.3 Cloud deployment workflow (`cloud-deployment.yml`, criterion 6)
+
+`required-ci` runs the security hooks, every student's tests, Terraform/Compose/script validation
+and builds all 16 images; only then does `deploy` run `scripts/aws/deploy.sh` for that exact
+commit on `main`. It authenticates with GitHub OIDC, so no AWS keys are stored in GitHub.
+
+Fixes made so the hosted deploy can actually run: Terraform pinned to 1.16.6 (the version that
+wrote the remote state), the `setup-terraform` wrapper disabled (it corrupts
+`$(terraform output -raw …)` in `validate-runtime.sh`), a concurrency group so two applies never
+share the state, quoted `"yes"`/`"no"` inputs, and validation of the OIDC stack in `required-ci`.
+
+Deploy role (`infra/aws/github-oidc/`, separate state so the role never manages itself): trusted
+only for `repo:ronaldokwan/ASD-2026-Project-Specifications:environment:aws-production`; allowed
+the services in `infra/aws/main.tf` in `ap-southeast-2` only, the state objects under
+`asd-2026/group-application/`, and IAM only on `asd26-g40-r2-*` roles (attach limited to
+`AmazonECSTaskExecutionRolePolicy`, pass-role limited to ECS tasks); it cannot modify itself.
+
+**One-off setup, then the run** (AWS administrator credentials, Git Bash):
+
+```bash
+# 1. Create the OIDC provider and deploy role (review the plan, type yes).
+#    Add CREATE_OIDC_PROVIDER=false if the account already has the GitHub provider.
+export AWS_REGION=ap-southeast-2 TF_STATE_BUCKET=asd26-g40-tfstate-ronaldo
+bash scripts/aws/setup-github-oidc.sh
+
+# 2. Create the aws-production environment, deployable from main only.
+echo '{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}' |
+  gh api -X PUT repos/ronaldokwan/ASD-2026-Project-Specifications/environments/aws-production --input -
+gh api -X POST repos/ronaldokwan/ASD-2026-Project-Specifications/environments/aws-production/deployment-branch-policies \
+  -f name=main -f type=branch
+
+# 3. Environment variables (step 1 prints the role ARN).
+gh variable set AWS_DEPLOY_ROLE_ARN --env aws-production --body "arn:aws:iam::604707013588:role/asd26-g40-r2-github-deploy"
+gh variable set TF_STATE_BUCKET     --env aws-production --body asd26-g40-tfstate-ronaldo
+gh variable set AWS_REGION          --env aws-production --body ap-southeast-2
+
+# 4. Push these changes to main, then deploy through GitHub Actions.
+gh workflow run cloud-deployment.yml --ref main -f deploy=yes
+run=$(gh run list --workflow cloud-deployment.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+gh run watch "$run" --exit-status
+
+# 5. Keep the evidence, then tear down.
+out=docs/evidence/student-1/release-2/cloud-deployment-run-$run
+mkdir -p "$out"
+gh run view "$run" --log > "$out/workflow.log"
+gh run download "$run" -D "$out"
+bash scripts/aws/destroy.sh
+```
 
 ## 7. Contribution log (Release 2)
 
@@ -161,25 +259,17 @@ terminal. Cloud (AWS ECS): Student 1 backend runs with AI-Mode, MCP, RAG and Mul
 | 22 Oct 2026 | Terraform/Compose Multi-Agent settings; Student 1 cloud runtime validation; review-mode evidence script |
 | 23 Oct 2026 | Diagnosed live Reviewer failures; deterministic readiness checks and application cross-check; shared server retry and human-review escalation (3 new shared tests); Reviewer model evaluation and switch to llama3.1:8b |
 | 23 Oct 2026 | Pre-commit hook installed; live endpoint tests; terminal and UI Multi-Agent runs with human decisions; AI-Mode review modes moved to `REVIEW_MODEL` (llama3.1:8b); Multi-Agent and Testing reviews generated |
+| 23 Oct 2026 | AWS deployment of the group application; fixed service-registry ports, duplicated ALB security-group rules, missing shared theme in cloud frontends and the validator redirect; runtime validation, Cloud Deployment Review, cloud and bonus screenshots; teardown |
+| 27 Oct 2026 | GitHub OIDC deploy role (Terraform + setup script); `cloud-deployment.yml` fixes for the hosted deploy; multi-server check script; raw evidence logs committed |
 
 ## 8. Capturing the remaining evidence
 
 ```bash
-# 1. Local multi-server run (terminal 1: Compose, terminal 2: native AI services)
+# Criterion 6: cloud-deployment.yml through GitHub Actions - steps in §6.3.
+# Criterion 1: multi-server log - terminals 1 and 2, then terminal 3:
 docker compose up -d --build
 bash scripts/run-ai-services.sh
-# 2. Multi-Agent workflow from the terminal, then a human decision
-python scripts/student-1-multi-agent.py start --product-id 1 --wait
-python scripts/student-1-multi-agent.py review --product-id 1 --workflow-id <id> --decision accept --feedback "Agreed."
-# 3. Agentic-loop reviews (AI-Mode must be running)
-python student-1/validation/release2_reviews.py multi-agent --product-id 1 --workflow-id <id>
-python student-1/validation/release2_reviews.py testing --pre-commit-log <artifact>/student-1-pre-commit.log \
-  --endpoint-junit <artifact>/student-1-endpoint-tests.xml --ci-run-id <run id> --ci-status passed
-python student-1/validation/release2_reviews.py cloud --base-url http://<alb-dns> --infrastructure reports/aws-runtime-validation.json
-# 4. AWS: deploy (criteria 5 and 7), then tear down so it stops costing money
-export AWS_REGION=ap-southeast-2 TF_STATE_BUCKET=asd26-g40-tfstate-ronaldo
-bash scripts/aws/deploy.sh
-bash scripts/aws/destroy.sh
+bash scripts/multi-server-check.sh
 ```
 
 Deployment-script fixes found while preparing the deploy (23 Oct 2026): `deploy.sh` now creates

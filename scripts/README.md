@@ -11,6 +11,8 @@ Only commands that do more than wrap a single Docker call live here.
 | `run-multi-agent.sh` | Start only the native Multi-Agent workflow service (7004), preserving other running services |
 | `aws/deploy.sh` | Build, push and deploy the whole group application to AWS (ECS Fargate), then validate it; needs `AWS_REGION` and `TF_STATE_BUCKET` |
 | `aws/destroy.sh` | Remove the whole AWS deployment so it stops costing money (same two variables) |
+| `aws/setup-github-oidc.sh` | One-off, as an AWS admin: create the GitHub OIDC provider and the deploy role `cloud-deployment.yml` assumes (same two variables) |
+| `multi-server-check.sh` | Third-terminal test of the local deployment: every Compose and native service, then Student 1 frontend → backend → database, MCP, RAG and Multi-Agent; writes the evidence log |
 
 Student 3 terminal workflow: `python scripts/multi-agent-workflow.py start --customer-id 1 --wait`, then use the printed workflow ID with `status` or `review`.
 

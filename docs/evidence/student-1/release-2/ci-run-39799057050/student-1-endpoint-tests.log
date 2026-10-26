@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.0.3, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/work/ASD-2026-Project-Specifications/ASD-2026-Project-Specifications
+collecting ... collected 10 items
+
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_persists_a_normalised_record PASSED [ 10%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_generates_a_sku_when_omitted PASSED [ 20%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override0-category must be one of] PASSED [ 30%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override1-price must be between] PASSED [ 40%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override2-name] PASSED [ 50%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_a_duplicate_sku PASSED [ 60%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_changes_only_the_supplied_fields PASSED [ 70%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_rejects_invalid_values_and_keeps_the_record PASSED [ 80%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_with_no_fields_is_rejected PASSED [ 90%]
+student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_unknown_id_is_404 PASSED [100%]
+
+==================================== PASSES ====================================
+- generated xml file: /home/runner/work/ASD-2026-Project-Specifications/ASD-2026-Project-Specifications/reports/student-1-endpoint-tests.xml -
+=========================== short test summary info ============================
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_persists_a_normalised_record
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_generates_a_sku_when_omitted
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override0-category must be one of]
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override1-price must be between]
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_invalid_payloads[override2-name]
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_create_product_rejects_a_duplicate_sku
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_changes_only_the_supplied_fields
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_rejects_invalid_values_and_keeps_the_record
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_with_no_fields_is_rejected
+PASSED student-1/endpoint-tests/test_post_commit_endpoints.py::test_update_product_unknown_id_is_404
+============================== 10 passed in 0.23s ==============================

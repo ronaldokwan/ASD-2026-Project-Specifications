@@ -7,11 +7,16 @@ on:
         description: Set to deploy after required validation passes
         required: true
         type: choice
-        options: [no, yes]
-        default: no
+        options: ["no", "yes"]
+        default: "no"
 
 permissions:
   contents: read
+
+# Two applies against the same Terraform state must never overlap.
+concurrency:
+  group: cloud-deployment
+  cancel-in-progress: false
 
 env:
   PYTHON_VERSION: "3.11"
@@ -41,7 +46,10 @@ jobs:
           cache-dependency-path: student-2/pom.xml
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.12.2
+          # Same version that wrote the remote state; the wrapper would corrupt
+          # $(terraform output -raw ...) in validate-runtime.sh.
+          terraform_version: 1.16.6
+          terraform_wrapper: false
       - name: Install application and scan dependencies
         run: |
           python -m pip install --upgrade pip
@@ -80,6 +88,8 @@ jobs:
           terraform -chdir=infra/aws fmt -check -recursive
           terraform -chdir=infra/aws init -backend=false -input=false
           terraform -chdir=infra/aws validate
+          terraform -chdir=infra/aws/github-oidc init -backend=false -input=false
+          terraform -chdir=infra/aws/github-oidc validate
           docker compose config --quiet
           bash -n scripts/aws/*.sh scripts/run-multi-agent.sh scripts/run-ai-services.sh
           python -m compileall -q ai-services/ai-mode ai-services/multi-agent student-3
@@ -123,7 +133,10 @@ jobs:
           ref: ${{ github.sha }}
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.12.2
+          # Same version that wrote the remote state; the wrapper would corrupt
+          # $(terraform output -raw ...) in validate-runtime.sh.
+          terraform_version: 1.16.6
+          terraform_wrapper: false
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
