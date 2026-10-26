@@ -99,9 +99,9 @@ jobs:
           docker build -t asd/student-1-db:ci student-1/database
           docker build -t asd/student-1-backend:ci student-1/backend
           docker build -t asd/student-1-frontend:ci student-1/frontend
-          docker build -t asd/student2-db:ci -f database-api/Dockerfile student-2
-          docker build -t asd/student2-api:ci -f backend/Dockerfile student-2
-          docker build -t asd/student2-frontend:ci -f frontend/Dockerfile student-2
+          docker build -t asd/student2-db:ci -f student-2/database-api/Dockerfile student-2
+          docker build -t asd/student2-api:ci -f student-2/backend/Dockerfile student-2
+          docker build -t asd/student2-frontend:ci -f student-2/frontend/Dockerfile student-2
           docker build -t asd/student-3-db:ci student-3/database
           docker build -t asd/student-3-backend:ci student-3/backend
           docker build -t asd/student-3-frontend:ci student-3/frontend

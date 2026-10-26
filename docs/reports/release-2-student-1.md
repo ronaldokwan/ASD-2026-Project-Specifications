@@ -226,15 +226,16 @@ export AWS_REGION=ap-southeast-2 TF_STATE_BUCKET=asd26-g40-tfstate-ronaldo
 bash scripts/aws/setup-github-oidc.sh
 
 # 2. Create the aws-production environment, deployable from main only.
+env_api=repos/ronaldokwan/ASD-2026-Project-Specifications/environments/aws-production
 echo '{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}' |
-  gh api -X PUT repos/ronaldokwan/ASD-2026-Project-Specifications/environments/aws-production --input -
-gh api -X POST repos/ronaldokwan/ASD-2026-Project-Specifications/environments/aws-production/deployment-branch-policies \
-  -f name=main -f type=branch
+  gh api -X PUT "$env_api" --input -
+gh api -X POST "$env_api/deployment-branch-policies" -f name=main -f type=branch
 
 # 3. Environment variables (step 1 prints the role ARN).
-gh variable set AWS_DEPLOY_ROLE_ARN --env aws-production --body "arn:aws:iam::604707013588:role/asd26-g40-r2-github-deploy"
-gh variable set TF_STATE_BUCKET     --env aws-production --body asd26-g40-tfstate-ronaldo
-gh variable set AWS_REGION          --env aws-production --body ap-southeast-2
+gh variable set AWS_DEPLOY_ROLE_ARN --env aws-production \
+  --body arn:aws:iam::604707013588:role/asd26-g40-r2-github-deploy
+gh variable set TF_STATE_BUCKET --env aws-production --body asd26-g40-tfstate-ronaldo
+gh variable set AWS_REGION      --env aws-production --body ap-southeast-2
 
 # 4. Push these changes to main, then deploy through GitHub Actions.
 gh workflow run cloud-deployment.yml --ref main -f deploy=yes

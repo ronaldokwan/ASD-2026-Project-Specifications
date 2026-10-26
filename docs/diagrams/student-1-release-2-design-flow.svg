@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="690" viewBox="0 0 1400 690" font-family="Segoe UI, Calibri, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+    <style>
+      .node{fill:#fff;stroke:#333;stroke-width:1.5}
+      .agent{fill:#e9f5ec;stroke:#2f7d4a;stroke-width:1.5}
+      .human{fill:#fdeceb;stroke:#b5443b;stroke-width:1.5}
+      .t{font-size:17px;font-weight:600;fill:#111;text-anchor:middle}
+      .s{font-size:13px;fill:#444;text-anchor:middle}
+      .band{font-size:15px;font-weight:600}
+      .lbl{font-size:13px;fill:#222}
+      .e{stroke:#333;stroke-width:1.6;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+
+  <!-- Containerised band -->
+  <rect x="10" y="10" width="1380" height="150" rx="10" fill="#eef4fb" stroke="#4a78b5" stroke-width="1.5"/>
+  <text x="26" y="34" class="band" fill="#2c5a94">Containerised: Docker Compose (local) · AWS ECS Fargate (cloud)</text>
+  <rect class="node" x="60" y="60" width="280" height="70" rx="8"/>
+  <text class="t" x="200" y="90">student-1-frontend :3001</text>
+  <text class="s" x="200" y="112">Flask + HTMX UI</text>
+  <rect class="node" x="560" y="60" width="280" height="70" rx="8"/>
+  <text class="t" x="700" y="90">student-1-backend :8001</text>
+  <text class="s" x="700" y="112">REST API · evidence builder</text>
+  <rect class="node" x="1060" y="60" width="280" height="70" rx="8"/>
+  <text class="t" x="1200" y="90">student-1-db :9001</text>
+  <text class="s" x="1200" y="112">SQLite (encrypted EFS in cloud)</text>
+  <path class="e" d="M340,95 L558,95"/>
+  <text class="lbl" x="430" y="87">REST</text>
+  <path class="e" d="M840,95 L1058,95"/>
+  <text class="lbl" x="930" y="87">REST</text>
+
+  <!-- Native host band -->
+  <rect x="10" y="190" width="1380" height="490" rx="10" fill="#fdf6ec" stroke="#c08a2e" stroke-width="1.5"/>
+  <text x="26" y="362" class="band" fill="#8a5f14">Native host services, not containerised: local only, disabled by default in the cloud</text>
+
+  <rect class="node" x="60" y="260" width="270" height="64" rx="8"/>
+  <text class="t" x="195" y="287">AI-Mode :7001</text>
+  <text class="s" x="195" y="308">R0 copy suggestion · agentic loop</text>
+  <rect class="node" x="370" y="260" width="270" height="64" rx="8"/>
+  <text class="t" x="505" y="287">MCP :7002/mcp</text>
+  <text class="s" x="505" y="308">R1 check_product_listing</text>
+  <rect class="node" x="680" y="260" width="270" height="64" rx="8"/>
+  <text class="t" x="815" y="287">RAG :7003</text>
+  <text class="s" x="815" y="308">R1 grounded answer</text>
+
+  <path class="e" d="M640,130 C520,190 260,200 205,258"/>
+  <path class="e" d="M680,130 C640,190 530,210 510,258"/>
+  <path class="e" d="M720,130 C750,190 805,210 812,258"/>
+  <path class="e" d="M800,130 C1000,200 1150,260 1170,388"/>
+  <text class="lbl" x="1190" y="300">R2 evidence:</text>
+  <text class="lbl" x="1190" y="318">product_facts, mcp_listing,</text>
+  <text class="lbl" x="1190" y="336">catalogue_policy</text>
+
+  <!-- Multi-Agent server -->
+  <rect x="60" y="390" width="1280" height="230" rx="10" fill="#ffffff" stroke="#c08a2e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="80" y="416" class="band" fill="#8a5f14">Multi-Agent server :7004 (Release 2)</text>
+  <rect class="agent" x="90" y="445" width="260" height="80" rx="8"/>
+  <text class="t" x="220" y="478">Planner</text>
+  <text class="s" x="220" y="500">llama3.1:8b · plan + evidence</text>
+  <rect class="agent" x="400" y="445" width="260" height="80" rx="8"/>
+  <text class="t" x="530" y="478">Worker</text>
+  <text class="s" x="530" y="500">qwen2.5:3b · readiness verdict</text>
+  <rect class="agent" x="710" y="445" width="260" height="80" rx="8"/>
+  <text class="t" x="840" y="478">Reviewer</text>
+  <text class="s" x="840" y="500">llama3.1:8b · claims vs evidence</text>
+  <rect class="human" x="1020" y="445" width="290" height="80" rx="8"/>
+  <text class="t" x="1165" y="478">Human Review</text>
+  <text class="s" x="1165" y="500">accept · partial · reject (UI / terminal)</text>
+  <path class="e" d="M350,485 L398,485"/>
+  <path class="e" d="M660,485 L708,485"/>
+  <path class="e" d="M970,485 L1018,485"/>
+  <path class="e" d="M840,525 C840,585 530,585 530,527"/>
+  <text class="lbl" x="640" y="600">revise ≤ 1 (rejected output retried ≤ 3)</text>
+
+  <!-- Return to UI -->
+  <path class="e" d="M1165,525 L1165,650 L32,650 L32,95 L58,95"/>
+  <text class="lbl" x="420" y="643">decision, workflow history and coordination audit log returned to the frontend UI</text>
+</svg>

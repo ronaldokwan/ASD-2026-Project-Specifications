@@ -34,7 +34,7 @@ build/
 !docs/evidence/**/*.log
 
 # Generated test evidence
-reports/
+/reports/
 
 # Terraform plans/state and local cloud configuration
 .terraform/
