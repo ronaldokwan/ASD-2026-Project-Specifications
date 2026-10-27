@@ -131,6 +131,7 @@ def fake_api(monkeypatch):
                        "loyalty_tier": "Silver", "joined_at": "2025-01-10"}],
         "created": [],
         "deleted": [],
+        "multi_agent_reviews": [],
     }
 
     def list_customers(search=None):
@@ -176,4 +177,35 @@ def fake_api(monkeypatch):
         }],
         "confidence": "high",
     })
+    workflow = {
+        "workflow_id": "workflow-123", "subject_ref": "student-3-customer:1",
+        "status": "human_review", "stage": "human_review", "created_at": "2026-10-22T00:00:00+00:00",
+        "plan": {"model_generated": {"tasks": [{"task": "Check policy", "evidence_refs": ["policy"]}]},
+                 "application_enforced": {"acceptance_criteria": ["Cite policy"],
+                                          "constraints": ["Do not apply reward"]}},
+        "worker_result": {"recommendation": "Review benefit.", "rationale": "Policy evidence supports review.",
+                           "policy_basis": "Silver Membership.", "evidence_refs": ["policy"]},
+        "reviewer_result": {"action": "ready_for_human", "findings": [],
+                             "missing_information": [], "recommendations": []},
+        "evidence": [{"id": "policy", "source": "RAG", "status": "available", "content": "Policy snippet."}],
+        "roles": [{"role": "planner", "model": "stub-model"}],
+        "revision_count": 0, "max_revisions": 1,
+        "completion_gate": {"planner_completed": True, "worker_completed": True,
+                             "reviewer_completed": True, "human_decision_recorded": False},
+    }
+    monkeypatch.setattr(frontend_api, "start_multi_agent_review", lambda customer_id: {
+        "workflow_id": "workflow-123", "status": "queued",
+    })
+    monkeypatch.setattr(frontend_api, "get_multi_agent_workflow", lambda customer_id, workflow_id: workflow)
+    monkeypatch.setattr(frontend_api, "list_multi_agent_workflows", lambda customer_id: {
+        "count": 1, "workflows": [workflow],
+    })
+
+    def review(customer_id, workflow_id, payload):
+        state["multi_agent_reviews"].append(payload)
+        return dict(workflow, status={"accept": "accepted", "partial_accept": "partially_accepted",
+                                      "reject": "rejected"}[payload["decision"]],
+                    human_decision=payload)
+
+    monkeypatch.setattr(frontend_api, "review_multi_agent_workflow", review)
     return state

@@ -1,0 +1,15 @@
+[INFO] Initializing environment for local:ruff==0.12.10.
+[INFO] Initializing environment for local:detect-secrets==1.5.0.
+[INFO] Initializing environment for local:pip-audit==2.9.0.
+[INFO] Installing environment for local.
+[INFO] Once installed this environment will be reused.
+[INFO] This may take a few minutes...
+[INFO] Installing environment for local.
+[INFO] Once installed this environment will be reused.
+[INFO] This may take a few minutes...
+[INFO] Installing environment for local.
+[INFO] Once installed this environment will be reused.
+[INFO] This may take a few minutes...
+Ruff security rules......................................................Passed
+detect-secrets staged-file scan..........................................Passed
+pip-audit relevant Python requirements...................................Passed

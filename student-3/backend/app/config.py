@@ -32,6 +32,11 @@ class Config:
     ).rstrip("/")
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
     RAG_ENABLED = _enabled("RAG_ENABLED")
+    MULTI_AGENT_URL = os.getenv(
+        "MULTI_AGENT_URL", "http://host.docker.internal:7004"
+    ).rstrip("/")
+    MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "20"))
+    MULTI_AGENT_ENABLED = _enabled("MULTI_AGENT_ENABLED")
     PORT = int(os.getenv("SERVICE_PORT", "8003"))
 
     LOYALTY_TIERS = ("Bronze", "Silver", "Gold")

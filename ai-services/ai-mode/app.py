@@ -13,17 +13,66 @@ Endpoints
 """
 
 import os
+import json
+import re
+import threading
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 
 from flask import Flask, jsonify, request
 
 from agent import AgentRequest, AgenticLoop
 from agent.ollama_client import OllamaClient, OllamaError
+from agent import review_modes
 from agent.validators import MCP_VALIDATION_SCHEMA, RAG_VALIDATION_SCHEMA
 
 app = Flask(__name__)
 
+_review_lock = threading.RLock()
+_review_dir = Path(os.getenv(
+    "AI_MODE_REVIEW_DATA_DIR",
+    str(Path(__file__).resolve().parents[2] / "reports" / "agentic-reviews"),
+))
+_review_history = _review_dir / "review_history.jsonl"
+_validation_log = _review_dir / "review_validation.jsonl"
+
+
+def _redact(value):
+    if isinstance(value, dict):
+        return {
+            key: ("[REDACTED]" if any(word in key.lower() for word in (
+                "password", "secret", "token", "credential", "access_key", "private_key",
+            )) else _redact(item))
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact(item) for item in value]
+    if isinstance(value, str):
+        value = re.sub(r"AKIA[0-9A-Z]{16}", "[REDACTED_AWS_KEY]", value)
+        value = re.sub(r"(?i)bearer\s+[A-Za-z0-9._~+/=-]+", "Bearer [REDACTED]", value)
+    return value
+
+
+def _append_review(record):
+    _review_dir.mkdir(parents=True, exist_ok=True)
+    with _review_lock:
+        for path in (_review_history, _validation_log):
+            item = dict(record)
+            if path == _validation_log:
+                item = {key: value for key, value in record.items()
+                        if key in ("at", "review_id", "mode", "validation_log")}
+            with path.open("a", encoding="utf-8") as stream:
+                stream.write(json.dumps(_redact(item), ensure_ascii=False, separators=(",", ":")) + "\n")
+                stream.flush()
+
 client = OllamaClient()
 loop = AgenticLoop(client=client)
+
+# Report reviews read long, mixed evidence; the small default model (fine for
+# product copy) returns fallbacks or noise there, so they use their own model.
+review_client = OllamaClient(model=os.getenv("REVIEW_MODEL", "llama3.1:8b"))
+review_loop = AgenticLoop(client=review_client)
 
 # Validation modes reuse the agentic loop with mode-specific schemas and
 # deterministic fallbacks for MCP tool results and RAG answers.
@@ -116,10 +165,9 @@ def agent_run():
 
 @app.post("/agent/validate")
 def agent_validate():
-    """Validate an MCP tool result or a grounded RAG answer.
+    """Validate tool/RAG output or review workflow/test/deployment evidence.
 
-    Body: {"mode": "mcp"|"rag", "subject": {...}}. ``subject`` contains an
-    MCP tool call and result, or a RAG query, answer and sources.
+    Body: {"mode": <supported mode>, "subject": {...}}.
     """
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -127,10 +175,26 @@ def agent_validate():
 
     mode = payload.get("mode")
     spec = _VALIDATION_MODES.get(mode)
+    report_review = mode in review_modes.REVIEW_MODES
+    if report_review:
+        spec = {
+            "goal": review_modes.REVIEW_MODES[mode]["goal"],
+            "task": review_modes.task_for(mode),
+            "schema": review_modes.schema_for(mode),
+            "fallback": {
+                "assessment": "incomplete",
+                **{field: "The model review did not execute." for field in review_modes.REVIEW_MODES[mode]["dimensions"]},
+                "findings": "No model findings were produced.",
+                "risks": "Evidence remains unverified without model execution.",
+                "recommendations": "Review the evidence and retry when the model service is available.",
+            },
+        }
     if not spec:
         return jsonify({
             "ok": False,
-            "error": "'mode' must be one of: {}".format(", ".join(_VALIDATION_MODES)),
+            "error": "'mode' must be one of: {}".format(
+                ", ".join(list(_VALIDATION_MODES) + list(review_modes.REVIEW_MODES))
+            ),
         }), 400
 
     subject = payload.get("subject")
@@ -145,8 +209,59 @@ def agent_validate():
         fallback=spec["fallback"],
         mode="{}_validation".format(mode),
     )
-    outcome = loop.run(agent_request)
+    outcome = (review_loop if report_review else loop).run(agent_request)
+    if report_review:
+        outcome = review_modes.finalize_review(mode, subject, outcome)
+        at = datetime.now(timezone.utc).isoformat()
+        record = {
+            "at": at,
+            "review_id": outcome["review_id"],
+            "mode": mode,
+            "model": outcome.get("model"),
+            "model_reviewed": outcome["result"]["validation_log"]["model_reviewed"],
+            "subject_summary": _review_subject_summary(mode, subject),
+            "result": outcome["result"],
+            "validation_log": outcome["result"]["validation_log"],
+        }
+        _append_review(record)
+        return jsonify(outcome), (200 if outcome.get("ok") else 502)
     return jsonify(outcome), (200 if outcome["ok"] else 502)
+
+
+def _review_subject_summary(mode, subject):
+    """Keep report logs useful without copying source code, reports or credentials."""
+    if mode == "testing_report":
+        security = subject.get("pre_commit_security_results") if isinstance(subject.get("pre_commit_security_results"), list) else []
+        endpoint_tests = subject.get("post_commit_backend_endpoint_tests") if isinstance(subject.get("post_commit_backend_endpoint_tests"), list) else []
+        hosted_ci = subject.get("hosted_ci") if isinstance(subject.get("hosted_ci"), dict) else {}
+        return {
+            "test_code_supplied": isinstance(subject.get("test_code"), str) and bool(subject["test_code"].strip()),
+            "pre_commit_security_results": [{"name": item.get("name"), "status": item.get("status"),
+                                              "exit_code": item.get("exit_code")}
+                                             for item in security if isinstance(item, dict)],
+            "post_commit_backend_endpoint_tests": [{"endpoint": item.get("endpoint"),
+                                                    "test_ref": item.get("test_ref"),
+                                                    "phase": item.get("phase"),
+                                                    "status": item.get("status"),
+                                                    "exit_code": item.get("exit_code")}
+                                                   for item in endpoint_tests if isinstance(item, dict)],
+            "hosted_ci": {"status": hosted_ci.get("status"), "run_id": hosted_ci.get("run_id")},
+        }
+    if mode == "cloud_deployment_report":
+        resources = subject.get("infrastructure_evidence") if isinstance(subject.get("infrastructure_evidence"), list) else []
+        checks = subject.get("runtime_checks") if isinstance(subject.get("runtime_checks"), list) else []
+        return {
+            "infrastructure_evidence": [{"name": item.get("name"), "status": item.get("status")}
+                                         for item in resources if isinstance(item, dict)],
+            "runtime_checks": [{"check": item.get("check"), "status": item.get("status"),
+                                "http_status": item.get("http_status")}
+                               for item in checks if isinstance(item, dict)],
+        }
+    workflow = subject.get("workflow")
+    if isinstance(workflow, dict):
+        return {"workflow_id": workflow.get("workflow_id"), "status": workflow.get("status"),
+                "completion_gate": workflow.get("completion_gate")}
+    return {"subject_keys": sorted(str(key) for key in subject.keys())[:30]}
 
 
 @app.errorhandler(404)
@@ -155,4 +270,4 @@ def not_found(_):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7000")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7000")), debug=False)

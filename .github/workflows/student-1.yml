@@ -1,6 +1,7 @@
 # ===========================================================================
 # Student 1 - Ronaldo Kwan - Product Catalogue
-# lint -> unit tests -> Docker build -> container smoke test
+# pre-commit security scans -> lint -> unit tests -> Docker build ->
+# post-commit endpoint tests (create_product, update_product) -> smoke test
 # ===========================================================================
 name: student-1
 
@@ -12,7 +13,11 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/student-1-multi-agent.py"
+      - "scripts/security/**"
+      - ".pre-commit-config.yaml"
       - "docker-compose.yml"
       - ".github/workflows/student-1.yml"
   pull_request:
@@ -21,7 +26,11 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/student-1-multi-agent.py"
+      - "scripts/security/**"
+      - ".pre-commit-config.yaml"
       - "docker-compose.yml"
       - ".github/workflows/student-1.yml"
   workflow_dispatch:
@@ -31,6 +40,7 @@ env:
   AI_MODE_ENABLED: "false"
   MCP_ENABLED: "false"
   RAG_ENABLED: "false"
+  MULTI_AGENT_ENABLED: "false"
 
 jobs:
   # -------------------------------------------------------------------------
@@ -54,7 +64,14 @@ jobs:
           pip install -r ai-services/ai-mode/requirements.txt
           pip install -r ai-services/mcp-server/requirements.txt
           pip install -r ai-services/rag-server/requirements.txt
-          pip install flake8
+          pip install -r ai-services/multi-agent/requirements.txt
+          pip install flake8 pre-commit==4.3.0
+
+      - name: Security scans (Ruff security rules, detect-secrets, pip-audit)
+        run: |
+          set -o pipefail
+          mkdir -p reports
+          pre-commit run --all-files --show-diff-on-failure 2>&1 | tee reports/student-1-pre-commit.log
 
       - name: Lint (syntax errors and undefined names fail the build)
         run: |
@@ -66,7 +83,7 @@ jobs:
       - name: JavaScript syntax
         run: node --check student-1/frontend/static/js/catalogue.js
 
-      - name: Student 1 microservice tests (incl. MCP and RAG integration)
+      - name: Student 1 microservice tests (incl. MCP, RAG and Multi-Agent integration)
         run: pytest student-1/tests -v --junitxml=reports/student-1-tests.xml
 
       - name: Shared agentic loop tests (AI-Mode, incl. MCP and RAG validation modes)
@@ -77,6 +94,9 @@ jobs:
 
       - name: Shared RAG server tests (incl. catalogue knowledge)
         run: pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
+
+      - name: Shared Multi-Agent server tests (Planner, Worker, Reviewer, Human Review)
+        run: pytest ai-services/multi-agent/tests -v --junitxml=reports/multi-agent-tests.xml
 
       - name: Upload test evidence for the technical report
         if: always()
@@ -99,8 +119,8 @@ jobs:
       - name: AI-Mode, MCP and RAG are not Docker Compose services
         run: |
           docker compose config --services | tee services.txt
-          if grep -E '^(ai-mode|mcp|mcp-server|rag|rag-server)$' services.txt; then
-            echo "::error::AI-Mode, MCP and RAG must run natively, not in Docker Compose"
+          if grep -E '^(ai-mode|mcp|mcp-server|rag|rag-server|multi-agent)$' services.txt; then
+            echo "::error::AI-Mode, MCP, RAG and Multi-Agent must run natively, not in Docker Compose"
             exit 1
           fi
 
@@ -141,6 +161,37 @@ jobs:
           wait_for "backend/API microservice" http://localhost:8001/health student-1-backend
           wait_for "frontend microservice"    http://localhost:3001/       student-1-frontend
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Post-commit endpoint tests (create_product, update_product)
+        env:
+          STUDENT1_API_URL: http://localhost:8001
+        run: |
+          set -o pipefail
+          pip install pytest==9.0.3 requests==2.33.0
+          mkdir -p reports
+          pytest student-1/endpoint-tests -v -rA \
+            --junitxml=reports/student-1-endpoint-tests.xml \
+            | tee reports/student-1-endpoint-tests.log
+          {
+            echo "## Student 1 post-commit endpoint tests"
+            echo
+            echo "Commit \`${GITHUB_SHA}\` against the live backend/API container."
+            echo
+            echo '```'
+            grep -E "PASSED|FAILED|ERROR|SKIPPED|passed|failed" reports/student-1-endpoint-tests.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload endpoint test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-1-endpoint-test-reports
+          path: reports/
+
       - name: Smoke test the CRUD path through the API
         run: |
           set -e
@@ -165,13 +216,14 @@ jobs:
           curl -fs http://localhost:3001/partials/products | grep -q "product-table"
           curl -fs http://localhost:3001/ | grep -q 'id="mcp-panel"'
           curl -fs http://localhost:3001/ | grep -q 'hx-post="/catalogue/ask"'
+          curl -fs http://localhost:3001/ | grep -q 'id="multi-agent-panel"'
 
-      - name: MCP and RAG are retained but disabled in CI
+      - name: MCP, RAG and Multi-Agent are retained but disabled in CI
         run: |
           set -e
           health=$(curl -fs http://localhost:8001/health)
           echo "$health"
-          for key in ai_mode mcp_server rag_server; do
+          for key in ai_mode mcp_server rag_server multi_agent_server; do
             echo "$health" | python3 -c "import json, sys; \
               assert json.load(sys.stdin)['$key'] == {'status': 'disabled'}, '$key'"
           done
@@ -188,6 +240,12 @@ jobs:
             -d '{"question":"Which headphones cancel noise?"}')
           cat rag.json
           test "$code" = "503" && grep -q "RAG integration is disabled" rag.json
+
+          code=$(curl -s -o multi-agent.json -w '%{http_code}' -X POST \
+            http://localhost:8001/api/products/1/multi-agent \
+            -H 'Content-Type: application/json' -d '{}')
+          cat multi-agent.json
+          test "$code" = "503" && grep -q "Multi-Agent integration is disabled" multi-agent.json
 
           # The Release 0 AI path still answers, from its deterministic fallback.
           curl -fs -X POST http://localhost:8001/api/products/ai \

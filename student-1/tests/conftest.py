@@ -73,13 +73,15 @@ from app.config import Config as BackendConfig  # noqa: E402
 def integration_flags(monkeypatch):
     """Pin the Release 1 switches so every test is independent of CI's env.
 
-    CI exports AI_MODE_ENABLED / MCP_ENABLED / RAG_ENABLED = false. Tests that
+    CI exports AI_MODE_ENABLED / MCP_ENABLED / RAG_ENABLED /
+    MULTI_AGENT_ENABLED = false. Tests that
     exercise MCP or RAG switch them on explicitly and stub the network hop;
     AI-Mode stays on so the Release 0 AI tests keep stubbing it as before.
     """
     monkeypatch.setattr(BackendConfig, "AI_MODE_ENABLED", True)
     monkeypatch.setattr(BackendConfig, "MCP_ENABLED", False)
     monkeypatch.setattr(BackendConfig, "RAG_ENABLED", False)
+    monkeypatch.setattr(BackendConfig, "MULTI_AGENT_ENABLED", False)
     monkeypatch.setattr(backend_rag, "_synced", False)
 
 

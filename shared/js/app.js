@@ -30,8 +30,17 @@
       "<p>" + f.description + "</p>" +
       '<div class="owner">Student ' + f.student + " &middot; " + f.owner + "</div>";
     return ready
-      ? '<a class="card feature-card" href="' + f.frontend + '">' + inner + "</a>"
+      ? '<a class="card feature-card" href="' + featureUrl(f.frontend) + '">' + inner + "</a>"
       : '<div class="card feature-card" style="opacity:.62">' + inner + "</div>";
+  }
+
+  function featureUrl(configuredUrl) {
+    const target = new URL(configuredUrl);
+    if (target.hostname === "localhost" || target.hostname === "127.0.0.1") {
+      target.hostname = window.location.hostname;
+      target.protocol = window.location.protocol;
+    }
+    return target.toString();
   }
 
   window.ASD = { renderFeatureTiles: renderFeatureTiles };

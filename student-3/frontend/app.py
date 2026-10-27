@@ -91,6 +91,17 @@ def customer_detail(customer_id):
     return render_template("partials/customer_detail.html", customer=customer)
 
 
+@app.get("/customers/<int:customer_id>/multi-agent/history")
+def multi_agent_history(customer_id):
+    try:
+        history = api_client.list_multi_agent_workflows(customer_id)
+    except ApiError as exc:
+        return render_template("partials/multi_agent_history.html", error=exc.message,
+                               workflows=[], customer_id=customer_id), exc.status
+    return render_template("partials/multi_agent_history.html", error=None,
+                           workflows=history.get("workflows", []), customer_id=customer_id)
+
+
 @app.get("/partials/form")
 def new_form():
     return render_template("partials/customer_form.html", customer=None, tiers=LOYALTY_TIERS)
@@ -164,6 +175,69 @@ def mcp_profile(customer_id):
     return render_template("partials/mcp_result.html", result=result)
 
 
+@app.post("/customers/<int:customer_id>/multi-agent")
+def start_multi_agent(customer_id):
+    try:
+        started = api_client.start_multi_agent_review(customer_id)
+        workflow = api_client.get_multi_agent_workflow(customer_id, started["workflow_id"])
+    except ApiError as exc:
+        return render_template("partials/multi_agent_result.html", error=exc.message,
+                               customer_id=customer_id, workflow=None), exc.status
+    return render_template("partials/multi_agent_result.html", error=None,
+                           customer_id=customer_id, workflow=workflow)
+
+
+@app.get("/customers/<int:customer_id>/multi-agent/<workflow_id>")
+def multi_agent_status(customer_id, workflow_id):
+    try:
+        workflow = api_client.get_multi_agent_workflow(customer_id, workflow_id)
+    except ApiError as exc:
+        return render_template("partials/multi_agent_result.html", error=exc.message,
+                               customer_id=customer_id, workflow=None), exc.status
+    return render_template("partials/multi_agent_result.html", error=None,
+                           customer_id=customer_id, workflow=workflow)
+
+
+@app.post("/customers/<int:customer_id>/multi-agent/<workflow_id>/review")
+def review_multi_agent(customer_id, workflow_id):
+    decision = request.form.get("decision", "").strip()
+    payload = {"decision": decision, "feedback": request.form.get("feedback", "").strip()}
+    if decision == "partial_accept":
+        payload.update({
+            "corrected_output": {
+                "recommendation": request.form.get("corrected_recommendation", "").strip(),
+                "rationale": request.form.get("corrected_rationale", "").strip(),
+            },
+            "accepted_fields": [item.strip() for item in request.form.get("accepted_fields", "").splitlines() if item.strip()],
+            "unresolved_issues": [item.strip() for item in request.form.get("unresolved_issues", "").splitlines() if item.strip()],
+        })
+    elif decision == "reject":
+        payload["unresolved_issues"] = [item.strip() for item in request.form.get("unresolved_issues", "").splitlines() if item.strip()]
+    try:
+        workflow = api_client.review_multi_agent_workflow(customer_id, workflow_id, payload)
+    except ApiError as exc:
+        review_form = {
+            field: request.form.get(field, "")
+            for field in (
+                "feedback", "corrected_recommendation", "corrected_rationale",
+                "accepted_fields", "unresolved_issues",
+            )
+        }
+        try:
+            workflow = api_client.get_multi_agent_workflow(customer_id, workflow_id)
+        except ApiError:
+            workflow = {"workflow_id": workflow_id, "status": "human_review"}
+        if workflow.get("human_decision"):
+            workflow["review_notice"] = "A decision was already recorded; showing the saved workflow."
+            return render_template("partials/multi_agent_result.html", error=None,
+                                   customer_id=customer_id, workflow=workflow), 200
+        workflow["review_form"] = review_form
+        return render_template("partials/multi_agent_result.html", error=exc.message,
+                               customer_id=customer_id, workflow=workflow), exc.status
+    return render_template("partials/multi_agent_result.html", error=None,
+                           customer_id=customer_id, workflow=workflow)
+
+
 @app.post("/loyalty-benefits/ask")
 def ask_loyalty_benefits():
     question = request.form.get("question", "").strip()
@@ -208,4 +282,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3003")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3003")), debug=False)

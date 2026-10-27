@@ -737,8 +737,29 @@ def answer_question(query, top_k=5, filters=None):
         )
         return output
 
-    answer = _remove_leading_section_heading(answer, relevant)
     answer_mode = "generated"
+    if answer.strip().lower().startswith("insufficient evidence") and not comparison_tiers:
+        # Retrieval already filtered this context through the relevance gate.
+        # Return those source excerpts generically instead of accepting a
+        # model refusal as proof that relevant evidence is absent.
+        answer = _extractive_fallback(relevant)
+        answer_mode = "extractive_fallback"
+        if not answer:
+            output = {
+                "status": "insufficient_context",
+                "answer": "",
+                "confidence": "insufficient",
+                "sources": [],
+                "message": "Insufficient relevant context was found.",
+            }
+            append_audit(
+                "answer_question",
+                {"query": query, "filters": filters},
+                output,
+                "insufficient",
+            )
+            return output
+    answer = _remove_leading_section_heading(answer, relevant)
     if not _is_extractive_answer(answer, relevant):
         answer = _extractive_fallback(relevant, include_all=bool(comparison_tiers))
         answer_mode = "extractive_fallback"

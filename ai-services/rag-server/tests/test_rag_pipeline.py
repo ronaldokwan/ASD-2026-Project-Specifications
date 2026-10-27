@@ -409,6 +409,26 @@ def test_policy_semantic_drift_uses_exact_retrieved_evidence(
     )
 
 
+def test_relevant_source_excerpt_survives_model_insufficient_refusal(monkeypatch):
+    monkeypatch.setattr(rag_pipeline, "_knowledge_loaded", False)
+    monkeypatch.setattr(rag_pipeline, "_generate_with_ollama", lambda _query, _context: "Insufficient evidence.")
+    rag_pipeline.upsert_documents([{
+        "id": "return-policy",
+        "text": "Returns: Items may be returned within 30 days with a receipt.",
+        "metadata": {"feature": "returns", "section": "Returns", "source": "return-policy"},
+    }])
+
+    output = rag_pipeline.answer_question(
+        "When may items be returned?",
+        filters={"feature": "returns"},
+    )
+
+    assert output["status"] == "ok"
+    assert output["answer"] == "Items may be returned within 30 days with a receipt."
+    assert [source["section"] for source in output["sources"]] == ["Returns"]
+    assert output["confidence"] in ("high", "medium", "low")
+
+
 def test_customer_policy_returns_insufficient_context_for_unsupported_question(
     monkeypatch,
 ):
@@ -447,7 +467,7 @@ def test_ollama_unavailable_is_not_reported_as_grounded(monkeypatch):
     }
 
 
-def test_model_insufficient_evidence_uses_grounded_extractive_fallback(monkeypatch):
+def test_model_refusal_uses_generic_retrieved_evidence_fallback(monkeypatch):
     seed_reviews()
     monkeypatch.setattr(
         rag_pipeline,
@@ -459,6 +479,7 @@ def test_model_insufficient_evidence_uses_grounded_extractive_fallback(monkeypat
         filters={"feature": "reviews"},
     )
     assert output["status"] == "ok"
+    assert output["answer"]
     assert "battery" in output["answer"].lower()
     assert output["sources"]
 

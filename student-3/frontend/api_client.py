@@ -9,6 +9,7 @@ TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
 RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "180"))
 
 
 class ApiError(Exception):
@@ -70,6 +71,27 @@ def check_customer_profile(customer_id):
         "POST",
         "/api/customers/{}/mcp-profile".format(customer_id),
         timeout=MCP_TIMEOUT,
+    )
+
+
+def start_multi_agent_review(customer_id):
+    return _call("POST", "/api/customers/{}/multi-agent".format(customer_id), timeout=MULTI_AGENT_TIMEOUT)
+
+
+def get_multi_agent_workflow(customer_id, workflow_id):
+    return _call("GET", "/api/customers/{}/multi-agent/{}".format(customer_id, workflow_id), timeout=MULTI_AGENT_TIMEOUT)
+
+
+def list_multi_agent_workflows(customer_id):
+    return _call("GET", "/api/customers/{}/multi-agent/history".format(customer_id), timeout=MULTI_AGENT_TIMEOUT)
+
+
+def review_multi_agent_workflow(customer_id, workflow_id, payload):
+    return _call(
+        "POST",
+        "/api/customers/{}/multi-agent/{}/review".format(customer_id, workflow_id),
+        json=payload,
+        timeout=MULTI_AGENT_TIMEOUT,
     )
 
 

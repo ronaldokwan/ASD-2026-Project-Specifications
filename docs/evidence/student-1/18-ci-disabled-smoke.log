@@ -1,0 +1,33 @@
+## docker compose config --services (no ai-mode / mcp / rag)
+shared-home
+student-4-db
+student-4-backend
+student-4-frontend
+student-3-db
+student-3-backend
+student-3-frontend
+student2-db
+student2-api
+student2-frontend
+student-1-db
+student-1-backend
+student-1-frontend
+student-5-db
+student-5-backend
+student-5-frontend
+ollama
+ollama-init
+## recreate student-1-backend with CI flags
+ Container asd-student-1-backend  Starting
+ Container asd-student-1-backend  Started
+RAG_ENABLED=false
+MCP_ENABLED=false
+AI_MODE_ENABLED=false
+## MCP and RAG are retained but disabled
+{"ai_mode":{"status":"disabled"},"database":{"db_path":"/data/products.db","feature":"Product Catalogue","owner":"Ronaldo Kwan","products":16,"service":"student-1-db","status":"ok","student":1},"feature":"Product Catalogue","mcp_server":{"status":"disabled"},"owner":"Ronaldo Kwan","rag_server":{"status":"disabled"},"service":"student-1-backend","status":"ok","student":1}
+{"detail":"MCP integration is disabled","error":"MCP server unavailable"}
+ -> HTTP 503
+{"detail":"RAG integration is disabled","error":"RAG server unavailable"}
+ -> HTTP 503
+AI copy fallback_used=true
+ALL CI SMOKE CHECKS PASSED

@@ -1,0 +1,37 @@
+Student 1 - Product Catalogue - Release 1 validation
+evidence -> C:\Users\ronal\Desktop\software-dev\ASD-2026-Project-Specifications\docs\evidence\student-1
+
+== 1. Terminal validation of the shared MCP and RAG servers ==
+  [PASS] MCP server is healthy - MCP Streamable HTTP
+  [PASS] check_product_listing is registered - check_review_quality, review_quality_check, check_customer_profile, check_product_listing
+  [PASS] tool returns a structured result - listing_status=ready
+  [PASS] tool boundary rejects out-of-contract arguments
+  [PASS] RAG server is healthy - qwen2.5:0.5b
+  [PASS] RAG direct: 'What price range is allowed for a catalogue product?' -> ok - confidence=medium, sources=1
+  [PASS] RAG direct: 'Who won the 2022 football world cup final?' -> insufficient_context - confidence=insufficient, sources=0
+
+== 2. MCP and RAG through the backend/API ==
+  [PASS] backend reaches the database, AI-Mode, MCP and RAG
+  [PASS] catalogue products indexed into the shared RAG corpus - 16 documents
+  [PASS] backend MCP check returns the tool result - ready / within_range
+  [PASS] backend RAG grounded answer: 'Which headphones have active noise cancelling?' - confidence=medium, cites SKU-AUD-1001 Aurora Wireless Headphones
+  [PASS] backend RAG grounded answer: 'What price range is allowed for a catalogue product?' - confidence=medium, cites Pricing Rules
+  [PASS] backend RAG insufficient-context response
+
+== 3. Shared agentic loop - MCP and RAG validation modes ==
+  [PASS] agentic loop MCP validation mode - valid=true, attempts=1, fallback_used=False
+  [PASS] agentic loop RAG validation mode: 'Which headphones have active noise cancelling?' - grounded=true, confidence_ok=true
+  [PASS] agentic loop RAG validation mode: 'What price range is allowed for a catalogue product?' - grounded=true, confidence_ok=true
+
+== 4. MCP and RAG through the frontend UI routes ==
+  [PASS] catalogue page shows the MCP and RAG panels
+  [PASS] frontend renders the MCP tool result
+  [PASS] frontend renders a grounded answer with citations and confidence
+  [PASS] frontend renders the insufficient-context state
+
+== 5. Release 0 functionality still works ==
+  [PASS] catalogue lists products - 16 products
+  [PASS] CRUD create -> update -> delete - SKU-AUD-1005
+  [PASS] AI-Mode copy suggestion (Plan -> Act -> Observe -> Adapt) - attempts=1, fallback_used=False
+
+23/23 checks passed

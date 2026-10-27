@@ -1,0 +1,63 @@
+{
+  "attempts": 2,
+  "elapsed_ms": 20652,
+  "fallback_used": false,
+  "mode": "multi_agent_workflow_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "supported",
+    "findings": "No failed checks are listed in product_facts indicating any issues with the required criteria according to the catalogue policy.",
+    "recommendations": "Review the product listing for SKU-AUD-1002 to ensure it meets all the required criteria according to the catalogue policy.",
+    "risks": "There is a risk that the product listing may not meet all the required criteria if the failed checks in product_facts are not accurately identified or addressed.",
+    "validation_log": {
+      "authoritative_assessment": "supported",
+      "contradiction": false,
+      "evidence_assessment": "supported",
+      "evidence_gate": "All model stages and a human decision are present.",
+      "mode": "multi_agent_workflow",
+      "model_assessment": "supported",
+      "model_reviewed": true,
+      "review_id": "ecdb7f59-63e3-4c93-82ce-f79f5db501cc"
+    },
+    "workflow_review": "The workflow has been completed and the product listing has been deemed ready to publish under the catalogue policy."
+  },
+  "review_id": "ecdb7f59-63e3-4c93-82ce-f79f5db501cc",
+  "status": "reviewed",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'multi_agent_workflow_review' with 1 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n    \"workflow_review\": \"The workflow is complete and the product listing for SKU-AUD-1002 has been deemed ready to publish under the catalogue policy.\",\n    \"assessment\": \"supported\",\n    \"findings\": \"\",\n    \"risks\": \"\",\n    \"recommendations\": \"Review the product listing for SK",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Guardrails rejected the output: 'findings' is missing; 'risks' is missing",
+      "status": "failed",
+      "step": "Observe"
+    },
+    {
+      "attempt": 2,
+      "detail": "Re-planned the prompt with the previous violations: 'findings' is missing; 'risks' is missing",
+      "step": "Adapt"
+    },
+    {
+      "attempt": 2,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n    \"workflow_review\": \"The workflow has been completed and the product listing has been deemed ready to publish under the catalogue policy.\",\n    \"assessment\": \"supported\",\n    \"findings\": \"No failed checks are listed in product_facts indicating any issues with the required cr",
+      "step": "Act"
+    },
+    {
+      "attempt": 2,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

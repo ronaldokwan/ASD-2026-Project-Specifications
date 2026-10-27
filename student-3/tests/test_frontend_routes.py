@@ -126,6 +126,109 @@ def test_mcp_service_unavailable_is_displayed(frontend, fake_api, monkeypatch):
     assert "MCP server unavailable" in response.get_data(as_text=True)
 
 
+def test_multi_agent_frontend_shows_stages_evidence_and_human_controls(frontend, fake_api):
+    response = frontend.post("/customers/1/multi-agent")
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "Model-generated plan" in html
+    assert "Application-enforced requirements" in html
+    assert "Check policy" in html
+    assert "Cite policy" in html
+    assert "Do not apply reward" in html
+    assert "Worker recommendation" in html
+    assert "Reviewer findings" in html
+    assert "Supporting evidence" in html
+    assert "Partially accept / correct" in html
+    assert "Reject recommendation" in html
+    assert "Does not" not in html
+
+
+def test_multi_agent_human_decision_is_sent_to_backend(frontend, fake_api):
+    response = frontend.post("/customers/1/multi-agent/workflow-123/review", data={
+        "decision": "partial_accept",
+        "feedback": "Corrected for the available evidence.",
+        "corrected_recommendation": "Retain the benefit suggestion.",
+        "corrected_rationale": "Policy source supports consideration.",
+        "accepted_fields": "recommendation",
+        "unresolved_issues": "Confirm eligibility before applying.",
+    })
+    assert response.status_code == 200
+    assert "Partially Accepted" in response.get_data(as_text=True)
+    assert fake_api["multi_agent_reviews"][0]["accepted_fields"] == ["recommendation"]
+    assert fake_api["multi_agent_reviews"][0]["unresolved_issues"] == [
+        "Confirm eligibility before applying.",
+    ]
+
+
+def test_partial_accept_validation_error_preserves_entered_values(
+    frontend, fake_api, monkeypatch
+):
+    values = {
+        "decision": "partial_accept",
+        "feedback": "",
+        "corrected_recommendation": "Bronze members may receive an approved policy benefit.",
+        "corrected_rationale": "This is informational and does not apply a reward.",
+        "accepted_fields": "Bronze tier\nApproved Bronze benefits",
+        "unresolved_issues": "None for this wording correction",
+    }
+
+    def reject_review(*_args, **_kwargs):
+        raise api_client.ApiError("Feedback is required for partial acceptance.", 400)
+
+    monkeypatch.setattr(api_client, "review_multi_agent_workflow", reject_review)
+    response = frontend.post(
+        "/customers/1/multi-agent/workflow-123/review", data=values
+    )
+    html = response.get_data(as_text=True)
+    assert response.status_code == 400
+    assert "Feedback is required for partial acceptance." in html
+    for value in (
+        "Bronze members may receive an approved policy benefit.",
+        "This is informational and does not apply a reward.",
+        "Bronze tier", "Approved Bronze benefits", "None for this wording correction",
+    ):
+        assert value in html
+    assert 'name="feedback" required' in html
+
+
+def test_review_error_after_save_displays_recorded_decision(frontend, fake_api, monkeypatch):
+    saved_decision = {
+        "decision": "partial_accept",
+        "feedback": "Wording correction only; rewards remain informational.",
+        "corrected_output": {
+            "recommendation": "Bronze members may receive the listed policy benefits.",
+            "rationale": "This does not establish eligibility or apply a reward.",
+        },
+        "accepted_fields": ["Bronze tier", "Approved Bronze benefits"],
+        "unresolved_issues": ["None for this wording correction"],
+    }
+    monkeypatch.setattr(api_client, "review_multi_agent_workflow", lambda *_args, **_kwargs: (
+        _ for _ in ()
+    ).throw(api_client.ApiError("The response could not be confirmed.", 502)))
+    monkeypatch.setattr(api_client, "get_multi_agent_workflow", lambda *_args: {
+        "workflow_id": "workflow-123", "status": "partially_accepted",
+        "human_decision": saved_decision,
+    })
+
+    response = frontend.post(
+        "/customers/1/multi-agent/workflow-123/review",
+        data={"decision": "partial_accept", "feedback": "retry"},
+    )
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "A decision was already recorded" in html
+    assert "Bronze members may receive the listed policy benefits." in html
+    assert "None for this wording correction" in html
+    assert "Administrator decision" not in html
+
+
+def test_multi_agent_history_fragment(frontend, fake_api):
+    response = frontend.get("/customers/1/multi-agent/history")
+    assert response.status_code == 200
+    assert "Workflow history" in response.get_data(as_text=True)
+    assert "workflow-123" in response.get_data(as_text=True)
+
+
 def test_rag_answer_displays_sources_and_confidence(frontend, fake_api):
     html = frontend.post(
         "/loyalty-benefits/ask",

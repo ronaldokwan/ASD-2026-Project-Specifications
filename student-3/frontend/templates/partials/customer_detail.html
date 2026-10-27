@@ -11,4 +11,10 @@
           hx-target="#mcp-panel" hx-disabled-elt="this">
     Check Profile with MCP
   </button>
+  <button class="btn ai" hx-post="/customers/{{ customer.id }}/multi-agent"
+          hx-target="#multi-agent-panel" hx-disabled-elt="this">
+    Review loyalty recommendation
+  </button>
 </div>
+<div class="result-panel" hx-get="/customers/{{ customer.id }}/multi-agent/history"
+     hx-trigger="load, every 15s" hx-swap="innerHTML"></div>

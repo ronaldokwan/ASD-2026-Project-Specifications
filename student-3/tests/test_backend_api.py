@@ -2,10 +2,11 @@
 
 import asyncio
 import copy
+import json
 
 import pytest
 
-from app import ai_agent, db_client, mcp_client, rag_client
+from app import ai_agent, db_client, mcp_client, rag_client, multi_agent_client
 from app.config import Config
 from app.validation import ValidationError, clean_customer
 
@@ -283,6 +284,162 @@ def test_rag_client_always_sends_customer_accounts_filter(monkeypatch):
 
 
 def test_rag_insufficient_context_passes_through(backend, monkeypatch):
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "insufficient_context", "answer": "", "sources": [],
+        "confidence": "insufficient", "message": "Insufficient relevant context was found.",
+    })
+
+
+def test_multi_agent_start_uses_existing_evidence_without_customer_contact_values(
+    backend, fake_db, monkeypatch
+):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    monkeypatch.setattr(mcp_client, "check_customer_profile", lambda _customer: profile_result())
+    requested_questions = []
+
+    def ask_policy(question):
+        requested_questions.append(question)
+        return {
+            "status": "ok", "answer": "Silver members may receive a delivery benefit.",
+            "confidence": "high", "sources": [{
+                "source": "customer-loyalty-policy.md", "section": "Silver Membership",
+                "snippet": "Silver members may receive a delivery benefit.",
+            }],
+        }
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", ask_policy)
+    captured = {}
+
+    def start(method, path, **kwargs):
+        captured.update(kwargs["json"])
+        return {"workflow_id": "workflow-123", "status": "queued"}
+
+    monkeypatch.setattr(multi_agent_client, "_call", start)
+    response = backend.post("/api/customers/1/multi-agent")
+    assert response.status_code == 202
+    assert response.get_json()["workflow_id"] == "workflow-123"
+    assert captured["subject_ref"] == "student-3-customer:1"
+    evidence_text = " ".join(item["content"] for item in captured["evidence"])
+    assert "Avery Brooks" not in evidence_text
+    assert "avery@example.test" not in evidence_text
+    assert "0400 000 001" not in evidence_text
+    assert {item["id"] for item in captured["evidence"]} == {
+        "customer_facts", "mcp_profile", "loyalty_policy",
+    }
+    facts = json.loads(next(
+        item["content"] for item in captured["evidence"] if item["id"] == "customer_facts"
+    ))
+    assert facts == {
+        "loyalty_tier": "Silver", "joined_at": "2025-01-10",
+        "has_phone": True, "has_address": True,
+    }
+    plan_contract = captured["request"]["plan_contract"]
+    assert any("optional and do not establish tier" in item
+               for item in plan_contract["constraints"])
+    assert plan_contract["acceptance_criteria"] == [
+        "Identify the tier recorded in customer_facts.",
+        "Use only benefits stated in loyalty_policy for that same tier.",
+        "Call out evidence that is actually missing or unavailable; do not call supplied facts missing.",
+    ]
+    assert captured["request"]["worker_evidence_ids"] == ["customer_facts", "loyalty_policy"]
+    assert captured["request"]["worker_required_evidence_ids"] == ["customer_facts", "loyalty_policy"]
+    assert captured["request"]["worker_policy_evidence_ids"] == ["loyalty_policy"]
+    evidence = {item["id"]: item for item in captured["evidence"]}
+    assert "Authoritative" in evidence["customer_facts"]["meaning"]
+    assert "not define or authorize loyalty benefits" in evidence["mcp_profile"]["meaning"]
+    assert "approved benefits" in evidence["loyalty_policy"]["meaning"]
+    assert requested_questions == ["What loyalty benefits are approved for a Silver customer?"]
+
+
+def test_multi_agent_does_not_accept_a_policy_section_for_a_different_tier(
+    backend, fake_db, monkeypatch
+):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    monkeypatch.setattr(mcp_client, "check_customer_profile", lambda _customer: profile_result())
+    monkeypatch.setattr(rag_client, "ask_loyalty_benefits", lambda _question: {
+        "status": "ok", "answer": "Bronze policy text.", "confidence": "high",
+        "sources": [{"source": "customer-loyalty-policy.md", "section": "Bronze Membership",
+                     "snippet": "Bronze policy text."}],
+    })
+    captured = {}
+
+    def start(_method, _path, **kwargs):
+        captured.update(kwargs["json"])
+        return {"workflow_id": "workflow-mismatch", "status": "queued"}
+
+    monkeypatch.setattr(multi_agent_client, "_call", start)
+    response = backend.post("/api/customers/1/multi-agent")
+    assert response.status_code == 202
+    policy = next(item for item in captured["evidence"] if item["id"] == "loyalty_policy")
+    assert policy["status"] == "insufficient"
+
+
+def test_multi_agent_routes_check_customer_ownership_and_record_decisions(
+    backend, fake_db, monkeypatch
+):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    subject_ref = "student-3-customer:1"
+    calls = []
+
+    def call(method, path, **kwargs):
+        calls.append((method, path, kwargs))
+        if method == "GET" and path == "/workflow/history":
+            return {"count": 1, "workflows": [{"workflow_id": "workflow-123"}]}
+        if method == "GET":
+            return {"workflow_id": "workflow-123", "subject_ref": subject_ref, "status": "human_review"}
+        return {"workflow_id": "workflow-123", "subject_ref": subject_ref,
+                "status": "partially_accepted", "human_decision": kwargs["json"]}
+
+    monkeypatch.setattr(multi_agent_client, "_call", call)
+    history = backend.get("/api/customers/1/multi-agent/history")
+    assert history.status_code == 200 and history.get_json()["count"] == 1
+    status = backend.get("/api/customers/1/multi-agent/workflow-123")
+    assert status.get_json()["status"] == "human_review"
+    review = backend.post("/api/customers/1/multi-agent/workflow-123/review", json={
+        "decision": "partial_accept", "feedback": "Corrected for review.",
+    })
+    assert review.status_code == 200
+    assert review.get_json()["status"] == "partially_accepted"
+    assert [item[1] for item in calls] == [
+        "/workflow/history", "/workflow/workflow-123", "/workflow/workflow-123",
+        "/workflow/workflow-123/review",
+    ]
+
+
+def test_multi_agent_review_validation_status_and_message_are_preserved(
+    backend, fake_db, monkeypatch
+):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+
+    def call(method, _path, **_kwargs):
+        if method == "GET":
+            return {"workflow_id": "workflow-123", "subject_ref": "student-3-customer:1",
+                    "status": "human_review", "human_decision": None}
+        raise multi_agent_client.MultiAgentBadResponse(
+            "Feedback is required for partial acceptance.", status=400
+        )
+
+    monkeypatch.setattr(multi_agent_client, "_call", call)
+    response = backend.post("/api/customers/1/multi-agent/workflow-123/review", json={
+        "decision": "partial_accept", "feedback": "",
+    })
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Feedback is required for partial acceptance."
+
+
+def test_multi_agent_disabled_and_wrong_customer_workflows_fail_safely(
+    backend, fake_db, monkeypatch
+):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", False)
+    disabled = backend.post("/api/customers/1/multi-agent")
+    assert disabled.status_code == 503
+    assert "disabled" in disabled.get_json()["detail"]
+
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    monkeypatch.setattr(multi_agent_client, "_call", lambda *_args, **_kwargs: {
+        "workflow_id": "workflow-123", "subject_ref": "student-3-customer:2",
+    })
+    wrong_owner = backend.get("/api/customers/1/multi-agent/workflow-123")
+    assert wrong_owner.status_code == 502
     monkeypatch.setattr(rag_client, "ask_loyalty_benefits", lambda _question: {
         "status": "insufficient_context", "answer": "", "sources": [],
         "confidence": "insufficient", "message": "Insufficient relevant context was found.",

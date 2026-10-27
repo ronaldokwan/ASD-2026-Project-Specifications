@@ -32,7 +32,7 @@
             </article>
             <article th:classappend="${workflow.reviewerResult != null ? ' complete' : (workflow.stage == 'reviewing' ? ' active' : '')}">
                 <span>Reviewer</span>
-                <strong>deepseek-r1:8b</strong>
+                <strong th:text="${workflow.roles != null and workflow.roles.size() > 2 ? workflow.roles[2]['model'] : 'llama3.1:8b'}">llama3.1:8b</strong>
                 <small th:text="${workflow.reviewerResult != null ? 'Validation completed' : (workflow.stage == 'reviewing' ? 'Validating evidence…' : 'Waiting')}">Status</small>
             </article>
         </div>

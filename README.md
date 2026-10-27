@@ -1,7 +1,7 @@
 # ASD 2026 – Agentic AI Retail Application (Canvas Group 40)
 
 An Agentic AI retail application built as a **microservices architecture**, containerised with
-Docker, and delivered incrementally across Releases 0, 1 and 2.
+Docker, and delivered incrementally across Releases 0, 1 and 2 .
 
 | Item          | Value                                                          |
 | ------------- | -------------------------------------------------------------- |
@@ -13,13 +13,13 @@ Docker, and delivered incrementally across Releases 0, 1 and 2.
 
 ## Team and features
 
-| #   | Student                             | Feature                              | Status          |
-| --- | ----------------------------------- | ------------------------------------ | --------------- |
-| 1   | Ronaldo Kwan                        | Product Catalogue                    | **Implemented** |
-| 2   | Jinying Li                          | Customer Orders                      | Skeleton only   |
-| 3   | Vishvak Ananthakrishnan Rameshkumar | Customer Account Management          | **Implemented** |
-| 4   | Jonathan Czesler                    | Inventory and Stock                  | Skeleton only   |
-| 5   | Alexander McGuinn                   | Reviews and Ratings                  | Skeleton only   |
+| #   | Student                             | Feature                     | Status          |
+| --- | ----------------------------------- | --------------------------- | --------------- |
+| 1   | Ronaldo Kwan                        | Product Catalogue           | **Implemented** |
+| 2   | Jinying Li                          | Customer Orders             | Skeleton only   |
+| 3   | Vishvak Ananthakrishnan Rameshkumar | Customer Account Management | **Implemented** |
+| 4   | Jonathan Czesler                    | Inventory and Stock         | Skeleton only   |
+| 5   | Alexander McGuinn                   | Reviews and Ratings         | Skeleton only   |
 
 Each student owns **three microservices** (frontend, backend/API, database) plus their own
 `.github/workflows/student-N.yml` CI/CD workflow.

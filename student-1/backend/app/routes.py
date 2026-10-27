@@ -18,11 +18,18 @@ Release 1 (shared MCP and RAG servers, both outside Docker Compose):
     POST   /api/products/<id>/mcp-check   MCP tool check_product_listing
     POST   /api/catalogue/ask             grounded RAG answer with citations
     POST   /api/catalogue/rag-sync        re-index every product into the RAG corpus
+
+Release 2 (shared Multi-Agent server, outside Docker Compose):
+
+    POST   /api/products/<id>/multi-agent                     start a listing review
+    GET    /api/products/<id>/multi-agent/history             workflows for one product
+    GET    /api/products/<id>/multi-agent/<workflow_id>       stages and outputs
+    POST   /api/products/<id>/multi-agent/<workflow_id>/review  human decision
 """
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client, mcp_client, rag_client
+from . import ai_agent, db_client, mcp_client, multi_agent_client, rag_client
 from .config import Config
 from .validation import ValidationError, canonical_category, clean_product
 
@@ -48,6 +55,7 @@ def health():
         "ai_mode": ai_agent.ai_mode_health(),
         "mcp_server": mcp_client.health(),
         "rag_server": rag_client.health(),
+        "multi_agent_server": multi_agent_client.health(),
     }
     return jsonify(body), (200 if database_ok else 503)
 
@@ -188,6 +196,38 @@ def rag_sync():
     return jsonify(rag_client.sync_products(db_client.list_products()))
 
 
+# ---------------------------------------------------- Release 2: Multi-Agent
+@api.post("/api/products/<int:product_id>/multi-agent")
+def start_multi_agent(product_id):
+    """Planner -> Worker -> Reviewer listing readiness review for one product."""
+    product = db_client.get_product(product_id)
+    return jsonify(multi_agent_client.start_listing_review(product)), 202
+
+
+@api.get("/api/products/<int:product_id>/multi-agent/history")
+def multi_agent_history(product_id):
+    db_client.get_product(product_id)
+    return jsonify(multi_agent_client.list_workflows(product_id))
+
+
+@api.get("/api/products/<int:product_id>/multi-agent/<workflow_id>")
+def multi_agent_status(product_id, workflow_id):
+    db_client.get_product(product_id)
+    return jsonify(multi_agent_client.get_workflow(product_id, workflow_id))
+
+
+@api.post("/api/products/<int:product_id>/multi-agent/<workflow_id>/review")
+def multi_agent_review(product_id, workflow_id):
+    """Record the administrator's human-review decision on a workflow."""
+    db_client.get_product(product_id)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    return jsonify(
+        multi_agent_client.review_workflow(product_id, workflow_id, payload)
+    )
+
+
 # ----------------------------------------------------------- error handlers
 @api.app_errorhandler(ValidationError)
 def handle_validation_error(exc):
@@ -241,6 +281,20 @@ def handle_rag_bad_response(exc):
         jsonify({"error": "RAG server returned an invalid result", "detail": str(exc)}),
         502,
     )
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentUnavailable)
+def handle_multi_agent_unavailable(exc):
+    return (
+        jsonify({"error": "Multi-Agent server unavailable", "detail": str(exc)}),
+        503,
+    )
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentBadResponse)
+def handle_multi_agent_bad_response(exc):
+    status = exc.status if exc.status in (400, 404, 409) else 502
+    return jsonify({"error": str(exc)}), status
 
 
 @api.app_errorhandler(404)

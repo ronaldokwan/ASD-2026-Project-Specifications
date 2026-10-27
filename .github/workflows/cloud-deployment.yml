@@ -1,0 +1,156 @@
+name: cloud-deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Set to deploy after required validation passes
+        required: true
+        type: choice
+        options: ["no", "yes"]
+        default: "no"
+
+permissions:
+  contents: read
+
+# Two applies against the same Terraform state must never overlap.
+concurrency:
+  group: cloud-deployment
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.11"
+  AWS_REGION: ap-southeast-2
+  AI_MODE_ENABLED: "false"
+  MCP_ENABLED: "false"
+  RAG_ENABLED: "false"
+  MULTI_AGENT_ENABLED: "false"
+
+jobs:
+  required-ci:
+    name: Required integrated validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: student-2/pom.xml
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          # Same version that wrote the remote state; the wrapper would corrupt
+          # $(terraform output -raw ...) in validate-runtime.sh.
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+      - name: Install application and scan dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r student-3/database/requirements.txt
+          pip install -r student-3/backend/requirements.txt
+          pip install -r student-3/frontend/requirements.txt
+          pip install -r student-1/database/requirements.txt
+          pip install -r student-1/backend/requirements.txt
+          pip install -r student-1/frontend/requirements.txt
+          pip install -r student-4/database/requirements.txt
+          pip install -r student-4/backend/requirements.txt
+          pip install -r student-4/frontend/requirements.txt
+          pip install -r student-5/database/requirements.txt
+          pip install -r student-5/backend/requirements.txt
+          pip install -r student-5/frontend/requirements.txt
+          pip install -r ai-services/ai-mode/requirements.txt
+          pip install -r ai-services/mcp-server/requirements.txt
+          pip install -r ai-services/rag-server/requirements.txt
+          pip install -r ai-services/multi-agent/requirements.txt
+          pip install pre-commit==4.3.0
+      - name: Security hooks
+        run: pre-commit run --all-files
+      - name: Release 2 tests
+        run: |
+          mkdir -p reports
+          pytest student-3/tests -v --junitxml=reports/student-3-tests.xml
+          pytest student-1/tests -v --junitxml=reports/student-1-tests.xml
+          pytest student-4/tests -v --junitxml=reports/student-4-tests.xml
+          pytest student-5/tests -v --junitxml=reports/student-5-tests.xml
+          cd student-2 && mvn --batch-mode clean verify
+          cd ..
+          pytest ai-services/multi-agent/tests -v --junitxml=reports/multi-agent-tests.xml
+          pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+      - name: Validate infrastructure, Compose and scripts
+        run: |
+          terraform -chdir=infra/aws fmt -check -recursive
+          terraform -chdir=infra/aws init -backend=false -input=false
+          terraform -chdir=infra/aws validate
+          terraform -chdir=infra/aws/github-oidc init -backend=false -input=false
+          terraform -chdir=infra/aws/github-oidc validate
+          docker compose config --quiet
+          bash -n scripts/aws/*.sh scripts/run-multi-agent.sh scripts/run-ai-services.sh
+          python -m compileall -q ai-services/ai-mode ai-services/multi-agent student-3
+      - name: Build integrated application images
+        run: |
+          docker build -t asd/shared-home:ci -f shared/Dockerfile shared
+          docker build -t asd/student-1-db:ci student-1/database
+          docker build -t asd/student-1-backend:ci student-1/backend
+          docker build -t asd/student-1-frontend:ci student-1/frontend
+          docker build -t asd/student2-db:ci -f student-2/database-api/Dockerfile student-2
+          docker build -t asd/student2-api:ci -f student-2/backend/Dockerfile student-2
+          docker build -t asd/student2-frontend:ci -f student-2/frontend/Dockerfile student-2
+          docker build -t asd/student-3-db:ci student-3/database
+          docker build -t asd/student-3-backend:ci student-3/backend
+          docker build -t asd/student-3-frontend:ci student-3/frontend
+          docker build -t asd/student-4-db:ci student-4/database
+          docker build -t asd/student-4-backend:ci student-4/backend
+          docker build -t asd/student-4-frontend:ci student-4/frontend
+          docker build -t asd/student-5-db:ci student-5/database
+          docker build -t asd/student-5-backend:ci student-5/backend
+          docker build -t asd/student-5-frontend:ci student-5/frontend
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-2-required-validation-${{ github.sha }}
+          path: reports/
+
+  deploy:
+    name: Deploy validated commit to AWS
+    if: github.ref == 'refs/heads/main' && inputs.deploy == 'yes'
+    needs: [required-ci]
+    runs-on: ubuntu-latest
+    environment: aws-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          # Same version that wrote the remote state; the wrapper would corrupt
+          # $(terraform output -raw ...) in validate-runtime.sh.
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'ap-southeast-2' }}
+      - name: Apply infrastructure, publish this tested commit, deploy and validate
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-2' }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          IMAGE_TAG: ${{ github.sha }}
+          APPROVE_DEPLOYMENT: YES
+        run: bash scripts/aws/deploy.sh
+      - name: Upload cloud execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-deployment-evidence-${{ github.sha }}
+          path: reports/aws-*.json
