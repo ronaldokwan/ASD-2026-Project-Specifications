@@ -12,6 +12,11 @@ microservice directly.
     POST /reviews/<id>              update
     POST /reviews/<id>/delete       delete
     POST /ai/summary                AI pros/cons summary of a product's reviews
+    POST /reviews/<id>/multi-agent  Release 2: run Planner -> Worker -> Reviewer moderation
+    GET  /reviews/<id>/multi-agent/<workflow_id>
+        Release 2: poll one workflow's status (self-polling while in progress)
+    POST /reviews/<id>/multi-agent/<workflow_id>/review
+        Release 2: record the moderator's accept/partial_accept/reject decision
     GET  /health                    frontend liveness + downstream health
     GET  /shared/<path>             the team's shared CSS/JS (read-only volume)
 """
@@ -252,6 +257,69 @@ def ai_moderate():
         return render_template("partials/mcp_result.html", error=exc.message)
 
     return render_template("partials/mcp_result.html", result=result)
+
+
+# ------------------------------------------------- Release 2: Multi-Agent
+def _multi_agent_panel(review_id, workflow, error=None, status=200):
+    try:
+        history = api_client.list_multi_agent_workflows(review_id).get("workflows", [])
+    except ApiError:
+        history = []
+    return render_template(
+        "partials/multi_agent_result.html",
+        review_id=review_id, workflow=workflow, history=history, error=error,
+    ), status
+
+
+@app.post("/reviews/<review_id>/multi-agent")
+def start_multi_agent(review_id):
+    try:
+        started = api_client.start_multi_agent_review(review_id)
+        workflow = api_client.get_multi_agent_workflow(review_id, started["workflow_id"])
+    except ApiError as exc:
+        return _multi_agent_panel(review_id, None, error=exc.message, status=exc.status)
+    return _multi_agent_panel(review_id, workflow)
+
+
+@app.get("/reviews/<review_id>/multi-agent/<workflow_id>")
+def multi_agent_status(review_id, workflow_id):
+    try:
+        workflow = api_client.get_multi_agent_workflow(review_id, workflow_id)
+    except ApiError as exc:
+        return _multi_agent_panel(review_id, None, error=exc.message, status=exc.status)
+    return _multi_agent_panel(review_id, workflow)
+
+
+@app.post("/reviews/<review_id>/multi-agent/<workflow_id>/review")
+def review_multi_agent(review_id, workflow_id):
+    decision = request.form.get("decision", "").strip()
+    payload = {"decision": decision, "feedback": request.form.get("feedback", "").strip()}
+    if decision == "partial_accept":
+        payload.update({
+            "corrected_output": {
+                "recommendation": request.form.get("corrected_recommendation", "").strip(),
+                "rationale": request.form.get("corrected_rationale", "").strip(),
+            },
+            "accepted_fields": [
+                item.strip() for item in request.form.get("accepted_fields", "").splitlines() if item.strip()
+            ],
+            "unresolved_issues": [
+                item.strip() for item in request.form.get("unresolved_issues", "").splitlines() if item.strip()
+            ],
+        })
+    elif decision == "reject":
+        payload["unresolved_issues"] = [
+            item.strip() for item in request.form.get("unresolved_issues", "").splitlines() if item.strip()
+        ]
+    try:
+        workflow = api_client.review_multi_agent_workflow(review_id, workflow_id, payload)
+    except ApiError as exc:
+        try:
+            workflow = api_client.get_multi_agent_workflow(review_id, workflow_id)
+        except ApiError:
+            workflow = {"workflow_id": workflow_id, "status": "human_review"}
+        return _multi_agent_panel(review_id, workflow, error=exc.message, status=exc.status)
+    return _multi_agent_panel(review_id, workflow)
 
 
 # -------------------------------------------------------------------- health

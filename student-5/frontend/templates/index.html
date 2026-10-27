@@ -44,6 +44,19 @@
         </div>
       </div>
 
+      <div class="card" id="multi-agent-card">
+        <h2>Multi-Agent moderation review (Release 2)</h2>
+        <p class="hint">
+          Press <em>Multi-Agent review</em> on any review. The shared Multi-Agent Server runs
+          <strong>Planner &rarr; Worker &rarr; Reviewer</strong>, grounded in the review's own text/rating
+          and the shared MCP moderation check, then waits for a moderator to accept, partially
+          accept or reject the result.
+        </p>
+        <div id="multi-agent-panel" class="result-panel" tabindex="-1" aria-live="polite">
+          <p class="muted">No workflow run yet. Press <em>Multi-Agent review</em> on any review.</p>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Ask about the reviews</h2>
         <p class="hint">
