@@ -1,0 +1,18 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="history">
+    <div class="notice error" th:if="${serviceError}" th:text="${serviceError}">Service error</div>
+    <section th:if="${workflowHistory != null}" class="history-card">
+        <h4 th:text="|Review history (${workflowHistory.count})|">Review history</h4>
+        <p class="muted" th:if="${workflowHistory.workflows.isEmpty()}">No workflow has been recorded for this order.</p>
+        <button th:each="item : ${workflowHistory.workflows}" class="history-item" type="button"
+                th:attr="hx-get=@{/orders/{id}/multi-agent/{workflowId}(id=${orderId},workflowId=${item.workflowId})}"
+                hx-target="#multi-agent-result" hx-swap="innerHTML">
+            <span th:text="${#strings.replace(item.status, '_', ' ')}">Status</span>
+            <code th:text="${item.workflowId}">ID</code>
+        </button>
+    </section>
+</div>
+</body>
+</html>

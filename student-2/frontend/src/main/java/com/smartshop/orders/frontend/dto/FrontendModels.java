@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class FrontendModels {
 
@@ -86,5 +87,54 @@ public final class FrontendModels {
         String docId,
         String label,
         List<String> snippets
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record StartWorkflowResponse(
+        @JsonProperty("workflow_id") String workflowId,
+        String status,
+        String error
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MultiAgentEvidence(
+        String id,
+        String source,
+        String status,
+        String meaning,
+        String content
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MultiAgentWorkflow(
+        @JsonProperty("workflow_id") String workflowId,
+        @JsonProperty("subject_ref") String subjectRef,
+        String status,
+        String stage,
+        Map<String, Object> plan,
+        @JsonProperty("worker_result") Map<String, Object> workerResult,
+        @JsonProperty("reviewer_result") Map<String, Object> reviewerResult,
+        @JsonProperty("human_decision") Map<String, Object> humanDecision,
+        List<Map<String, Object>> roles,
+        List<MultiAgentEvidence> evidence,
+        @JsonProperty("revision_count") Integer revisionCount,
+        @JsonProperty("max_revisions") Integer maxRevisions,
+        String failure,
+        String error
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record MultiAgentHistory(
+        int count,
+        List<MultiAgentWorkflow> workflows,
+        String error
+    ) {}
+
+    public record MultiAgentReviewRequest(
+        String decision,
+        String feedback,
+        @JsonProperty("accepted_fields") List<String> acceptedFields,
+        @JsonProperty("unresolved_issues") List<String> unresolvedIssues,
+        @JsonProperty("corrected_output") Map<String, String> correctedOutput
     ) {}
 }

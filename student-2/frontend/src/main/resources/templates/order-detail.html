@@ -118,10 +118,42 @@
             </article>
         </div>
     </section>
+
+    <section class="panel multi-agent-panel">
+        <div class="section-heading intelligence-heading">
+            <div>
+                <span class="eyebrow">Release 2 · Human-supervised agents</span>
+                <h2>Multi-Agent order review</h2>
+            </div>
+            <button class="button secondary" type="button"
+                    th:attr="hx-get=@{/orders/{id}/multi-agent/history(id=${order.id})}"
+                    hx-target="#multi-agent-history" hx-swap="innerHTML">Review history</button>
+        </div>
+        <p class="muted">Planner, Worker and Reviewer agents evaluate sanitised order facts, the MCP fulfilment result and RAG shipping-policy evidence. A human makes the final decision.</p>
+        <div class="agent-role-overview" aria-label="Multi-Agent workflow roles">
+            <article>
+                <span class="agent-step">1</span>
+                <div><strong>Planner</strong><small>llama3.1:8b · creates the evidence-based plan</small></div>
+            </article>
+            <article>
+                <span class="agent-step">2</span>
+                <div><strong>Worker</strong><small>qwen2.5:3b · produces the grounded recommendation</small></div>
+            </article>
+            <article>
+                <span class="agent-step">3</span>
+                <div><strong>Reviewer</strong><small>llama3.1:8b · validates claims before human review</small></div>
+            </article>
+        </div>
+        <button class="button dark" type="button"
+                th:attr="hx-post=@{/orders/{id}/multi-agent(id=${order.id})}"
+                hx-target="#multi-agent-result" hx-swap="innerHTML">Run Multi-Agent review</button>
+        <div id="multi-agent-result" class="multi-agent-result muted">Run the review to see the Planner, Worker, Reviewer and Human Review results.</div>
+        <div id="multi-agent-history" class="multi-agent-history"></div>
+    </section>
 </main>
 <footer class="container muted" style="padding-bottom:32px">
     ASD 2026 · Canvas Group 40 · Agentic AI Retail Application ·
-    frontend → backend/API → shared MCP/RAG services → Ollama → LLM
+    frontend → backend/API → shared MCP/RAG/Multi-Agent services → Ollama → LLM
 </footer>
 </body>
 </html>
