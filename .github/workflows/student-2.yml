@@ -33,7 +33,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Test two Student 2 backend endpoint functions
+      - name: Test the Student 2 controller contracts
         run: >-
           mvn --batch-mode --projects backend
           --define test=OrderEndpointTests test
@@ -41,11 +41,11 @@ jobs:
       - name: Build and test all modules
         run: mvn --batch-mode clean verify
 
-      - name: Upload Student 2 endpoint test evidence
+      - name: Upload Student 2 controller test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: student-2-r2-endpoint-test-results
+          name: student-2-r2-controller-test-results
           path: student-2/backend/target/surefire-reports/TEST-*OrderEndpointTests.xml
           if-no-files-found: error
           retention-days: 30
@@ -67,6 +67,20 @@ jobs:
           done
           docker compose logs
           exit 1
+
+      - name: Test two backend endpoint functions against the live containers
+        run: >-
+          python3 endpoint-tests/test_live_order_endpoints.py
+          2>&1 | tee "${RUNNER_TEMP}/student-2-live-endpoint-tests.log"
+
+      - name: Upload Student 2 live endpoint evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-2-r2-live-endpoint-test-results
+          path: ${{ runner.temp }}/student-2-live-endpoint-tests.log
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Stop containers
         if: always()
