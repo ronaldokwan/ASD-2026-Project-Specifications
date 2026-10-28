@@ -1,0 +1,76 @@
+{
+  "database_filesystem_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "fs-05bce2f0bb4af16a7"
+  },
+  "ecr_repository_urls": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "shared-home": "string",
+        "student-1-backend": "string",
+        "student-1-db": "string",
+        "student-1-frontend": "string",
+        "student-3-backend": "string",
+        "student-3-db": "string",
+        "student-3-frontend": "string",
+        "student-4-backend": "string",
+        "student-4-db": "string",
+        "student-4-frontend": "string",
+        "student-5-backend": "string",
+        "student-5-db": "string",
+        "student-5-frontend": "string",
+        "student2-api": "string",
+        "student2-db": "string",
+        "student2-frontend": "string"
+      }
+    ],
+    "value": {
+      "shared-home": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/shared-home",
+      "student-1-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-backend",
+      "student-1-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-db",
+      "student-1-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-frontend",
+      "student-3-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-backend",
+      "student-3-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-db",
+      "student-3-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-frontend",
+      "student-4-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-backend",
+      "student-4-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-db",
+      "student-4-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-frontend",
+      "student-5-backend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-backend",
+      "student-5-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-db",
+      "student-5-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-frontend",
+      "student2-api": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-api",
+      "student2-db": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-db",
+      "student2-frontend": "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-frontend"
+    }
+  },
+  "frontend_urls": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "home": "string",
+        "student_1": "string",
+        "student_2": "string",
+        "student_3": "string",
+        "student_4": "string",
+        "student_5": "string"
+      }
+    ],
+    "value": {
+      "home": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com",
+      "student_1": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001",
+      "student_2": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3002",
+      "student_3": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3003",
+      "student_4": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3004",
+      "student_5": "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3005"
+    }
+  },
+  "load_balancer_dns_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com"
+  }
+}
