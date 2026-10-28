@@ -123,7 +123,8 @@ curl --fail --silent --show-error -X POST "$student5_url/reviews" \
   --data-urlencode "review=Created by validate-runtime.sh to verify cloud CRUD." >/dev/null
 table="$(curl --fail --silent --show-error --get "$student5_url/partials/reviews" \
   --data-urlencode "product_sku=$review_sku")"
-review_id="$(python3 -c 'import re,sys; m=re.search("id=\"review-([^\"]+)\"",sys.stdin.read()); print(m.group(1) if m else "")' <<<"$table")"
+# Skip the table's and form's own ids (review-table, review-form); rows are review-<uuid>.
+review_id="$(python3 -c 'import re,sys; m=re.search("id=\"review-(?!table\"|form\")([^\"]+)\"",sys.stdin.read()); print(m.group(1) if m else "")' <<<"$table")"
 [[ -n "$review_id" ]] || { echo "Student 5 create/list through database failed." >&2; exit 1; }
 updated="$(curl --fail --silent --show-error -X POST "$student5_url/reviews/$review_id" \
   --data-urlencode "product_sku=$review_sku" \
