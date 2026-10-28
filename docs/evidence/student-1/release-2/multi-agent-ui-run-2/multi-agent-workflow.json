@@ -1,0 +1,177 @@
+{
+  "workflow_id": "fdb60147-2442-4649-ba60-63eebc8983a2",
+  "subject_ref": "student-1-product:12",
+  "request": {
+    "goal": "Say whether this product listing is ready to publish under the catalogue policy, for administrator review. It is ready only if failed_checks in product_facts is empty; otherwise name each failed check as the fix. Write the recommendation as one sentence and the rationale as one short sentence.",
+    "plan_contract": {
+      "acceptance_criteria": [
+        "Base readiness on readiness_checks and failed_checks in product_facts.",
+        "Cite catalogue_policy as the source of the readiness rules.",
+        "Name every failed check as a fix, or state that none failed."
+      ],
+      "constraints": [
+        "product_facts is authoritative for stored product fields and rule results.",
+        "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+        "Do not invent prices, stock, sales or competitor data.",
+        "Do not edit, publish, archive or delete the product."
+      ]
+    },
+    "worker_evidence_ids": [
+      "product_facts",
+      "catalogue_policy"
+    ],
+    "worker_required_evidence_ids": [
+      "product_facts",
+      "catalogue_policy"
+    ],
+    "worker_policy_evidence_ids": [
+      "catalogue_policy"
+    ]
+  },
+  "evidence": [
+    {
+      "id": "product_facts",
+      "source": "student-1-product-api",
+      "status": "available",
+      "content": "{\"sku\": \"SKU-WEA-4002\", \"name\": \"Everyday Fitness Band\", \"category\": \"Wearables\", \"price_aud\": 89.0, \"status\": \"active\", \"description_word_count\": 13, \"description\": \"Slim activity tracker with heart-rate monitoring, sleep tracking and a seven day battery.\", \"readiness_checks\": {\"status_is_active\": true, \"category_is_valid\": true, \"price_within_1_to_9999_aud\": true, \"description_has_at_least_8_words\": true}, \"failed_checks\": []}",
+      "meaning": "Authoritative stored product fields. readiness_checks is the application's exact check of each Listing Readiness rule; failed_checks lists the rules not met."
+    },
+    {
+      "id": "mcp_listing",
+      "source": "shared-mcp-check_product_listing",
+      "status": "available",
+      "content": "{\"tool\": \"check_product_listing\", \"sku\": \"SKU-WEA-4002\", \"listing_status\": \"ready\", \"description_word_count\": 13, \"issues\": [], \"warnings\": [\"price is 99.1% above the category average of 44.71\"], \"errors\": []}",
+      "meaning": "Independent cross-check from the shared MCP listing tool: listing_status and any issues, warnings or errors. Validation evidence, not policy."
+    },
+    {
+      "id": "catalogue_policy",
+      "source": "shared-rag-product-catalogue-policy",
+      "status": "available",
+      "content": "{\"status\": \"ok\", \"answer\": \"A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"sources\": [{\"source\": \"product-catalogue-policy.md\", \"section\": \"Listing Readiness\", \"snippet\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"text\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\"}], \"confidence\": \"medium\", \"retrieved_count\": 1, \"elapsed_ms\": 534}",
+      "meaning": "Catalogue policy retrieved by the shared RAG server. Authoritative for listing readiness only when a Listing Readiness section is cited."
+    }
+  ],
+  "created_at": "2026-10-28T10:12:31.064154+00:00",
+  "updated_at": "2026-10-28T10:17:00.060891+00:00",
+  "status": "accepted",
+  "stage": "completed",
+  "plan": {
+    "model_generated": {
+      "tasks": [
+        {
+          "task": "Check if failed_checks in product_facts is empty",
+          "evidence_refs": [
+            "product_facts"
+          ]
+        },
+        {
+          "task": "If failed_checks is not empty, list each failed check as the fix",
+          "evidence_refs": [
+            "product_facts"
+          ]
+        },
+        {
+          "task": "Check listing_status in mcp_listing and issues, warnings or errors",
+          "evidence_refs": [
+            "mcp_listing"
+          ]
+        },
+        {
+          "task": "Verify catalogue policy for Listing Readiness rules",
+          "evidence_refs": [
+            "catalogue_policy"
+          ]
+        }
+      ]
+    },
+    "application_enforced": {
+      "acceptance_criteria": [
+        "Base readiness on readiness_checks and failed_checks in product_facts.",
+        "Cite catalogue_policy as the source of the readiness rules.",
+        "Name every failed check as a fix, or state that none failed."
+      ],
+      "constraints": [
+        "product_facts is authoritative for stored product fields and rule results.",
+        "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+        "Do not invent prices, stock, sales or competitor data.",
+        "Do not edit, publish, archive or delete the product."
+      ]
+    }
+  },
+  "worker_result": {
+    "recommendation": "The product listing for SKU-WEA-4002 is ready to publish under the catalogue policy as there are no failed checks in product_facts.",
+    "rationale": "The product listing meets all the required criteria according to the catalogue policy, which states a listing is ready when it is active, has a valid category and price, and has a description of at least eight words. There are no failed checks listed in the product facts indicating any issues with these requirements.",
+    "policy_basis": "catalogue_policy",
+    "evidence_refs": [
+      "product_facts",
+      "catalogue_policy"
+    ],
+    "application_added_evidence_refs": []
+  },
+  "reviewer_result": {
+    "action": "not_supported",
+    "findings": [
+      {
+        "severity": "high",
+        "finding": "The product listing for SKU-WEA-4002 is ready to publish under the catalogue policy as there are no failed checks in product_facts.",
+        "evidence_ref": "product_facts",
+        "classification": "unsupported_claim",
+        "claim_field": "recommendation"
+      },
+      {
+        "severity": "high",
+        "finding": "The product listing meets all the required criteria according to the catalogue policy, which states a listing is ready when it is active, has a valid category and price, and has a description of at least eight words. There are no failed checks listed in the product facts indicating any issues with",
+        "evidence_ref": "catalogue_policy",
+        "classification": "unsupported_claim",
+        "claim_field": "rationale"
+      },
+      {
+        "severity": "high",
+        "finding": "The product listing for SKU-WEA-4002 is ready to publish under the catalogue policy as there are no failed checks in product_facts.",
+        "evidence_ref": "catalogue_policy",
+        "classification": "contradiction",
+        "claim_field": "recommendation"
+      }
+    ],
+    "missing_information": [],
+    "recommendations": [
+      "Check if the product listing has a valid category and price according to the catalogue policy. Check if the product description has at least eight words."
+    ],
+    "claim_assessment": {
+      "recommendation": "unsupported",
+      "rationale": "unsupported",
+      "consistency": "contradictory"
+    }
+  },
+  "human_decision": {
+    "decision": "accept",
+    "feedback": "accept",
+    "reviewed_at": "2026-10-28T10:17:00.060891+00:00"
+  },
+  "roles": [
+    {
+      "role": "planner",
+      "model": "llama3.1:8b",
+      "completed_at": "2026-10-28T10:12:41.560014+00:00"
+    },
+    {
+      "role": "worker",
+      "model": "qwen2.5:3b",
+      "revision": 0,
+      "completed_at": "2026-10-28T10:12:47.219689+00:00"
+    },
+    {
+      "role": "reviewer",
+      "model": "llama3.1:8b",
+      "completed_at": "2026-10-28T10:13:11.051888+00:00"
+    }
+  ],
+  "revision_count": 0,
+  "max_revisions": 1,
+  "completion_gate": {
+    "planner_completed": true,
+    "worker_completed": true,
+    "reviewer_completed": true,
+    "human_decision_recorded": true
+  }
+}
