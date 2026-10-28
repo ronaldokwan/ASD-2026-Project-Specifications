@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 24008,
+  "fallback_used": false,
+  "mode": "multi_agent_workflow_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "issues_found",
+    "findings": "The review text is promotional and contains a link, which is not consistent with a 5-star review. The moderation check result does not support the claim that the review should be published as-is.",
+    "recommendations": "Review the review text and rating for consistency. Check the moderation check result for any issues that may affect publication.",
+    "risks": "The review may be published as-is, which could lead to user dissatisfaction and damage to the product's reputation.",
+    "validation_log": {
+      "authoritative_assessment": "issues_found",
+      "contradiction": false,
+      "evidence_assessment": "issues_found",
+      "evidence_gate": "The human decision rejected the result.",
+      "mode": "multi_agent_workflow",
+      "model_assessment": "issues_found",
+      "model_reviewed": true,
+      "review_id": "1cc7369f-0f31-46de-a0e4-b52f97692f98"
+    },
+    "workflow_review": "The review was rejected due to promotional text and an external link, which is not consistent with a 5-star review. The moderation check result indicates that the review is not spammy, but it does not guarantee publication. The review text is inconsistent with the 5-star rating provided."
+  },
+  "review_id": "1cc7369f-0f31-46de-a0e4-b52f97692f98",
+  "status": "blocked",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'multi_agent_workflow_review' with 1 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n  \"workflow_review\": \"The review was rejected due to promotional text and an external link, which is not consistent with a 5-star review. The moderation check result indicates that the review is not spammy, but it does not guarantee publication. The review text is inconsistent ",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

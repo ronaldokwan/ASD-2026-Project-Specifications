@@ -1,0 +1,32 @@
+────────────────────────────────────────────────────────────────
+  Student 5 · Reviews and Ratings · multi-server check
+  2026-10-28 03:22 UTC · commit 749a447
+────────────────────────────────────────────────────────────────
+
+Terminal 1 · Docker Compose (containerised)
+  ✓  ollama                         running   :11434
+  ✓  student-5-backend              running   :8005
+  ✓  student-5-db                   running   :9005
+  ✓  student-5-frontend             running   :3005
+
+Terminal 2 · native host services (not in Compose)
+  ✓  AI services outside Compose    none in docker-compose.yml
+  ✓  AI-Mode  :7001                 HTTP 200
+  ✓  MCP server  :7002              HTTP 200
+  ✓  RAG server  :7003              HTTP 200
+  ✓  Multi-Agent server  :7004      HTTP 200
+
+Student 5 paths
+  ✓  Frontend UI  :3005             HTTP 200
+  ✓  Backend/API  :8005             ok
+  ✓  Database  :9005                ok
+  ✓  Backend -> Database            13 reviews
+  ✓  Backend -> AI-Mode             ok
+  ✓  Backend -> MCP                 check_review_quality, HTTP 200
+     (RAG answers through the LLM, allow up to 2 minutes)
+  ✓  Backend -> RAG                 grounded answer, HTTP 200
+  ✓  Backend -> Multi-Agent         workflow history, HTTP 200
+
+────────────────────────────────────────────────────────────────
+  ALL CHECKS PASSED · log: docs/evidence/student-5/release-2/05-multi-server-check.log
+────────────────────────────────────────────────────────────────
