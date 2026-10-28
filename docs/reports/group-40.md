@@ -114,7 +114,7 @@ Findings resolved: S201 `debug=True` removed from the three Student 1 services a
 
 ### 5.2 Student 2 – Jinying Li
 
-Student 2 executed the shared pre-commit configuration over all tracked files on 28 Oct 2026 at commit `70ba5bf`; the command exited successfully and the Git hook remains installed for subsequent commits. Ruff security rules, detect-secrets and pip-audit all passed. Ruff and pip-audit cover the shared Python AI services and Python dependencies, while Student 2's Customer Orders services are Java/Maven; detect-secrets covers Student 2 source, workflow and configuration files. The strict pip-audit run retained only the four documented ChromaDB advisory exceptions that currently have no fixed release, and found no additional blocking vulnerability. Evidence: `docs/evidence/student-2/release-2/01-pre-commit-security-scans.log`.
+Student 2 executed the shared pre-commit configuration over all tracked files on 28 Oct 2026 at commit `1e5e25f`; the command exited successfully and the Git hook remains installed for subsequent commits. Ruff security rules, detect-secrets and pip-audit all passed. Ruff and pip-audit cover the shared Python AI services and Python dependencies, while Student 2's Customer Orders services are Java/Maven; detect-secrets covers Student 2 source, workflow and configuration files. The strict pip-audit run retained only the four documented ChromaDB advisory exceptions that currently have no fixed release, and found no additional blocking vulnerability. Evidence: `docs/evidence/student-2/release-2/01-pre-commit-security-scans.log`.
 
 | Hook | Student 2 / shared scope | Result |
 |---|---|---|
@@ -153,7 +153,7 @@ Hosted run [39799057050](https://github.com/ronaldokwan/ASD-2026-Project-Specifi
 
 ### 6.2 Student 2 – Jinying Li (`student-2.yml`)
 
-Run [40673632219](https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40673632219) validated commit `70ba5bf`. The workflow compiled and tested all three Java modules, built and health-checked the three Student 2 containers, then ran the following checks against the live backend and database API:
+Run [40675390602](https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40675390602) validated commit `1e5e25f`. The workflow compiled and tested all three Java modules, built and health-checked the three Student 2 containers, then ran the following checks against the live backend and database API:
 
 | Endpoint function | Check | Result |
 |---|---|---|
@@ -197,7 +197,7 @@ The agentic-loop Testing Review mode (`llama3.1:8b`) reviewed Student 2 local an
 | Input | Gate | Model | Result | Evidence |
 |---|---|---|---|---|
 | Local security hooks and endpoint test code; GitHub Actions not supplied | incomplete | incomplete | **incomplete** | `testing-review-local/` |
-| CI run 40673632219: security hooks and three live endpoint checks passed | passed | passed | **passed** | `testing-review-ci/` |
+| CI run 40675390602: security hooks and three live endpoint checks passed | passed | passed | **passed** | `testing-review-ci/` |
 
 The hosted validation log records that all three pre-commit security hooks and at least two post-commit backend endpoint tests passed, with no contradiction between the evidence gate and model assessment.
 
