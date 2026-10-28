@@ -90,3 +90,22 @@ variable "discovery_namespace" {
   type    = string
   default = "asd.internal"
 }
+
+variable "multi_agent_enabled" {
+  description = "Enable Student 4 Multi-Agent requests only when its shared service is reachable from the VPC."
+  type        = bool
+  default     = false
+}
+
+variable "multi_agent_url" {
+  description = "Private, VPC-reachable URL for the shared Multi-Agent workflow service."
+  type        = string
+  default     = "http://127.0.0.1:7004"
+  validation {
+    condition = can(regex("^https?://[^/]+$", var.multi_agent_url)) && (
+      !var.multi_agent_enabled
+      || !can(regex("^https?://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$", var.multi_agent_url))
+    )
+    error_message = "Provide an HTTP(S) URL; when Multi-Agent is enabled, it cannot point to the task's loopback interface."
+  }
+}

@@ -12,6 +12,7 @@ talks to the backend/API microservice directly.
     POST /stock/<id>                update
     POST /stock/<id>/delete         delete
     POST /stock/<id>/mcp-check      shared MCP reorder assessment
+    POST /stock/<id>/multi-agent    Planner -> Worker -> Reviewer restock review
     POST /ai/recommend              AI restock recommendation
     POST /rag/ask                   inventory-grounded RAG answer
     GET  /health                    frontend liveness + downstream health
@@ -19,6 +20,7 @@ talks to the backend/API microservice directly.
 """
 
 import os
+import re
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
@@ -298,6 +300,116 @@ def rag_ask():
     return render_template("partials/rag_result.html", outcome=outcome)
 
 
+# -------------------------------------------------------------- Multi-Agent
+RUNNING_STAGES = ("queued", "planning", "working", "reviewing", "revising")
+app.jinja_env.globals["RUNNING_STAGES"] = RUNNING_STAGES
+
+
+def _lines(field):
+    return [line.strip() for line in request.form.get(field, "").splitlines() if line.strip()]
+
+
+def _workflow_panel(stock_id, workflow=None, error=None):
+    return render_template(
+        "partials/multi_agent_result.html",
+        stock_id=stock_id,
+        workflow=workflow,
+        error=error,
+    )
+
+
+@app.post("/stock/<int:stock_id>/multi-agent")
+def start_multi_agent(stock_id):
+    """Queue an evidence-grounded reorder review and render its first state."""
+    try:
+        started = api_client.start_multi_agent_review(stock_id)
+        workflow_id = started.get("workflow_id") if isinstance(started, dict) else None
+        if not isinstance(workflow_id, str) or not re.fullmatch(
+            r"[A-Za-z0-9_-]{1,128}", workflow_id
+        ):
+            return _workflow_panel(
+                stock_id, error="The API returned an invalid workflow ID."
+            )
+        workflow = api_client.get_multi_agent_workflow(
+            stock_id, workflow_id
+        )
+    except ApiError as exc:
+        return _workflow_panel(stock_id, error=exc.message)
+    return _workflow_panel(stock_id, workflow)
+
+
+@app.get("/stock/<int:stock_id>/multi-agent/history")
+def multi_agent_history(stock_id):
+    try:
+        history = api_client.list_multi_agent_workflows(stock_id)
+    except ApiError as exc:
+        return render_template(
+            "partials/multi_agent_history.html",
+            stock_id=stock_id,
+            workflows=[],
+            error=exc.message,
+            current=None,
+        )
+    workflows = history.get("workflows") if isinstance(history, dict) else None
+    valid_history = isinstance(workflows, list) and all(
+        isinstance(item, dict)
+        and isinstance(item.get("workflow_id"), str)
+        and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", item["workflow_id"])
+        for item in workflows
+    )
+    return render_template(
+        "partials/multi_agent_history.html",
+        stock_id=stock_id,
+        workflows=workflows if valid_history else [],
+        error=None if valid_history else "The API returned invalid workflow history.",
+        current=request.args.get("current"),
+    )
+
+
+@app.get("/stock/<int:stock_id>/multi-agent/<workflow_id>")
+def multi_agent_status(stock_id, workflow_id):
+    try:
+        workflow = api_client.get_multi_agent_workflow(stock_id, workflow_id)
+    except ApiError as exc:
+        return _workflow_panel(stock_id, error=exc.message)
+    return _workflow_panel(stock_id, workflow)
+
+
+@app.post("/stock/<int:stock_id>/multi-agent/<workflow_id>/review")
+def review_multi_agent(stock_id, workflow_id):
+    """Submit an accept, corrected partial acceptance, or rejection."""
+    decision = request.form.get("decision", "").strip()
+    payload = {
+        "decision": decision,
+        "feedback": request.form.get("feedback", "").strip(),
+    }
+    if decision == "partial_accept":
+        payload.update({
+            "corrected_output": {
+                "recommendation": request.form.get(
+                    "corrected_recommendation", ""
+                ).strip(),
+                "rationale": request.form.get("corrected_rationale", "").strip(),
+            },
+            "accepted_fields": _lines("accepted_fields"),
+            "unresolved_issues": _lines("unresolved_issues"),
+        })
+    elif decision == "reject":
+        payload["unresolved_issues"] = _lines("unresolved_issues")
+
+    try:
+        workflow = api_client.review_multi_agent_workflow(
+            stock_id, workflow_id, payload
+        )
+    except ApiError as exc:
+        try:
+            workflow = api_client.get_multi_agent_workflow(stock_id, workflow_id)
+        except ApiError:
+            workflow = None
+        return _workflow_panel(stock_id, workflow, error=exc.message)
+    return _workflow_panel(stock_id, workflow)
+
+
 # -------------------------------------------------------------------- health
 @app.get("/health")
 def health():
@@ -317,4 +429,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3004")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3004")), debug=False)
