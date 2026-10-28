@@ -8,4 +8,4 @@ app = create_app()
 
 if __name__ == "__main__":
     # Flask's development server is useful locally; production containers use Gunicorn.
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", str(Config.PORT))), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", str(Config.PORT))), debug=False)

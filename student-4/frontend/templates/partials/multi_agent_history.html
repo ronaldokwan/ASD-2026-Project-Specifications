@@ -1,0 +1,23 @@
+<div class="multi-agent-history">
+  <h3>Workflow history</h3>
+  {% if error %}
+    <p class="muted">{{ error }}</p>
+  {% elif workflows %}
+    <ul>
+      {% for item in workflows %}
+        <li>{{ item.created_at }} &middot; <strong>{{ item.status|replace('_', ' ') }}</strong>
+          {% if item.human_decision %} &middot; {{ item.human_decision.decision|replace('_', ' ') }}{% endif %}
+          {% if item.workflow_id == current %}
+            <span class="badge">viewing</span>
+          {% else %}
+            <button class="btn secondary"
+                    hx-get="/stock/{{ stock_id }}/multi-agent/{{ item.workflow_id }}"
+                    hx-target="#multi-agent-panel"
+                    hx-swap="innerHTML show:#multi-agent-card:top">View</button>
+          {% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No earlier reviews for this stock item.</p>
+  {% endif %}
+</div>

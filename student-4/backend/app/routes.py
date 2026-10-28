@@ -15,7 +15,7 @@ Plus supporting endpoints: GET /health.
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, db_client, mcp_client, rag_client
+from . import ai_agent, db_client, mcp_client, multi_agent_client, rag_client
 from .config import Config
 from .validation import ValidationError, clean_stock
 
@@ -42,6 +42,7 @@ def health():
         "ai_mode": ai_agent.ai_mode_health(),
         "mcp_server": mcp_client.health(),
         "rag_server": rag_client.health(),
+        "multi_agent_server": multi_agent_client.health(),
     }
     return jsonify(body), (200 if database_ok else 503)
 
@@ -156,6 +157,37 @@ def rag_sync():
     return jsonify(rag_client.sync_stocks(db_client.list_stock()))
 
 
+# -------------------------------------------------------------- Multi-Agent
+@api.post("/api/stock/<int:stock_id>/multi-agent")
+def start_multi_agent(stock_id):
+    """Start an evidence-grounded reorder review for one inventory item."""
+    stock = db_client.get_stock(stock_id)
+    return jsonify(multi_agent_client.start_restock_review(stock)), 202
+
+
+@api.get("/api/stock/<int:stock_id>/multi-agent/history")
+def multi_agent_history(stock_id):
+    db_client.get_stock(stock_id)
+    return jsonify(multi_agent_client.list_workflows(stock_id))
+
+
+@api.get("/api/stock/<int:stock_id>/multi-agent/<workflow_id>")
+def multi_agent_status(stock_id, workflow_id):
+    db_client.get_stock(stock_id)
+    return jsonify(multi_agent_client.get_workflow(stock_id, workflow_id))
+
+
+@api.post("/api/stock/<int:stock_id>/multi-agent/<workflow_id>/review")
+def review_multi_agent(stock_id, workflow_id):
+    db_client.get_stock(stock_id)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise multi_agent_client.MultiAgentBadResponse(
+            "request body must be a JSON object", status=400
+        )
+    return jsonify(multi_agent_client.review_workflow(stock_id, workflow_id, payload))
+
+
 # ----------------------------------------------------------- error handlers
 @api.app_errorhandler(ValidationError)
 def handle_validation_error(exc):
@@ -205,6 +237,17 @@ def handle_rag_unavailable(exc):
 @api.app_errorhandler(rag_client.RAGBadResponse)
 def handle_rag_bad_response(exc):
     return jsonify({"error": "RAG server returned an invalid result", "detail": str(exc)}), 502
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentUnavailable)
+def handle_multi_agent_unavailable(exc):
+    return jsonify({"error": "Multi-Agent server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentBadResponse)
+def handle_multi_agent_bad_response(exc):
+    status = exc.status if exc.status in (400, 404, 409) else 502
+    return jsonify({"error": str(exc)}), status
 
 
 @api.app_errorhandler(404)

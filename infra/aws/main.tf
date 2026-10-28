@@ -86,10 +86,11 @@ locals {
       role          = "backend", port = 8004, health_path = "/health", health_kind = "python"
       listener_port = null, discovery_name = "student-4-backend", persistent = false, db_file = ""
       environment = {
-        DATABASE_URL    = "http://student-4-db.${local.namespace}:9004", SERVICE_PORT = "8004"
-        AI_MODE_ENABLED = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
-        AI_MODE_URL     = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
-        RAG_SERVER_URL  = "http://127.0.0.1:7003"
+        DATABASE_URL        = "http://student-4-db.${local.namespace}:9004", SERVICE_PORT = "8004"
+        AI_MODE_ENABLED     = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
+        MULTI_AGENT_ENABLED = tostring(var.multi_agent_enabled), MULTI_AGENT_URL = var.multi_agent_url
+        AI_MODE_URL         = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
+        RAG_SERVER_URL      = "http://127.0.0.1:7003"
       }
     }
     "student-4-frontend" = {
