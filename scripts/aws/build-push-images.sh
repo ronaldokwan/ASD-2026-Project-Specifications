@@ -12,8 +12,18 @@ aws ecr get-login-password --region "$region" | docker login --username AWS --pa
 build_push() {
   local name="$1" context="$2" dockerfile="$3"
   local image="$registry/$prefix/$name:$tag"
-  docker build --pull -f "$root/$dockerfile" -t "$image" "$root/$context"
+  local build_dir="$root/$context" dockerfile_path="$root/$dockerfile"
+  if [[ "$name" == student-*-frontend ]]; then
+    # Compose mounts shared/ (team theme and JS) into these frontends at /app/shared;
+    # the cloud image has to carry its own copy or every /shared/... asset is a 404.
+    build_dir="$(mktemp -d)"
+    cp -r "$root/$context/." "$build_dir/"
+    cp -r "$root/shared" "$build_dir/shared"
+    dockerfile_path="$build_dir/$(basename "$dockerfile")"
+  fi
+  docker build --pull -f "$dockerfile_path" -t "$image" "$build_dir"
   docker push "$image"
+  [[ "$build_dir" == "$root/$context" ]] || rm -rf "$build_dir"
 }
 
 build_push shared-home shared shared/Dockerfile

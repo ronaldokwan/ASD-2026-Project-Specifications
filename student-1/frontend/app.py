@@ -15,6 +15,10 @@ talks to the backend/API microservice directly.
     POST /ai/suggest                AI description + price suggestion
     POST /products/<id>/mcp-check   Release 1: shared MCP listing check
     POST /catalogue/ask             Release 1: grounded RAG answer
+    POST /products/<id>/multi-agent                 Release 2: start a listing review
+    GET  /products/<id>/multi-agent/history         Release 2: workflow history
+    GET  /products/<id>/multi-agent/<wid>           Release 2: workflow stages (polled)
+    POST /products/<id>/multi-agent/<wid>/review    Release 2: human decision
     GET  /health                    frontend liveness + downstream health
     GET  /shared/<path>             the team's shared CSS/JS (read-only volume)
 """
@@ -331,6 +335,95 @@ def ask_catalogue():
     return render_template("partials/rag_result.html", outcome=outcome)
 
 
+# ------------------------------------------------- Release 2: Multi-Agent
+# Stages during which the panel keeps polling the workflow for progress.
+RUNNING_STAGES = ("queued", "planning", "working", "reviewing", "revising")
+app.jinja_env.globals["RUNNING_STAGES"] = RUNNING_STAGES
+
+
+def _lines(field):
+    return [line.strip() for line in request.form.get(field, "").splitlines() if line.strip()]
+
+
+def _workflow_panel(product_id, workflow=None, error=None, status=200):
+    return (
+        render_template(
+            "partials/multi_agent_result.html",
+            product_id=product_id,
+            workflow=workflow,
+            error=error,
+        ),
+        status,
+    )
+
+
+@app.post("/products/<int:product_id>/multi-agent")
+def start_multi_agent(product_id):
+    """Queue a Planner -> Worker -> Reviewer review, then show its first state."""
+    try:
+        started = api_client.start_multi_agent_review(product_id)
+        workflow = api_client.get_multi_agent_workflow(product_id, started["workflow_id"])
+    except ApiError as exc:
+        return _workflow_panel(product_id, error=exc.message)
+    return _workflow_panel(product_id, workflow)
+
+
+@app.get("/products/<int:product_id>/multi-agent/history")
+def multi_agent_history(product_id):
+    try:
+        history = api_client.list_multi_agent_workflows(product_id)
+    except ApiError as exc:
+        return render_template(
+            "partials/multi_agent_history.html",
+            product_id=product_id, workflows=[], error=exc.message, current=None,
+        )
+    return render_template(
+        "partials/multi_agent_history.html",
+        product_id=product_id, workflows=history.get("workflows", []), error=None,
+        current=request.args.get("current"),
+    )
+
+
+@app.get("/products/<int:product_id>/multi-agent/<workflow_id>")
+def multi_agent_status(product_id, workflow_id):
+    try:
+        workflow = api_client.get_multi_agent_workflow(product_id, workflow_id)
+    except ApiError as exc:
+        return _workflow_panel(product_id, error=exc.message)
+    return _workflow_panel(product_id, workflow)
+
+
+@app.post("/products/<int:product_id>/multi-agent/<workflow_id>/review")
+def review_multi_agent(product_id, workflow_id):
+    """Human review: accept, partially accept with corrections, or reject."""
+    decision = request.form.get("decision", "").strip()
+    payload = {"decision": decision, "feedback": request.form.get("feedback", "").strip()}
+    if decision == "partial_accept":
+        payload.update(
+            {
+                "corrected_output": {
+                    "recommendation": request.form.get("corrected_recommendation", "").strip(),
+                    "rationale": request.form.get("corrected_rationale", "").strip(),
+                },
+                "accepted_fields": _lines("accepted_fields"),
+                "unresolved_issues": _lines("unresolved_issues"),
+            }
+        )
+    elif decision == "reject":
+        payload["unresolved_issues"] = _lines("unresolved_issues")
+
+    try:
+        workflow = api_client.review_multi_agent_workflow(product_id, workflow_id, payload)
+    except ApiError as exc:
+        # Re-show the workflow with the error so the administrator can retry.
+        try:
+            workflow = api_client.get_multi_agent_workflow(product_id, workflow_id)
+        except ApiError:
+            workflow = None
+        return _workflow_panel(product_id, workflow, error=exc.message)
+    return _workflow_panel(product_id, workflow)
+
+
 # -------------------------------------------------------------------- health
 @app.get("/health")
 def health():
@@ -349,4 +442,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3001")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "3001")), debug=False)

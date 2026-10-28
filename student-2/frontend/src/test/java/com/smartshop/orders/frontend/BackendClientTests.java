@@ -80,4 +80,25 @@ class BackendClientTests {
         assertThat(backendClient.askRag(7, "Can this order ship?").answer()).isEqualTo("Yes.");
         server.verify();
     }
+
+    @Test
+    void startsAndReadsTheMultiAgentWorkflow() {
+        server.expect(once(), requestTo("http://student2-api:8002/api/orders/7/multi-agent"))
+            .andRespond(withSuccess(
+                "{\"workflow_id\":\"wf-7\",\"status\":\"queued\"}",
+                MediaType.APPLICATION_JSON
+            ));
+        server.expect(once(), requestTo("http://student2-api:8002/api/orders/7/multi-agent/wf-7"))
+            .andRespond(withSuccess("""
+                {"workflow_id":"wf-7","subject_ref":"student-2-order:7","status":"human_review","stage":"human_review"}
+                """, MediaType.APPLICATION_JSON));
+
+        var started = backendClient.startMultiAgent(7);
+        var workflow = backendClient.getMultiAgent(7, started.workflowId());
+
+        assertThat(started.status()).isEqualTo("queued");
+        assertThat(workflow.subjectRef()).isEqualTo("student-2-order:7");
+        assertThat(workflow.status()).isEqualTo("human_review");
+        server.verify();
+    }
 }

@@ -1,0 +1,166 @@
+{
+  "mode": "multi_agent_workflow",
+  "subject": {
+    "workflow": {
+      "application_check": {
+        "agrees": true,
+        "expected": "ready",
+        "failed_checks": [],
+        "worker_verdict": "ready"
+      },
+      "completion_gate": {
+        "human_decision_recorded": true,
+        "planner_completed": true,
+        "reviewer_completed": true,
+        "worker_completed": true
+      },
+      "created_at": "2026-10-22T14:23:44.375759+00:00",
+      "evidence": [
+        {
+          "content": "{\"sku\": \"SKU-AUD-1002\", \"name\": \"Pebble Bluetooth Speaker\", \"category\": \"Audio\", \"price_aud\": 59.0, \"status\": \"active\", \"description_word_count\": 12, \"description\": \"Pocket-sized waterproof speaker with 12 hours of playback and a carabiner clip.\", \"readiness_checks\": {\"status_is_active\": true, \"category_is_valid\": true, \"price_within_1_to_9999_aud\": true, \"description_has_at_least_8_words\": true}, \"failed_checks\": []}",
+          "id": "product_facts",
+          "meaning": "Authoritative stored product fields. readiness_checks is the application's exact check of each Listing Readiness rule; failed_checks lists the rules not met.",
+          "source": "student-1-product-api",
+          "status": "available"
+        },
+        {
+          "content": "{\"tool\": \"check_product_listing\", \"sku\": \"SKU-AUD-1002\", \"listing_status\": \"ready\", \"description_word_count\": 12, \"issues\": [], \"warnings\": [\"price is 59.3% below the category average of 144.80\"], \"errors\": []}",
+          "id": "mcp_listing",
+          "meaning": "Independent cross-check from the shared MCP listing tool: listing_status and any issues, warnings or errors. Validation evidence, not policy.",
+          "source": "shared-mcp-check_product_listing",
+          "status": "available"
+        },
+        {
+          "content": "{\"status\": \"ok\", \"answer\": \"A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"sources\": [{\"source\": \"product-catalogue-policy.md\", \"section\": \"Listing Readiness\", \"snippet\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\", \"text\": \"Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.\"}], \"confidence\": \"medium\", \"retrieved_count\": 1, \"elapsed_ms\": 5423}",
+          "id": "catalogue_policy",
+          "meaning": "Catalogue policy retrieved by the shared RAG server. Authoritative for listing readiness only when a Listing Readiness section is cited.",
+          "source": "shared-rag-product-catalogue-policy",
+          "status": "available"
+        }
+      ],
+      "human_decision": {
+        "decision": "accept",
+        "feedback": "Verified: active, Audio, 59 AUD, 12-word description; matches the application cross-check.",
+        "reviewed_at": "2026-10-22T14:24:31.577707+00:00"
+      },
+      "max_revisions": 1,
+      "plan": {
+        "application_enforced": {
+          "acceptance_criteria": [
+            "Base readiness on readiness_checks and failed_checks in product_facts.",
+            "Cite catalogue_policy as the source of the readiness rules.",
+            "Name every failed check as a fix, or state that none failed."
+          ],
+          "constraints": [
+            "product_facts is authoritative for stored product fields and rule results.",
+            "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+            "Do not invent prices, stock, sales or competitor data.",
+            "Do not edit, publish, archive or delete the product."
+          ]
+        },
+        "model_generated": {
+          "tasks": [
+            {
+              "evidence_refs": [
+                "product_facts"
+              ],
+              "task": "Check if failed_checks in product_facts is empty"
+            },
+            {
+              "evidence_refs": [
+                "product_facts"
+              ],
+              "task": "If failed_checks is not empty, list each failed check as the fix"
+            },
+            {
+              "evidence_refs": [
+                "mcp_listing"
+              ],
+              "task": "Check if listing_status in mcp_listing is 'ready'"
+            },
+            {
+              "evidence_refs": [
+                "catalogue_policy"
+              ],
+              "task": "Verify catalogue policy for Listing Readiness rules"
+            }
+          ]
+        }
+      },
+      "request": {
+        "goal": "Say whether this product listing is ready to publish under the catalogue policy, for administrator review. It is ready only if failed_checks in product_facts is empty; otherwise name each failed check as the fix. Write the recommendation as one sentence and the rationale as one short sentence.",
+        "plan_contract": {
+          "acceptance_criteria": [
+            "Base readiness on readiness_checks and failed_checks in product_facts.",
+            "Cite catalogue_policy as the source of the readiness rules.",
+            "Name every failed check as a fix, or state that none failed."
+          ],
+          "constraints": [
+            "product_facts is authoritative for stored product fields and rule results.",
+            "mcp_listing is an independent cross-check; it does not define catalogue policy.",
+            "Do not invent prices, stock, sales or competitor data.",
+            "Do not edit, publish, archive or delete the product."
+          ]
+        },
+        "worker_evidence_ids": [
+          "product_facts",
+          "catalogue_policy"
+        ],
+        "worker_policy_evidence_ids": [
+          "catalogue_policy"
+        ],
+        "worker_required_evidence_ids": [
+          "product_facts",
+          "catalogue_policy"
+        ]
+      },
+      "reviewer_result": {
+        "action": "ready_for_human",
+        "claim_assessment": {
+          "consistency": "not_applicable",
+          "rationale": "supported",
+          "recommendation": "supported"
+        },
+        "findings": [],
+        "missing_information": [],
+        "recommendations": [
+          "Review the product listing for SKU-AUD-1002 to ensure it meets all the required criteria according to the catalogue policy."
+        ]
+      },
+      "revision_count": 0,
+      "roles": [
+        {
+          "completed_at": "2026-10-22T14:23:54.035035+00:00",
+          "model": "llama3.1:8b",
+          "role": "planner"
+        },
+        {
+          "completed_at": "2026-10-22T14:23:59.577209+00:00",
+          "model": "qwen2.5:3b",
+          "revision": 0,
+          "role": "worker"
+        },
+        {
+          "completed_at": "2026-10-22T14:24:14.697113+00:00",
+          "model": "llama3.1:8b",
+          "role": "reviewer"
+        }
+      ],
+      "stage": "completed",
+      "status": "accepted",
+      "subject_ref": "student-1-product:2",
+      "updated_at": "2026-10-22T14:24:31.577707+00:00",
+      "worker_result": {
+        "application_added_evidence_refs": [],
+        "evidence_refs": [
+          "product_facts",
+          "catalogue_policy"
+        ],
+        "policy_basis": "catalogue_policy",
+        "rationale": "The product listing meets all the required criteria according to the catalogue policy, which states that a listing is ready when it is active, has a valid category and price, and has a description of at least eight words. There are no failed checks listed in product_facts indicating any issues with these requirements.",
+        "recommendation": "The product listing for SKU-AUD-1002 is ready to publish under the catalogue policy as there are no failed checks in product_facts."
+      },
+      "workflow_id": "daa3d23d-b58c-4629-9bc3-9ac0db4e6e53"
+    }
+  }
+}

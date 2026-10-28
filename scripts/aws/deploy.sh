@@ -9,9 +9,14 @@ if [[ "${APPROVE_DEPLOYMENT:-}" != "YES" ]]; then
   [[ "$answer" == "DEPLOY" ]] || { echo "Deployment cancelled."; exit 1; }
 fi
 
+# Terraform and the image push must target the same region.
+export TF_VAR_aws_region="${AWS_REGION:-ap-southeast-2}"
+mkdir -p "$root/reports"
+
 bash "$root/scripts/aws/init.sh"
-terraform -chdir="$root/infra/aws" apply -var="image_tag=bootstrap" -target=aws_ecr_repository.services
+# Approval was given above (DEPLOY or APPROVE_DEPLOYMENT=YES); GitHub Actions has no terminal to answer a prompt.
+terraform -chdir="$root/infra/aws" apply -input=false -auto-approve -var="image_tag=bootstrap" -target=aws_ecr_repository.services
 IMAGE_TAG="$tag" bash "$root/scripts/aws/build-push-images.sh"
-terraform -chdir="$root/infra/aws" apply -var="image_tag=$tag" -auto-approve
+terraform -chdir="$root/infra/aws" apply -input=false -auto-approve -var="image_tag=$tag"
 terraform -chdir="$root/infra/aws" output -json | tee "$root/reports/aws-deployment-outputs.json"
 bash "$root/scripts/aws/validate-runtime.sh"

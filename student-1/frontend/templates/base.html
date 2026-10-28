@@ -4,6 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# show: swaps (Check, Review, View) jump instantly: some browsers silently drop
+     htmx's default smooth scroll, leaving the result off-screen. #}
+  <meta name="htmx-config" content='{"scrollBehavior": "auto"}'>
   <title>{% block title %}Product Catalogue{% endblock %} &middot; ASD 2026 Group 40</title>
 
   <!-- Team-wide theme, mounted read-only from shared/ -->

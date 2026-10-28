@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="330" viewBox="0 0 1400 330" font-family="Segoe UI, Calibri, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+    <style>
+      .n{fill:#fff;stroke:#333;stroke-width:1.4}
+      .sec{fill:#fdeceb;stroke:#b5443b;stroke-width:1.4}
+      .ci{fill:#eaf2fb;stroke:#2c5a94;stroke-width:1.4}
+      .cd{fill:#eef7ee;stroke:#2f7d4a;stroke-width:1.4}
+      .aws{fill:#fff4e0;stroke:#e08a00;stroke-width:1.6}
+      .t{font-size:15px;font-weight:600;fill:#111;text-anchor:middle}
+      .s{font-size:12px;fill:#444;text-anchor:middle}
+      .lbl{font-size:12px;fill:#222}
+      .band{font-size:13px;font-weight:600;fill:#555}
+      .e{stroke:#333;stroke-width:1.5;fill:none;marker-end:url(#a)}
+    </style>
+  </defs>
+  <text x="20" y="22" class="band">Every commit and push</text>
+  <rect class="n"   x="20"  y="35" width="230" height="90" rx="8"/>
+  <text class="t" x="135" y="70">Source control</text>
+  <text class="s" x="135" y="92">git commit on a feature branch</text>
+  <rect class="sec" x="300" y="35" width="300" height="90" rx="8"/>
+  <text class="t" x="450" y="62">Pre-commit security scans</text>
+  <text class="s" x="450" y="84">Ruff security rules (S) · detect-secrets</text>
+  <text class="s" x="450" y="102">pip-audit --strict · commit blocked on failure</text>
+  <rect class="ci"  x="650" y="35" width="250" height="90" rx="8"/>
+  <text class="t" x="775" y="62">git push → GitHub Actions</text>
+  <text class="s" x="775" y="84">student-1.yml … student-5.yml</text>
+  <text class="s" x="775" y="102">re-run hooks, lint, unit tests</text>
+  <rect class="ci"  x="950" y="35" width="430" height="90" rx="8"/>
+  <text class="t" x="1165" y="62">Post-commit tests per student</text>
+  <text class="s" x="1165" y="84">Docker build → Compose up → two backend/API endpoint</text>
+  <text class="s" x="1165" y="102">functions tested against the live container → smoke tests</text>
+  <path class="e" d="M250,80 L298,80"/>
+  <path class="e" d="M600,80 L648,80"/>
+  <path class="e" d="M900,80 L948,80"/>
+
+  <text x="155" y="172" class="band">Release: manual dispatch of cloud-deployment.yml on main (deploy = yes)</text>
+  <path class="e" d="M1165,125 L1165,150 L135,150 L135,183"/>
+  <rect class="cd" x="20" y="185" width="270" height="110" rx="8"/>
+  <text class="t" x="155" y="212">required-ci job</text>
+  <text class="s" x="155" y="234">security hooks · every student's tests</text>
+  <text class="s" x="155" y="252">Terraform fmt/validate · Compose config</text>
+  <text class="s" x="155" y="270">build all 16 images</text>
+  <rect class="cd" x="330" y="185" width="230" height="110" rx="8"/>
+  <text class="t" x="445" y="212">deploy job</text>
+  <text class="s" x="445" y="234">needs: required-ci</text>
+  <text class="s" x="445" y="252">environment aws-production</text>
+  <text class="s" x="445" y="270">OIDC → IAM deploy role</text>
+  <rect class="cd" x="600" y="185" width="300" height="110" rx="8"/>
+  <text class="t" x="750" y="212">scripts/aws/deploy.sh</text>
+  <text class="s" x="750" y="234">init S3 state → create ECR repositories</text>
+  <text class="s" x="750" y="252">build-push-images.sh (tag = commit SHA)</text>
+  <text class="s" x="750" y="270">terraform apply (infra/aws)</text>
+  <rect class="cd" x="940" y="185" width="220" height="110" rx="8"/>
+  <text class="t" x="1050" y="212">validate-runtime.sh</text>
+  <text class="s" x="1050" y="234">home + 5 frontends HTTP 200</text>
+  <text class="s" x="1050" y="252">CRUD through frontends</text>
+  <text class="s" x="1050" y="270">AI services disabled</text>
+  <rect class="aws" x="1200" y="185" width="180" height="110" rx="8"/>
+  <text class="t" x="1290" y="225">AWS ECS Fargate</text>
+  <text class="s" x="1290" y="247">live application</text>
+  <text class="s" x="1290" y="265">behind the ALB</text>
+  <path class="e" d="M290,240 L328,240"/>
+  <path class="e" d="M560,240 L598,240"/>
+  <path class="e" d="M900,240 L938,240"/>
+  <path class="e" d="M1160,240 L1198,240"/>
+</svg>

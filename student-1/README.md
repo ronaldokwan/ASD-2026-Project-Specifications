@@ -14,6 +14,13 @@ products in the same category already cost.
   policy and the live product records, with a confidence category or an explicit
   insufficient-context result.
 
+**Release 2** adds a **Multi-Agent listing review**: **Review** on any product sends the stored
+product, the MCP listing check and the RAG *Listing Readiness* policy to the shared Multi-Agent
+server (:7004), whose Planner, Worker and Reviewer agents assess whether the listing is ready to
+publish. The administrator then accepts, partially accepts with corrections, or rejects the
+result in the UI (or with `scripts/student-1-multi-agent.py`); every workflow keeps its history
+and audit log. `MULTI_AGENT_ENABLED=false` (CI and cloud) makes these endpoints answer 503.
+
 ## Microservices
 
 | Microservice | Folder | Port | Stack |
@@ -170,8 +177,16 @@ BACKEND_URL=http://localhost:8001 python frontend/app.py             # :3001
 ## Tests
 
 ```bash
-pytest student-1/tests -v      # 112 tests: no Docker, LLM, MCP or RAG server required
+pytest student-1/tests -v      # 149 tests: no Docker, LLM, MCP, RAG or Multi-Agent server required
+
+# Release 2 post-commit endpoint tests (create_product, update_product) against a running backend
+STUDENT1_API_URL=http://localhost:8001 pytest student-1/endpoint-tests -v
 ```
+
+Release 2 adds `test_multi_agent_backend.py` (evidence building, disabled/unreachable server,
+ownership checks, human review), `test_multi_agent_frontend.py` (panel, polling, the three
+decisions) and `test_multi_agent_contract.py` (the request run through the real shared
+Multi-Agent server with only the models stubbed).
 
 `tests/` covers the SQLite layer and the database HTTP API, the backend's CRUD contract and every
 validation rule, the AI request the backend builds (grounding + guardrails + fallback), and the

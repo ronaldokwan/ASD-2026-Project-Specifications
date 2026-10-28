@@ -1,0 +1,3 @@
+$ bash scripts/aws/validate-runtime.sh
+{"checked_at":"2026-10-22T16:52:40Z","base_url":"http://asd26-g40-r2-alb-1126318493.ap-southeast-2.elb.amazonaws.com","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"disabled","controlled_recovery":"no"}
+(exit code: 0)

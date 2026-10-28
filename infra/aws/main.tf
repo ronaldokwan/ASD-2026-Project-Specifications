@@ -22,10 +22,11 @@ locals {
       role          = "backend", port = 8001, health_path = "/health", health_kind = "python"
       listener_port = null, discovery_name = "student-1-backend", persistent = false, db_file = ""
       environment = {
-        DATABASE_URL    = "http://student-1-db.${local.namespace}:9001", SERVICE_PORT = "8001"
-        AI_MODE_ENABLED = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
-        AI_MODE_URL     = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
-        RAG_SERVER_URL  = "http://127.0.0.1:7003"
+        DATABASE_URL        = "http://student-1-db.${local.namespace}:9001", SERVICE_PORT = "8001"
+        AI_MODE_ENABLED     = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
+        MULTI_AGENT_ENABLED = "false", MULTI_AGENT_URL = "http://127.0.0.1:7004"
+        AI_MODE_URL         = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
+        RAG_SERVER_URL      = "http://127.0.0.1:7003"
       }
     }
     "student-1-frontend" = {
@@ -225,6 +226,18 @@ resource "aws_security_group" "tasks" {
     protocol    = "tcp"
     self        = true
   }
+  # Load balancer to every public listener, including the home page on port 80.
+  # Kept inline: separate aws_security_group_rule resources on a group that also has
+  # inline rules are removed again by every apply, which made all frontends return 503.
+  dynamic "ingress" {
+    for_each = local.frontends
+    content {
+      from_port       = ingress.value.port
+      to_port         = ingress.value.port
+      protocol        = "tcp"
+      security_groups = [aws_security_group.alb.id]
+    }
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -234,14 +247,13 @@ resource "aws_security_group" "tasks" {
   tags = { Name = "${var.name_prefix}-tasks" }
 }
 
-resource "aws_security_group_rule" "tasks_frontend_from_alb" {
-  for_each                 = { for key, value in local.frontends : key => value if value.role == "frontend" }
-  type                     = "ingress"
-  security_group_id        = aws_security_group.tasks.id
-  source_security_group_id = aws_security_group.alb.id
-  from_port                = each.value.port
-  to_port                  = each.value.port
-  protocol                 = "tcp"
+# The former separate load-balancer rules now live inline above; forget them without
+# revoking, so the existing rules keep serving traffic.
+removed {
+  from = aws_security_group_rule.tasks_frontend_from_alb
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "aws_security_group" "endpoint" {
@@ -309,6 +321,8 @@ resource "aws_ecr_repository" "services" {
   for_each             = local.services
   name                 = "${var.name_prefix}/${each.key}"
   image_tag_mutability = "IMMUTABLE"
+  # Images are rebuilt from git on every deploy; allow destroy to remove a non-empty repository.
+  force_delete = true
   image_scanning_configuration { scan_on_push = true }
   encryption_configuration { encryption_type = "AES256" }
   tags = { Application = "asd-group-application", Service = each.key }
@@ -553,14 +567,15 @@ resource "aws_ecs_service" "database" {
     security_groups  = [aws_security_group.tasks.id]
     assign_public_ip = false
   }
+  # A records with awsvpc networking: AWS rejects container_name/container_port (SRV only).
   service_registries {
-    registry_arn   = aws_service_discovery_service.internal[each.key].arn
-    container_name = each.key
-    container_port = each.value.port
+    registry_arn = aws_service_discovery_service.internal[each.key].arn
   }
   depends_on = [aws_efs_mount_target.private, aws_vpc_endpoint.interface]
 }
 
+# Backends and frontends replace each task in place (minimum 0%, maximum 100%): a new
+# account's 6-vCPU Fargate quota cannot run old and new tasks side by side during a redeploy.
 resource "aws_ecs_service" "backend" {
   for_each                           = local.backends
   name                               = "${var.name_prefix}-${each.key}"
@@ -568,8 +583,8 @@ resource "aws_ecs_service" "backend" {
   task_definition                    = aws_ecs_task_definition.service[each.key].arn
   desired_count                      = var.desired_count
   launch_type                        = "FARGATE"
-  deployment_minimum_healthy_percent = 50
-  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   health_check_grace_period_seconds  = 60
   deployment_circuit_breaker {
     enable   = true
@@ -580,10 +595,9 @@ resource "aws_ecs_service" "backend" {
     security_groups  = [aws_security_group.tasks.id]
     assign_public_ip = false
   }
+  # A records with awsvpc networking: AWS rejects container_name/container_port (SRV only).
   service_registries {
-    registry_arn   = aws_service_discovery_service.internal[each.key].arn
-    container_name = each.key
-    container_port = each.value.port
+    registry_arn = aws_service_discovery_service.internal[each.key].arn
   }
   depends_on = [aws_ecs_service.database, aws_vpc_endpoint.interface]
 }
@@ -595,8 +609,8 @@ resource "aws_ecs_service" "frontend" {
   task_definition                    = aws_ecs_task_definition.service[each.key].arn
   desired_count                      = var.desired_count
   launch_type                        = "FARGATE"
-  deployment_minimum_healthy_percent = 50
-  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
   health_check_grace_period_seconds  = 60
   deployment_circuit_breaker {
     enable   = true

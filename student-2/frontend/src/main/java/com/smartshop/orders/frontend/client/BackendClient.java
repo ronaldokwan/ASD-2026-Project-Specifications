@@ -7,10 +7,14 @@ import com.smartshop.orders.frontend.dto.FrontendModels.OrderRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.OrderResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.ProductInfo;
 import com.smartshop.orders.frontend.dto.FrontendModels.McpToolResponse;
+import com.smartshop.orders.frontend.dto.FrontendModels.MultiAgentHistory;
+import com.smartshop.orders.frontend.dto.FrontendModels.MultiAgentReviewRequest;
+import com.smartshop.orders.frontend.dto.FrontendModels.MultiAgentWorkflow;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagAnswerResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagQuestionRequest;
 import com.smartshop.orders.frontend.dto.FrontendModels.RagWriteResponse;
 import com.smartshop.orders.frontend.dto.FrontendModels.StatusRequest;
+import com.smartshop.orders.frontend.dto.FrontendModels.StartWorkflowResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -106,6 +110,31 @@ public class BackendClient {
         return restClient.post().uri("/api/orders/{id}/rag/ask", id)
             .contentType(MediaType.APPLICATION_JSON).body(new RagQuestionRequest(question))
             .retrieve().body(RagAnswerResponse.class);
+    }
+
+    public StartWorkflowResponse startMultiAgent(long id) {
+        return restClient.post().uri("/api/orders/{id}/multi-agent", id)
+            .retrieve().body(StartWorkflowResponse.class);
+    }
+
+    public MultiAgentWorkflow getMultiAgent(long id, String workflowId) {
+        return restClient.get().uri("/api/orders/{id}/multi-agent/{workflowId}", id, workflowId)
+            .retrieve().body(MultiAgentWorkflow.class);
+    }
+
+    public MultiAgentHistory multiAgentHistory(long id) {
+        return restClient.get().uri("/api/orders/{id}/multi-agent/history", id)
+            .retrieve().body(MultiAgentHistory.class);
+    }
+
+    public MultiAgentWorkflow reviewMultiAgent(
+        long id,
+        String workflowId,
+        MultiAgentReviewRequest request
+    ) {
+        return restClient.post().uri("/api/orders/{id}/multi-agent/{workflowId}/review", id, workflowId)
+            .contentType(MediaType.APPLICATION_JSON).body(request)
+            .retrieve().body(MultiAgentWorkflow.class);
     }
 
     public Map<String, Object> health() {

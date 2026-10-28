@@ -44,7 +44,7 @@ def _model_result(mode, assessment="passed"):
 
 
 def _run_review(monkeypatch, mode, subject, assessment="passed"):
-    monkeypatch.setattr(ai_app.loop, "run", lambda _request: {
+    monkeypatch.setattr(ai_app.review_loop, "run", lambda _request: {
         "ok": True,
         "result": _model_result(mode, assessment),
         "fallback_used": False,
@@ -137,7 +137,7 @@ def test_local_tests_do_not_count_as_post_commit_backend_evidence(client, monkey
 def test_testing_review_corrects_model_claim_that_local_tests_were_post_commit(client, monkeypatch):
     result = _model_result("testing_report")
     result["execution_results_review"] = "The endpoint tests were run post-commit and passed."
-    monkeypatch.setattr(ai_app.loop, "run", lambda _request: {
+    monkeypatch.setattr(ai_app.review_loop, "run", lambda _request: {
         "ok": True, "result": result, "fallback_used": False, "trace": [],
     })
     response = client.post("/agent/validate", json={
@@ -215,7 +215,7 @@ def test_workflow_review_requires_actual_human_decision(client, monkeypatch):
 
 
 def test_unavailable_model_is_not_reported_as_success(client, monkeypatch):
-    monkeypatch.setattr(ai_app.loop, "run", lambda _request: {
+    monkeypatch.setattr(ai_app.review_loop, "run", lambda _request: {
         "ok": True, "result": {"assessment": "passed"}, "fallback_used": True,
         "trace": [],
     })
@@ -228,3 +228,17 @@ def test_unavailable_model_is_not_reported_as_success(client, monkeypatch):
     assert result["ok"] is False
     assert result["result"]["assessment"] == "incomplete"
     assert result["result"]["validation_log"]["model_reviewed"] is False
+
+
+def test_report_reviews_use_the_review_model_not_the_copy_model(client, monkeypatch):
+    calls = []
+    monkeypatch.setattr(ai_app.loop, "run", lambda request: calls.append("copy") or {})
+    monkeypatch.setattr(ai_app.review_loop, "run", lambda request: calls.append("review") or {
+        "ok": True, "fallback_used": False, "model": "review-model",
+        "result": {"assessment": "incomplete", "workflow_review": "x", "findings": "x",
+                   "risks": "x", "recommendations": "x"},
+    })
+    ai_app.app.test_client().post("/agent/validate", json={
+        "mode": "multi_agent_workflow", "subject": {"workflow": {"status": "failed"}},
+    })
+    assert calls == ["review"]

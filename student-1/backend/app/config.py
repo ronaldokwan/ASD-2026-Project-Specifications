@@ -46,6 +46,17 @@ class Config:
     QUESTION_MIN_CHARS = 5
     QUESTION_MAX_CHARS = 500
 
+    # Release 2: shared native Multi-Agent server (Planner -> Worker -> Reviewer).
+    MULTI_AGENT_URL = os.getenv(
+        "MULTI_AGENT_URL", "http://host.docker.internal:7004"
+    ).rstrip("/")
+    MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "20"))
+    MULTI_AGENT_ENABLED = _enabled("MULTI_AGENT_ENABLED")
+    MULTI_AGENT_SUBJECT = "student-1-product"
+    READINESS_SECTION = "Listing Readiness"
+    # Listing Readiness rule in product-catalogue-policy.md.
+    READINESS_MIN_DESCRIPTION_WORDS = 8
+
     PORT = int(os.getenv("SERVICE_PORT", "8001"))
 
     # Business rules for the catalogue, enforced on every write and used as the

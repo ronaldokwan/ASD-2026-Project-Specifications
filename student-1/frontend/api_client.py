@@ -14,6 +14,7 @@ TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "15"))
 RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
+MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "180"))
 
 
 class ApiError(Exception):
@@ -114,6 +115,35 @@ def ask_catalogue(question):
         "/api/catalogue/ask",
         timeout=RAG_TIMEOUT,
         json={"question": question},
+    )
+
+
+def start_multi_agent_review(product_id):
+    """Release 2: queue a Planner -> Worker -> Reviewer listing review."""
+    return _call(
+        "POST",
+        "/api/products/{}/multi-agent".format(product_id),
+        timeout=MULTI_AGENT_TIMEOUT,
+        json={},
+    )
+
+
+def get_multi_agent_workflow(product_id, workflow_id):
+    return _call(
+        "GET", "/api/products/{}/multi-agent/{}".format(product_id, workflow_id)
+    )
+
+
+def list_multi_agent_workflows(product_id):
+    return _call("GET", "/api/products/{}/multi-agent/history".format(product_id))
+
+
+def review_multi_agent_workflow(product_id, workflow_id, payload):
+    """Record the administrator's human-review decision."""
+    return _call(
+        "POST",
+        "/api/products/{}/multi-agent/{}/review".format(product_id, workflow_id),
+        json=payload,
     )
 
 

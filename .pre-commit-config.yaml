@@ -13,13 +13,20 @@ repos:
           --per-file-ignores '**/tests/**/*.py:S101'
           --per-file-ignores 'ai-services/ai-mode/app.py:S104'
           --per-file-ignores 'ai-services/multi-agent/server.py:S104'
+          --per-file-ignores 'ai-services/mcp-server/server.py:S104'
+          --per-file-ignores 'ai-services/mcp-server/http_server.py:S104'
+          --per-file-ignores 'ai-services/rag-server/http_server.py:S104'
+          --per-file-ignores 'student-1/backend/wsgi.py:S104'
+          --per-file-ignores 'student-1/database/app.py:S104'
+          --per-file-ignores 'student-1/frontend/app.py:S104'
+          --per-file-ignores 'student-1/endpoint-tests/*.py:S101'
           --per-file-ignores 'student-3/backend/wsgi.py:S104'
           --per-file-ignores 'student-3/database/app.py:S104'
           --per-file-ignores 'student-3/frontend/app.py:S104'
         language: python
         additional_dependencies: [ruff==0.12.10]
         types: [python]
-        files: ^(ai-services/(ai-mode|mcp-server|rag-server|multi-agent)/|student-3/|scripts/).+\.py$
+        files: ^(ai-services/(ai-mode|mcp-server|rag-server|multi-agent)/|student-1/|student-3/|scripts/).+\.py$
 
       - id: detect-secrets
         name: detect-secrets staged-file scan

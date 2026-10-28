@@ -30,9 +30,11 @@ Thumbs.db
 dist/
 build/
 *.log
+# ...except captured evidence, which the technical report cites by file name
+!docs/evidence/**/*.log
 
 # Generated test evidence
-reports/
+/reports/
 
 # Terraform plans/state and local cloud configuration
 .terraform/

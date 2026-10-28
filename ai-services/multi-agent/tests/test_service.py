@@ -178,7 +178,7 @@ def test_incomplete_plan_cannot_pass_the_completion_gate(client, monkeypatch):
     workflow_id = _start(client, max_revisions=0).get_json()["workflow_id"]
     workflow = client.get("/workflow/" + workflow_id).get_json()
 
-    assert calls == ["planner"]
+    assert calls == ["planner"] * service.STAGE_ATTEMPTS
     assert workflow["status"] == "failed"
     assert "complete required plan" in workflow["failure"]
     assert workflow["completion_gate"]["planner_completed"] is False
@@ -205,7 +205,7 @@ def test_invalid_review_and_missing_models_do_not_complete(client, monkeypatch):
 
 
 def test_each_model_role_uses_its_configured_model_and_output_schema(monkeypatch):
-    role_models = {"planner": "planner-local", "worker": "worker-local", "reviewer": "reviewer-local"}
+    role_models = {"planner": "planner-local", "worker": "worker-local", "reviewer": "deepseek-r1:8b"}
     monkeypatch.setattr(service, "ROLE_MODELS", role_models)
     monkeypatch.setattr(service, "_available_models", lambda **_kwargs: list(role_models.values()))
     calls = []
@@ -249,7 +249,7 @@ def test_each_model_role_uses_its_configured_model_and_output_schema(monkeypatch
     assert all(call["payload"]["options"]["num_ctx"] >= 4096 for call in calls)
     assert "think" not in calls[0]["payload"]
     assert "think" not in calls[1]["payload"]
-    assert calls[2]["payload"]["think"] is False
+    assert calls[2]["payload"]["think"] is False  # only DeepSeek R1 models get think=False
     assert all(call["payload"]["system"] == service.ROLE_INSTRUCTIONS[role]
                for call, role in zip(calls, role_models))
 
@@ -388,7 +388,7 @@ def test_role_schemas_allow_full_policy_quote_and_actionable_reviewer_finding():
     )
     assert worker_schema["properties"]["policy_basis"]["enum"] == ["loyalty_policy"]
     assert worker_schema["properties"]["recommendation"]["maxLength"] == 480
-    assert worker_schema["properties"]["rationale"]["maxLength"] == 300
+    assert worker_schema["properties"]["rationale"]["maxLength"] == 600
     assert reviewer_schema["properties"]["findings"]["items"]["properties"]["finding"]["maxLength"] >= 300
 
 
@@ -655,3 +655,80 @@ def test_jsonl_appends_are_valid_lines_under_concurrent_writes(client):
     records = [json.loads(line) for line in service.AUDIT_PATH.read_text().splitlines()]
     assert len(records) == 80
     assert {record["n"] for record in records} == set(range(80))
+
+
+INCONSISTENT_REVIEW = {
+    "action": "not_supported",
+    "claim_assessment": {"recommendation": "supported", "rationale": "supported",
+                         "consistency": "contradictory"},
+    "findings": [{"severity": "high", "finding": "The rationale contradicts the policy.",
+                  "evidence_ref": "policy", "classification": "contradiction",
+                  "claim_field": "rationale"}],
+    "missing_information": [],
+    "recommendations": ["Correct the rationale."],
+}
+
+
+def test_rejected_output_is_retried_with_the_reason_fed_back(client, monkeypatch):
+    prompts = []
+
+    def fake_call(role, prompt):
+        prompts.append((role, prompt))
+        if role == "reviewer" and len([p for p in prompts if p[0] == "reviewer"]) == 1:
+            return "test-model", INCONSISTENT_REVIEW
+        return "test-model", _output_for(role)
+
+    monkeypatch.setattr(service, "_call_model", fake_call)
+    workflow_id = _start(client, max_revisions=0).get_json()["workflow_id"]
+    workflow = client.get("/workflow/" + workflow_id).get_json()
+
+    reviewer_prompts = [prompt for role, prompt in prompts if role == "reviewer"]
+    assert len(reviewer_prompts) == 2
+    assert "YOUR PREVIOUS OUTPUT WAS REJECTED" in reviewer_prompts[1]
+    assert "no unsupported Worker claim" in reviewer_prompts[1]
+    assert workflow["status"] == "human_review"
+    assert "reconciled" not in workflow["reviewer_result"]
+    events = [json.loads(line)["event"] for line in service.AUDIT_PATH.read_text().splitlines()]
+    assert "stage_output_rejected" in events
+
+
+def test_persistently_inconsistent_reviewer_reaches_human_review_flagged(client, monkeypatch):
+    calls = []
+
+    def fake_call(role, _prompt):
+        calls.append(role)
+        return "test-model", INCONSISTENT_REVIEW if role == "reviewer" else _output_for(role)
+
+    monkeypatch.setattr(service, "_call_model", fake_call)
+    workflow_id = _start(client, max_revisions=0).get_json()["workflow_id"]
+    workflow = client.get("/workflow/" + workflow_id).get_json()
+
+    assert calls.count("reviewer") == service.STAGE_ATTEMPTS
+    assert workflow["status"] == "human_review"
+    review = workflow["reviewer_result"]
+    assert review["reconciled"] is True
+    assert review["action"] == "not_supported"
+    assert review["claim_assessment"]["recommendation"] == "unsupported"
+    assert review["claim_assessment"]["rationale"] == "unsupported"
+    assert review["findings"][0]["finding"] == "The rationale contradicts the policy."
+    assert "internally inconsistent" in review["findings"][-1]["finding"]
+    assert workflow["completion_gate"]["reviewer_completed"] is True
+    events = [json.loads(line)["event"] for line in service.AUDIT_PATH.read_text().splitlines()]
+    assert "reviewer_output_reconciled" in events
+    accepted = client.post("/workflow/{}/review".format(workflow_id),
+                           json={"decision": "reject", "feedback": "Reviewer was unreliable."})
+    assert accepted.get_json()["status"] == "rejected"
+
+
+def test_reviewer_without_any_parsable_output_still_fails(client, monkeypatch):
+    def fake_call(role, _prompt):
+        if role == "reviewer":
+            raise service.WorkflowError("reviewer returned malformed JSON")
+        return "test-model", _output_for(role)
+
+    monkeypatch.setattr(service, "_call_model", fake_call)
+    workflow_id = _start(client, max_revisions=0).get_json()["workflow_id"]
+    workflow = client.get("/workflow/" + workflow_id).get_json()
+
+    assert workflow["status"] == "failed"
+    assert "malformed JSON" in workflow["failure"]

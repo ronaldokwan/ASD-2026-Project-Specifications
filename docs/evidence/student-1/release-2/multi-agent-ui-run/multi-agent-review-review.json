@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 9314,
+  "fallback_used": false,
+  "mode": "multi_agent_workflow_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "issues_found",
+    "findings": "The catalogue policy indicates that a listing is ready to publish when it has an active status, valid category, and description length of at least eight words. However, the product facts indicate that the listing status is 'draft', which contradicts the catalogue policy.",
+    "recommendations": "Review the catalogue policy and product facts to ensure that all required criteria are met before publishing the listing.",
+    "risks": "If the listing is published in its current state, it may not meet the required criteria for readiness, potentially leading to errors or issues down the line.",
+    "validation_log": {
+      "authoritative_assessment": "issues_found",
+      "contradiction": false,
+      "evidence_assessment": "issues_found",
+      "evidence_gate": "The human decision rejected the result.",
+      "mode": "multi_agent_workflow",
+      "model_assessment": "issues_found",
+      "model_reviewed": true,
+      "review_id": "e17d3870-a0c2-4c17-a475-4c724d05da96"
+    },
+    "workflow_review": "The worker's verdict and planner's application check disagreed on the product listing's readiness."
+  },
+  "review_id": "e17d3870-a0c2-4c17-a475-4c724d05da96",
+  "status": "blocked",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'multi_agent_workflow_review' with 1 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n  \"workflow_review\": \"The worker's verdict and planner's application check disagreed on the product listing's readiness.\",\n  \"assessment\": \"issues_found\",\n  \"findings\": \"The catalogue policy indicates that a listing is ready to publish when it has an active status, valid catego",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

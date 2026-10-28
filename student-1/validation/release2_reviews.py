@@ -1,0 +1,217 @@
+"""Release 2 - Student 1 evidence for the shared agentic-loop review modes.
+
+Builds each review subject from real evidence, sends it to the shared AI-Mode
+service (POST /agent/validate) and saves the review with its validation log
+under docs/evidence/student-1/release-2/.
+
+    python student-1/validation/release2_reviews.py testing \
+        --pre-commit-log reports/student-1-pre-commit.log \
+        --endpoint-junit reports/student-1-endpoint-tests.xml \
+        --ci-run-id 123456 --ci-status passed
+    python student-1/validation/release2_reviews.py multi-agent --product-id 1 --workflow-id <id>
+    python student-1/validation/release2_reviews.py cloud --base-url http://<alb-dns> \
+        --infrastructure reports/aws-runtime-validation.json
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import time
+import xml.etree.ElementTree as ET  # noqa: S405 - parses JUnit files this repo's own CI wrote
+from pathlib import Path
+
+import requests
+
+REPO = Path(__file__).resolve().parents[2]
+OUT = Path(os.getenv("EVIDENCE_DIR", REPO / "docs" / "evidence" / "student-1" / "release-2")).resolve()
+AI_MODE_URL = os.getenv("AI_MODE_URL", "http://localhost:7001").rstrip("/")
+BACKEND = os.getenv("BACKEND_URL", "http://localhost:8001").rstrip("/")
+ENDPOINT_TESTS = REPO / "student-1" / "endpoint-tests" / "test_post_commit_endpoints.py"
+
+# pre-commit hook display names -> hook ids the Testing Review gate expects.
+HOOKS = {
+    "Ruff security rules": "ruff-security",
+    "detect-secrets staged-file scan": "detect-secrets",
+    "pip-audit relevant Python requirements": "pip-audit",
+}
+ENDPOINTS = {
+    "create_product": "POST /api/products",
+    "update_product": "PUT /api/products/<id>",
+}
+
+
+def save(name, body):
+    OUT.mkdir(parents=True, exist_ok=True)
+    path = OUT / name
+    path.write_text(json.dumps(body, indent=2), encoding="utf-8")
+    print("saved", path.relative_to(REPO).as_posix())
+
+
+def review(mode, subject, name):
+    """Run one review mode; save the subject, the review and its validation log."""
+    save(name + "-subject.json", {"mode": mode, "subject": subject})
+    response = requests.post(
+        AI_MODE_URL + "/agent/validate", json={"mode": mode, "subject": subject}, timeout=600
+    )
+    outcome = response.json()
+    save(name + "-review.json", outcome)
+    log = (outcome.get("result") or {}).get("validation_log", {})
+    print("{}: status={} assessment={} model_reviewed={}".format(
+        mode, outcome.get("status"), log.get("authoritative_assessment"), log.get("model_reviewed")))
+    return 0 if response.ok else 1
+
+
+# --------------------------------------------------------------------- testing
+def pre_commit_results(log_path):
+    text = Path(log_path).read_text(encoding="utf-8", errors="replace")
+    results = []
+    for label, hook in HOOKS.items():
+        match = re.search(re.escape(label) + r"\.*\s*(Passed|Failed|Skipped)", text)
+        status = {"Passed": "passed", "Failed": "failed", "Skipped": "skipped"}.get(
+            match.group(1) if match else "", "not_run"
+        )
+        results.append({"name": hook, "status": status, "phase": "pre_commit",
+                        "source": Path(log_path).name})
+    return results
+
+
+def endpoint_results(junit_path, phase="post_commit"):
+    cases = ET.parse(junit_path).getroot().iter("testcase")  # noqa: S314 - local CI artefact
+    grouped = {name: [] for name in ENDPOINTS}
+    for case in cases:
+        endpoint = next((name for name in ENDPOINTS if name in case.get("name", "")), None)
+        if endpoint is None:
+            continue
+        failed = any(case.find(tag) is not None for tag in ("failure", "error"))
+        skipped = case.find("skipped") is not None
+        grouped[endpoint].append("failed" if failed else "skipped" if skipped else "passed")
+    results = []
+    for endpoint, statuses in grouped.items():
+        status = ("not_run" if not statuses else "failed" if "failed" in statuses
+                  else "skipped" if "skipped" in statuses else "passed")
+        results.append({
+            "endpoint": endpoint,
+            "route": ENDPOINTS[endpoint],
+            "test_ref": "student-1/endpoint-tests/test_post_commit_endpoints.py",
+            "phase": phase,
+            "status": status,
+            "tests": len(statuses),
+            "passed": statuses.count("passed"),
+        })
+    return results
+
+
+def run_testing(args):
+    subject = {
+        "student": 1,
+        "feature": "Product Catalogue",
+        "test_code": ENDPOINT_TESTS.read_text(encoding="utf-8"),
+        "pre_commit_security_results": pre_commit_results(args.pre_commit_log),
+        "post_commit_backend_endpoint_tests": endpoint_results(args.endpoint_junit, args.phase),
+        "hosted_ci": {"workflow": "student-1.yml", "run_id": args.ci_run_id,
+                      "status": args.ci_status},
+    }
+    return review("testing_report", subject, "testing-review")
+
+
+# ----------------------------------------------------------------- multi-agent
+def run_multi_agent(args):
+    url = "{}/api/products/{}/multi-agent/{}".format(BACKEND, args.product_id, args.workflow_id)
+    workflow = requests.get(url, timeout=30).json()
+    save("multi-agent-workflow.json", workflow)
+    return review("multi_agent_workflow", {"workflow": workflow}, "multi-agent-review")
+
+
+# ----------------------------------------------------------------------- cloud
+def _check(check, method, url, expect=200, **kwargs):
+    started = time.time()
+    try:
+        response = requests.request(method, url, timeout=30, **kwargs)
+    except requests.RequestException as exc:
+        return {"check": check, "url": url, "status": "unavailable", "error": str(exc)}, None
+    return {
+        "check": check, "url": url, "http_status": response.status_code,
+        "status": "passed" if response.status_code == expect else "failed",
+        "elapsed_ms": int((time.time() - started) * 1000),
+    }, response
+
+
+def run_cloud(args):
+    frontend = "{}:3001".format(args.base_url.rstrip("/"))
+    checks = []
+    item, _ = _check("frontend", "GET", frontend + "/")
+    checks.append(item)
+    item, response = _check("backend_database", "GET", frontend + "/health")
+    backend = (response.json().get("backend", {}) if response is not None and response.ok else {})
+    if item["status"] == "passed" and backend.get("database", {}).get("status") != "ok":
+        item["status"] = "failed"
+    checks.append(item)
+    disabled = all(backend.get(key) == {"status": "disabled"}
+                   for key in ("ai_mode", "mcp_server", "rag_server", "multi_agent_server"))
+    checks.append({"check": "ai_services_disabled_by_default",
+                   "status": "passed" if disabled else "failed",
+                   "detail": {key: backend.get(key) for key in
+                              ("ai_mode", "mcp_server", "rag_server", "multi_agent_server")}})
+
+    sku = "SKU-AWS-{}".format(int(time.time()))
+    form = {"sku": sku, "name": "Release 2 cloud review", "category": "Audio",
+            "price": "42.00", "status": "draft",
+            "description": "Created by release2_reviews.py to verify cloud CRUD."}
+    crud = {"check": "crud", "status": "failed", "steps": []}
+    created, _ = _check("create", "POST", frontend + "/products", data=form)
+    _, table = _check("read", "GET", frontend + "/partials/products", params={"search": sku})
+    match = re.search(r"product-row-(\d+)", table.text if table is not None else "")
+    crud["steps"].append(created)
+    if match:
+        product_id = match.group(1)
+        updated, _ = _check("update", "POST", "{}/products/{}".format(frontend, product_id),
+                            data=dict(form, price="43.50"))
+        deleted, _ = _check("delete", "POST", "{}/products/{}/delete".format(frontend, product_id))
+        crud["steps"] += [{"check": "read", "status": "passed", "product_id": product_id},
+                          updated, deleted]
+        if all(step["status"] == "passed" for step in crud["steps"]):
+            crud["status"] = "passed"
+    checks.append(crud)
+
+    infrastructure = []
+    for path in args.infrastructure:
+        try:
+            content = json.loads(Path(path).read_text(encoding="utf-8"))
+            infrastructure.append({"name": Path(path).name, "status": "passed", "content": content})
+        except (OSError, ValueError) as exc:
+            infrastructure.append({"name": Path(path).name, "status": "unavailable", "error": str(exc)})
+    subject = {"student": 1, "feature": "Product Catalogue", "platform": "AWS",
+               "infrastructure_evidence": infrastructure, "runtime_checks": checks}
+    return review("cloud_deployment_report", subject, "cloud-deployment-review")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    testing = commands.add_parser("testing", help="Testing Report Review")
+    testing.add_argument("--pre-commit-log", required=True)
+    testing.add_argument("--endpoint-junit", required=True)
+    testing.add_argument("--ci-run-id", default=None)
+    testing.add_argument("--ci-status", choices=("passed", "failed", "not_run"), default="not_run")
+    testing.add_argument("--phase", choices=("post_commit", "local"), default="post_commit",
+                         help="post_commit for the student-1.yml artifact; local for a local run")
+
+    multi = commands.add_parser("multi-agent", help="Multi-Agent Workflow Review")
+    multi.add_argument("--product-id", type=int, required=True)
+    multi.add_argument("--workflow-id", required=True)
+
+    cloud = commands.add_parser("cloud", help="Cloud Deployment Report Review")
+    cloud.add_argument("--base-url", required=True, help="http://<load balancer DNS name>")
+    cloud.add_argument("--infrastructure", nargs="+", default=[],
+                       help="infrastructure evidence JSON, e.g. reports/aws-runtime-validation.json")
+
+    args = parser.parse_args()
+    return {"testing": run_testing, "multi-agent": run_multi_agent, "cloud": run_cloud}[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

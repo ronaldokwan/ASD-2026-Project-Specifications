@@ -9,8 +9,14 @@ Only commands that do more than wrap a single Docker call live here.
 | `run-tests.sh` | Run every implemented pytest suite and write JUnit evidence to `reports/` for the technical report |
 | `run-ai-services.sh` | Start native AI-Mode (7001), genuine MCP Streamable HTTP (7002/mcp), and RAG (7003) |
 | `run-multi-agent.sh` | Start only the native Multi-Agent workflow service (7004), preserving other running services |
+| `aws/deploy.sh` | Build, push and deploy the whole group application to AWS (ECS Fargate), then validate it; needs `AWS_REGION` and `TF_STATE_BUCKET` |
+| `aws/destroy.sh` | Remove the whole AWS deployment so it stops costing money (same two variables) |
+| `aws/setup-github-oidc.sh` | One-off, as an AWS admin: create the GitHub OIDC provider and the deploy role `cloud-deployment.yml` assumes (same two variables) |
+| `multi-server-check.sh` | Third-terminal test of the local deployment: every Compose and native service, then Student 1 frontend → backend → database, MCP, RAG and Multi-Agent; writes the evidence log |
 
 Student 3 terminal workflow: `python scripts/multi-agent-workflow.py start --customer-id 1 --wait`, then use the printed workflow ID with `status` or `review`.
+
+Student 1 terminal workflow: `python scripts/student-1-multi-agent.py start --product-id 1 --wait`, then `review --product-id 1 --workflow-id <id> --decision accept` (or `history --product-id 1`).
 
 Run them from Git Bash on Windows: `bash scripts/run-local.sh`.
 
