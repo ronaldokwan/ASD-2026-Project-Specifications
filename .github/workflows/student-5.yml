@@ -1,6 +1,7 @@
 # ===========================================================================
 # Student 5 - Alexander McGuinn - Reviews and Ratings
-# lint -> unit tests -> Docker build -> container smoke test
+# Release 2: security scans -> lint -> unit tests -> Docker build ->
+#            post-commit endpoint tests against the live container -> smoke tests
 # ===========================================================================
 name: student-5
 
@@ -12,7 +13,10 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/security/**"
+      - ".pre-commit-config.yaml"
       - "docker-compose.yml"
       - ".github/workflows/student-5.yml"
   pull_request:
@@ -21,7 +25,10 @@ on:
       - "ai-services/ai-mode/**"
       - "ai-services/mcp-server/**"
       - "ai-services/rag-server/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
+      - "scripts/security/**"
+      - ".pre-commit-config.yaml"
       - "docker-compose.yml"
       - ".github/workflows/student-5.yml"
   workflow_dispatch:
@@ -32,7 +39,7 @@ env:
 jobs:
   # -------------------------------------------------------------------------
   test:
-    name: Unit tests (frontend, backend/API, database)
+    name: Security scans and unit tests (frontend, backend/API, database)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,16 +58,23 @@ jobs:
           pip install -r ai-services/ai-mode/requirements.txt
           pip install -r ai-services/mcp-server/requirements.txt
           pip install -r ai-services/rag-server/requirements.txt
-          pip install flake8
+          pip install -r ai-services/multi-agent/requirements.txt
+          pip install flake8 pre-commit==4.3.0
+
+      - name: Security scans (Ruff security rules, detect-secrets, pip-audit)
+        run: |
+          set -o pipefail
+          mkdir -p reports
+          pre-commit run --all-files --show-diff-on-failure 2>&1 | tee reports/student-5-pre-commit.log
 
       - name: Lint (syntax errors and undefined names fail the build)
         run: |
-          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
+          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server ai-services/multi-agent \
             --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server \
+          flake8 student-5 ai-services/ai-mode ai-services/mcp-server ai-services/rag-server ai-services/multi-agent \
             --count --max-line-length=100 --exit-zero --statistics
 
-      - name: Student 5 microservice tests
+      - name: Student 5 microservice tests (incl. MCP, RAG and Multi-Agent integration)
         run: pytest student-5/tests -v --junitxml=reports/student-5-tests.xml
 
       - name: Shared agentic loop tests (AI-Mode)
@@ -72,6 +86,9 @@ jobs:
       - name: Shared RAG server tests
         run: pytest ai-services/rag-server/tests -v --junitxml=reports/rag-server-tests.xml
 
+      - name: Shared Multi-Agent server tests (Planner, Worker, Reviewer, Human Review)
+        run: pytest ai-services/multi-agent/tests -v --junitxml=reports/multi-agent-tests.xml
+
       - name: Upload test evidence for the technical report
         if: always()
         uses: actions/upload-artifact@v4
@@ -81,7 +98,7 @@ jobs:
 
   # -------------------------------------------------------------------------
   docker:
-    name: Build containers and smoke test
+    name: Build containers, post-commit endpoint tests and smoke tests
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -90,6 +107,14 @@ jobs:
       - name: Validate the shared Docker Compose configuration
         run: docker compose config --quiet
 
+      - name: AI-Mode, MCP, RAG and Multi-Agent are not Docker Compose services
+        run: |
+          docker compose config --services | tee services.txt
+          if grep -E '^(ai-mode|mcp|mcp-server|rag|rag-server|multi-agent)$' services.txt; then
+            echo "::error::AI-Mode, MCP, RAG and Multi-Agent must run natively, not in Docker Compose"
+            exit 1
+          fi
+
       - name: Build the three Student 5 images
         run: |
           docker build -t asd/student-5-db:ci       student-5/database
@@ -97,23 +122,15 @@ jobs:
           docker build -t asd/student-5-frontend:ci student-5/frontend
 
       - name: Start the Student 5 stack
-        # --no-deps keeps the multi-gigabyte Ollama image and the Product
-        # Catalogue stack out of CI; the AI path is covered by the stubbed
-        # AI-Mode/MCP/RAG tests in the job above. AI-Mode, the shared MCP
-        # server and the shared RAG server are not containerised (Release 1)
-        # and are not started here either, so every AI-backed endpoint must
-        # degrade gracefully (see the smoke-test step below), and the
-        # catalogue lookup degrades to the raw SKU when unreachable (see
-        # backend/app/catalogue_client.py).
+        # --no-deps keeps Ollama and the Product Catalogue stack out of CI. The
+        # native AI services are not started either, so every AI-backed
+        # endpoint must degrade gracefully (checked below).
         run: |
           cp .env.example .env
           docker compose up -d --build --no-deps \
             student-5-db student-5-backend student-5-frontend
 
       - name: Wait for all three microservices
-        # Every container publishes its port before gunicorn is accepting, so a
-        # bare connect succeeds and the proxy then resets it (curl exit 56).
-        # Poll each endpoint until it actually answers before smoke testing.
         run: |
           wait_for() {
             name=$1; url=$2; svc=$3
@@ -133,6 +150,37 @@ jobs:
           wait_for "backend/API microservice" http://localhost:8005/health student-5-backend
           wait_for "frontend microservice"    http://localhost:3005/       student-5-frontend
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Post-commit endpoint tests (create_review, update_review)
+        env:
+          STUDENT5_API_URL: http://localhost:8005
+        run: |
+          set -o pipefail
+          pip install pytest==9.0.3 requests==2.33.0
+          mkdir -p reports
+          pytest student-5/endpoint-tests -v -rA \
+            --junitxml=reports/student-5-endpoint-tests.xml \
+            | tee reports/student-5-endpoint-tests.log
+          {
+            echo "## Student 5 post-commit endpoint tests"
+            echo
+            echo "Commit \`${GITHUB_SHA}\` against the live backend/API container."
+            echo
+            echo '```'
+            grep -E "PASSED|FAILED|ERROR|SKIPPED|passed|failed" reports/student-5-endpoint-tests.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload endpoint test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-5-endpoint-test-reports
+          path: reports/
+
       - name: Smoke test the CRUD path through the API
         run: |
           set -e
@@ -151,10 +199,7 @@ jobs:
           curl -fs -X DELETE "http://localhost:8005/api/reviews/$id" > /dev/null
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8005/api/reviews/$id)" = "404"
 
-      - name: Smoke test graceful degradation (AI-Mode, MCP, RAG disabled in CI)
-        # Release 1: none of the three shared AI services run in this job (no
-        # ollama-sized images, no native host processes). Both new endpoints
-        # must fail soft (503 from our own error handler) rather than 500.
+      - name: Smoke test graceful degradation (AI-Mode, MCP, RAG, Multi-Agent not running)
         run: |
           set -e
           code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8005/api/reviews/ask \
@@ -167,10 +212,16 @@ jobs:
             -d '{"product_sku":"SKU-AUD-1001","review_text":"Great product overall.","rating":5}')
           test "$code" = "503"
 
+          id=$(curl -fs http://localhost:8005/api/reviews | python3 -c 'import json,sys; print(json.load(sys.stdin)["reviews"][0]["review_id"])')
+          code=$(curl -s -o ma.json -w '%{http_code}' -X POST "http://localhost:8005/api/reviews/$id/multi-agent")
+          cat ma.json
+          test "$code" = "503" && grep -q "Multi-Agent workflow unavailable" ma.json
+
       - name: Smoke test the frontend microservice
         run: |
           curl -fs http://localhost:3005/ | grep -q "Reviews and Ratings"
           curl -fs http://localhost:3005/partials/reviews | grep -q "review-table"
+          curl -fs http://localhost:3005/ | grep -q 'id="multi-agent-panel"'
 
       - name: Container logs (evidence on failure)
         if: always()

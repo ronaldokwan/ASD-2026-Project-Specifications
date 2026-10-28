@@ -4,9 +4,12 @@ The database, catalogue and AI-Mode hops are stubbed, so these tests cover the
 API contract, the validation rules and the AI request the backend builds.
 """
 
+import json
+
 import pytest
 
-from app import ai_agent, db_client, mcp_client, rag_client
+from app import ai_agent, db_client, mcp_client, multi_agent_client, rag_client
+from app.config import Config
 from app.validation import ValidationError, clean_review
 
 
@@ -281,6 +284,109 @@ def test_rag_service_outage_returns_503(backend, fake_db, monkeypatch):
     })
     assert response.status_code == 503
     assert "RAG" in response.get_json()["error"]
+
+
+# --------------------------------------------------- Release 2: Multi-Agent
+def test_multi_agent_start_builds_review_and_moderation_evidence(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    monkeypatch.setattr(mcp_client, "check_review_quality", lambda **_kwargs: {
+        "tool": "check_review_quality",
+        "result": {
+            "flagged": False, "reasons": ["no issues found"],
+            "spam_score": 0.0, "duplicate_risk": "low", "word_count": 4,
+        },
+    })
+    captured = {}
+
+    def start(method, path, **kwargs):
+        captured.update(kwargs["json"])
+        return {"workflow_id": "workflow-123", "status": "queued"}
+
+    monkeypatch.setattr(multi_agent_client, "_call", start)
+    response = backend.post("/api/reviews/r1/multi-agent")
+    assert response.status_code == 202
+    assert response.get_json()["workflow_id"] == "workflow-123"
+    assert captured["subject_ref"] == "student-5-review:r1"
+    assert {item["id"] for item in captured["evidence"]} == {"review_facts", "mcp_moderation"}
+    facts = json.loads(next(
+        item["content"] for item in captured["evidence"] if item["id"] == "review_facts"
+    ))
+    assert facts["review_id"] == "r1"
+    assert facts["review_text"] == "Fantastic noise cancelling."
+    assert facts["existing_review_count"] == 2  # r1 and r2 share SKU-AUD-1001
+    assert captured["request"]["worker_evidence_ids"] == ["review_facts", "mcp_moderation"]
+    assert "worker_policy_evidence_ids" not in captured["request"]
+
+
+def test_multi_agent_start_marks_moderation_unavailable_on_outage(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+
+    def boom(**_kwargs):
+        raise mcp_client.MCPServiceUnavailable("connection refused")
+
+    monkeypatch.setattr(mcp_client, "check_review_quality", boom)
+    captured = {}
+
+    def start(_method, _path, **kwargs):
+        captured.update(kwargs["json"])
+        return {"workflow_id": "workflow-456", "status": "queued"}
+
+    monkeypatch.setattr(multi_agent_client, "_call", start)
+    response = backend.post("/api/reviews/r1/multi-agent")
+    assert response.status_code == 202
+    moderation = next(item for item in captured["evidence"] if item["id"] == "mcp_moderation")
+    assert moderation["status"] == "unavailable"
+
+
+def test_multi_agent_disabled_returns_503(backend, fake_db):
+    response = backend.post("/api/reviews/r1/multi-agent")
+    assert response.status_code == 503
+    assert response.get_json()["error"] == "Multi-Agent workflow unavailable"
+
+
+def test_multi_agent_unknown_review_is_404(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    response = backend.post("/api/reviews/does-not-exist/multi-agent")
+    assert response.status_code == 404
+
+
+def test_multi_agent_routes_check_review_ownership_and_record_decisions(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    subject_ref = "student-5-review:r1"
+    calls = []
+
+    def call(method, path, **kwargs):
+        calls.append((method, path, kwargs))
+        if method == "GET" and path == "/workflow/history":
+            return {"count": 1, "workflows": [{"workflow_id": "workflow-123"}]}
+        if method == "GET":
+            return {"workflow_id": "workflow-123", "subject_ref": subject_ref, "status": "human_review"}
+        return {"workflow_id": "workflow-123", "subject_ref": subject_ref,
+                "status": "accepted", "human_decision": kwargs["json"]}
+
+    monkeypatch.setattr(multi_agent_client, "_call", call)
+    history = backend.get("/api/reviews/r1/multi-agent/history")
+    assert history.status_code == 200 and history.get_json()["count"] == 1
+    status = backend.get("/api/reviews/r1/multi-agent/workflow-123")
+    assert status.get_json()["status"] == "human_review"
+    review = backend.post("/api/reviews/r1/multi-agent/workflow-123/review", json={
+        "decision": "accept", "feedback": "Looks fine.",
+    })
+    assert review.status_code == 200
+    assert review.get_json()["status"] == "accepted"
+    assert [item[1] for item in calls] == [
+        "/workflow/history", "/workflow/workflow-123", "/workflow/workflow-123",
+        "/workflow/workflow-123/review",
+    ]
+
+
+def test_multi_agent_review_rejects_a_workflow_belonging_to_another_review(backend, fake_db, monkeypatch):
+    monkeypatch.setattr(Config, "MULTI_AGENT_ENABLED", True)
+    monkeypatch.setattr(multi_agent_client, "_call", lambda _method, _path, **_kwargs: {
+        "workflow_id": "workflow-999", "subject_ref": "student-5-review:r2", "status": "human_review",
+    })
+    response = backend.post("/api/reviews/r1/multi-agent/workflow-999/review", json={"decision": "accept"})
+    assert response.status_code == 502
 
 
 # ------------------------------------------------------------- validation unit

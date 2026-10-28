@@ -11,11 +11,19 @@ Endpoints registered in the Project Group Registration Form:
 
 Plus supporting endpoints: GET /health, GET /api/products (proxied from
 Student 1's catalogue, best-effort, for the "which product" picker in the UI).
+
+Release 2 (shared native Multi-Agent Server, outside Docker Compose):
+
+    POST   /api/reviews/<id>/multi-agent                run Planner -> Worker -> Reviewer
+    GET    /api/reviews/<id>/multi-agent/history         workflow history for this review
+    GET    /api/reviews/<id>/multi-agent/<workflow_id>   poll one workflow's status
+    POST   /api/reviews/<id>/multi-agent/<workflow_id>/review
+        record the moderator's accept / partial_accept / reject decision
 """
 
 from flask import Blueprint, jsonify, request
 
-from . import ai_agent, catalogue_client, db_client, mcp_client, rag_client
+from . import ai_agent, catalogue_client, db_client, mcp_client, multi_agent_client, rag_client
 from .config import Config
 from .validation import ValidationError, clean_review
 
@@ -159,6 +167,39 @@ def moderate_review():
     return jsonify({"tool_result": tool_result, "validation": validation}), 200
 
 
+# ------------------------------------------------- Release 2: Multi-Agent
+@api.post("/api/reviews/<review_id>/multi-agent")
+def start_multi_agent(review_id):
+    """Run the shared Planner -> Worker -> Reviewer moderation workflow for one review."""
+    review = db_client.get_review(review_id)
+    try:
+        stats = db_client.product_stats(review["product_sku"])
+    except db_client.DatabaseError:
+        stats = {}  # grounding is best-effort: a database blip must not block the workflow
+    return jsonify(multi_agent_client.start_review_moderation(review, stats)), 202
+
+
+@api.get("/api/reviews/<review_id>/multi-agent/history")
+def multi_agent_history(review_id):
+    db_client.get_review(review_id)
+    return jsonify(multi_agent_client.list_workflows(review_id))
+
+
+@api.get("/api/reviews/<review_id>/multi-agent/<workflow_id>")
+def multi_agent_status(review_id, workflow_id):
+    db_client.get_review(review_id)
+    return jsonify(multi_agent_client.get_workflow(review_id, workflow_id))
+
+
+@api.post("/api/reviews/<review_id>/multi-agent/<workflow_id>/review")
+def multi_agent_review(review_id, workflow_id):
+    db_client.get_review(review_id)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        raise ValidationError(["request body must be a JSON object"])
+    return jsonify(multi_agent_client.review_workflow(review_id, workflow_id, payload))
+
+
 # ----------------------------------------------------------- error handlers
 @api.app_errorhandler(ValidationError)
 def handle_validation_error(exc):
@@ -193,6 +234,17 @@ def handle_mcp_bad_response(exc):
 @api.app_errorhandler(rag_client.RAGServiceError)
 def handle_rag_error(exc):
     return jsonify({"error": "RAG server unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentUnavailable)
+def handle_multi_agent_unavailable(exc):
+    return jsonify({"error": "Multi-Agent workflow unavailable", "detail": str(exc)}), 503
+
+
+@api.app_errorhandler(multi_agent_client.MultiAgentBadResponse)
+def handle_multi_agent_bad_response(exc):
+    status = exc.status if exc.status in (400, 404, 409) else 502
+    return jsonify({"error": str(exc)}), status
 
 
 @api.app_errorhandler(404)
