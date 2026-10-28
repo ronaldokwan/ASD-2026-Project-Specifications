@@ -40,6 +40,8 @@ email="release2-check-$run_id@example.invalid"
 customer_id=""
 student1_url="$scheme://$hostport:3001"
 product_id=""
+student5_url="$scheme://$hostport:3005"
+review_id=""
 cleanup() {
   if [[ -n "$customer_id" ]]; then
     curl --silent --show-error --output /dev/null -X POST \
@@ -48,6 +50,10 @@ cleanup() {
   if [[ -n "$product_id" ]]; then
     curl --silent --show-error --output /dev/null -X POST \
       "$student1_url/products/$product_id/delete" || true
+  fi
+  if [[ -n "$review_id" ]]; then
+    curl --silent --show-error --output /dev/null -X POST \
+      "$student5_url/reviews/$review_id/delete" || true
   fi
 }
 trap cleanup EXIT
@@ -103,6 +109,29 @@ for key in ("ai_mode", "mcp_server", "rag_server", "multi_agent_server"):
     assert backend[key] == {"status": "disabled"}, key
 '
 
+# Student 5 Reviews and Ratings CRUD through its public frontend proxy.
+review_sku="SKU-AWS-REV-$(date -u +%H%M%S)$$"
+curl --fail --silent --show-error -X POST "$student5_url/reviews" \
+  --data-urlencode "product_sku=$review_sku" \
+  --data-urlencode "user_id=release2check" \
+  --data-urlencode "rating=4" \
+  --data-urlencode "review=Created by validate-runtime.sh to verify cloud CRUD." >/dev/null
+table="$(curl --fail --silent --show-error --get "$student5_url/partials/reviews" \
+  --data-urlencode "product_sku=$review_sku")"
+review_id="$(python3 -c 'import re,sys; m=re.search("id=\"review-([^\"]+)\"",sys.stdin.read()); print(m.group(1) if m else "")' <<<"$table")"
+[[ -n "$review_id" ]] || { echo "Student 5 create/list through database failed." >&2; exit 1; }
+updated="$(curl --fail --silent --show-error -X POST "$student5_url/reviews/$review_id" \
+  --data-urlencode "product_sku=$review_sku" \
+  --data-urlencode "user_id=release2check" \
+  --data-urlencode "rating=5" \
+  --data-urlencode "review=Updated by validate-runtime.sh to verify cloud CRUD.")"
+grep -q "updated" <<<"$updated"
+curl --fail --silent --show-error -X POST "$student5_url/reviews/$review_id/delete" >/dev/null
+review_id=""
+table="$(curl --fail --silent --show-error --get "$student5_url/partials/reviews" \
+  --data-urlencode "product_sku=$review_sku")"
+grep -q "No reviews match" <<<"$table"
+
 if [[ "${EXERCISE_RECOVERY:-no}" == "yes" ]]; then
   # A nonexistent path gives a reversible 404 check without changing a service or data.
   status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$url/__release2-controlled-invalid-endpoint")"
@@ -112,6 +141,6 @@ if [[ "${EXERCISE_RECOVERY:-no}" == "yes" ]]; then
 fi
 
 mkdir -p "$root/reports"
-printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"disabled","controlled_recovery":"%s"}\n' \
+printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"disabled","student5_crud":"create-update-delete-and-database-list-verified","controlled_recovery":"%s"}\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$url" "${EXERCISE_RECOVERY:-no}" \
   | tee "$root/reports/aws-runtime-validation.json"
