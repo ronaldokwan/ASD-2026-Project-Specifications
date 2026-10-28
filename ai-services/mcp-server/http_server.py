@@ -90,4 +90,10 @@ def not_found(_):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7002")), debug=False)
+    # This legacy Flask facade is not used by Docker backends; the supported
+    # native MCP transport is server.py. Keep manual use local by default.
+    app.run(
+        host=os.getenv("MCP_HTTP_BIND_ADDRESS", "127.0.0.1"),
+        port=int(os.getenv("SERVICE_PORT", "7002")),
+        debug=False,
+    )

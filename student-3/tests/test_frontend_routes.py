@@ -229,6 +229,81 @@ def test_multi_agent_history_fragment(frontend, fake_api):
     assert "workflow-123" in response.get_data(as_text=True)
 
 
+def test_multi_agent_history_is_newest_first_and_shows_five_more_at_a_time(
+    frontend, fake_api, monkeypatch
+):
+    workflows = [
+        {
+            "workflow_id": "workflow-{}".format(number),
+            "status": "failed" if number == 12 else "human_review",
+            "created_at": "2026-10-{:02d}T00:00:00+00:00".format(number),
+            "human_decision": {"decision": "accept"} if number == 12 else None,
+        }
+        for number in range(1, 13)
+    ]
+    monkeypatch.setattr(api_client, "list_multi_agent_workflows", lambda _customer_id: {
+        "count": len(workflows), "workflows": workflows,
+    })
+
+    first_page = frontend.get("/customers/1/multi-agent/history")
+    html = first_page.get_data(as_text=True)
+    assert first_page.status_code == 200
+    positions = [html.index("workflow-{}\"".format(number)) for number in (12, 11, 10, 9, 8)]
+    assert positions == sorted(positions)
+    assert "workflow-8\"" in html
+    assert "workflow-7\"" not in html
+    assert "Failed" in html
+    assert "Accept" in html
+    assert "2026-10-12T00:00:00+00:00" in html
+    assert 'hx-get="/customers/1/multi-agent/history?offset=5"' in html
+
+    second_page = frontend.get("/customers/1/multi-agent/history?offset=5")
+    html = second_page.get_data(as_text=True)
+    assert 'id="multi-agent-history-list"' in html
+    assert "workflow-8\"" in html
+    assert "workflow-3\"" in html
+    assert "workflow-2\"" not in html
+    assert 'hx-get="/customers/1/multi-agent/history?offset=10"' in html
+
+    final_page = frontend.get("/customers/1/multi-agent/history?offset=10")
+    html = final_page.get_data(as_text=True)
+    assert "workflow-2\"" in html and "workflow-1\"" in html
+    assert "Show more" not in html
+    assert 'hx-get="/customers/1/multi-agent/workflow-1"' in html
+
+    older_workflow = {
+        "workflow_id": "workflow-1", "status": "human_review",
+        "stage": "human_review", "created_at": "2026-10-01T00:00:00+00:00",
+        "plan": {}, "worker_result": {}, "reviewer_result": {}, "evidence": [],
+        "roles": [], "completion_gate": {},
+    }
+    monkeypatch.setattr(
+        api_client, "get_multi_agent_workflow",
+        lambda _customer_id, workflow_id: dict(older_workflow, workflow_id=workflow_id),
+    )
+    viewed = frontend.get("/customers/1/multi-agent/workflow-1")
+    assert viewed.status_code == 200
+    assert "workflow-1" in viewed.get_data(as_text=True)
+
+
+def test_multi_agent_history_hides_show_more_when_five_or_fewer(
+    frontend, fake_api, monkeypatch
+):
+    workflows = [
+        {"workflow_id": "workflow-{}".format(number), "status": "failed",
+         "created_at": "2026-10-{:02d}T00:00:00+00:00".format(number)}
+        for number in range(1, 6)
+    ]
+    monkeypatch.setattr(api_client, "list_multi_agent_workflows", lambda _customer_id: {
+        "count": len(workflows), "workflows": workflows,
+    })
+    response = frontend.get("/customers/1/multi-agent/history")
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert all("workflow-{}\"".format(number) in html for number in range(1, 6))
+    assert "Show more" not in html
+
+
 def test_rag_answer_displays_sources_and_confidence(frontend, fake_api):
     html = frontend.post(
         "/loyalty-benefits/ask",

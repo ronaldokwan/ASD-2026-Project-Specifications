@@ -36,6 +36,10 @@
         <p><strong>Claim assessment:</strong> Recommendation {{ workflow.reviewer_result.claim_assessment.recommendation|replace('_', ' ') }}; rationale {{ workflow.reviewer_result.claim_assessment.rationale|replace('_', ' ') }}; consistency {{ workflow.reviewer_result.claim_assessment.consistency|replace('_', ' ') }}.</p>
       {% endif %}
       {% if workflow.reviewer_result.findings %}<ul>{% for finding in workflow.reviewer_result.findings %}<li><strong>{{ finding.severity|title }}:</strong> {{ finding.finding }}{% if finding.evidence_ref %} <small>({{ finding.evidence_ref }})</small>{% endif %}</li>{% endfor %}</ul>{% endif %}
+      {% if workflow.reviewer_result.application_added_findings %}
+        <h5>Application evidence checks</h5>
+        <ul>{% for finding in workflow.reviewer_result.application_added_findings %}<li><strong>Application check · {{ finding.severity|title }}:</strong> {{ finding.finding }}{% if finding.evidence_ref %} <small>({{ finding.evidence_ref }})</small>{% endif %}</li>{% endfor %}</ul>
+      {% endif %}
       {% if workflow.reviewer_result.missing_information %}<p><strong>Missing information:</strong> {{ workflow.reviewer_result.missing_information|join('; ') }}</p>{% endif %}
       {% if workflow.reviewer_result.recommendations %}<p><strong>Reviewer recommendations:</strong> {{ workflow.reviewer_result.recommendations|join('; ') }}</p>{% endif %}
     {% endif %}
