@@ -60,7 +60,9 @@ For a listing-readiness review the backend sends the Multi-Agent Server three ev
 
 ### 3.2 Student 2 – Jinying Li – Customer Orders
 
-> TODO (Student 2): Updated design flow including the Multi-Agent flow.
+![Student 2 Customer Orders Release 2 design flow.](../diagrams/student-2-release-2-design-flow.png)
+
+The Customer Orders frontend calls the backend/API, which reads and writes orders through the database API. Local AI-Mode, MCP, RAG and Multi-Agent services remain outside Docker Compose. For a Multi-Agent review, the backend supplies sanitised `order_facts`, the deterministic `mcp_fulfilment` result and the RAG `shipping_policy`. Planner, Worker and Reviewer run in sequence before a human accepts, corrects or rejects the recommendation. The decision, workflow history and audit evidence return to the frontend; the agents cannot mutate or ship an order.
 
 ### 3.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar – Customer Account Management
 
@@ -112,7 +114,7 @@ Findings resolved: S201 `debug=True` removed from the three Student 1 services a
 
 ### 5.2 Student 2 – Jinying Li
 
-Student 2 executed the shared pre-commit configuration over all tracked files on 27 Oct 2026 at commit `1d0d0a2`; the command exited successfully and the Git hook was installed for subsequent commits. Ruff security rules, detect-secrets and pip-audit all passed. Ruff and pip-audit cover the shared Python AI services and Python dependencies, while Student 2's Customer Orders services are Java/Maven; detect-secrets covers Student 2 source, workflow and configuration files. The strict pip-audit run retained only the four documented ChromaDB advisory exceptions that currently have no fixed release, and found no additional blocking vulnerability. Evidence: `docs/evidence/student-2/release-2/01-pre-commit-security-scans.log`.
+Student 2 executed the shared pre-commit configuration over all tracked files on 28 Oct 2026 at commit `70ba5bf`; the command exited successfully and the Git hook remains installed for subsequent commits. Ruff security rules, detect-secrets and pip-audit all passed. Ruff and pip-audit cover the shared Python AI services and Python dependencies, while Student 2's Customer Orders services are Java/Maven; detect-secrets covers Student 2 source, workflow and configuration files. The strict pip-audit run retained only the four documented ChromaDB advisory exceptions that currently have no fixed release, and found no additional blocking vulnerability. Evidence: `docs/evidence/student-2/release-2/01-pre-commit-security-scans.log`.
 
 | Hook | Student 2 / shared scope | Result |
 |---|---|---|
@@ -151,7 +153,15 @@ Hosted run [39799057050](https://github.com/ronaldokwan/ASD-2026-Project-Specifi
 
 ### 6.2 Student 2 – Jinying Li (`student-2.yml`)
 
-> TODO (Student 2): Post-commit tests of two backend/API endpoint functions and workflow evidence.
+Run [40673632219](https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40673632219) validated commit `70ba5bf`. The workflow compiled and tested all three Java modules, built and health-checked the three Student 2 containers, then ran the following checks against the live backend and database API:
+
+| Endpoint function | Check | Result |
+|---|---|---|
+| `GET /api/orders/{id}` | A persisted order was returned through the backend | **Passed** |
+| `PATCH /api/orders/{id}/status` | A supported status was persisted | **Passed** |
+| `PATCH /api/orders/{id}/status` | An unsupported status returned HTTP 400 without changing the order | **Passed** |
+
+The controller and live endpoint logs were uploaded as workflow artifacts. Evidence: `docs/evidence/student-2/release-2/02-endpoint-ci-summary.json`.
 
 ### 6.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar (`student-3.yml`)
 
@@ -182,7 +192,14 @@ The validation log records *"All three pre-commit security hooks and at least tw
 
 ### 7.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Testing Review output and validation log.
+The agentic-loop Testing Review mode (`llama3.1:8b`) reviewed Student 2 local and hosted evidence:
+
+| Input | Gate | Model | Result | Evidence |
+|---|---|---|---|---|
+| Local security hooks and endpoint test code; GitHub Actions not supplied | incomplete | incomplete | **incomplete** | `testing-review-local/` |
+| CI run 40673632219: security hooks and three live endpoint checks passed | passed | passed | **passed** | `testing-review-ci/` |
+
+The hosted validation log records that all three pre-commit security hooks and at least two post-commit backend endpoint tests passed, with no contradiction between the evidence gate and model assessment.
 
 ### 7.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 
@@ -220,7 +237,7 @@ The three Student 1 containers run under Docker Compose (`MULTI_AGENT_URL=host.d
 
 ### 8.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Local deployment evidence.
+The three Customer Orders microservices ran in Docker Compose on ports 3002, 8002 and 9002. AI-Mode, MCP, RAG and Multi-Agent ran natively on ports 7001–7004. Health checks returned HTTP 200, and the frontend completed order create, update and delete operations. The order detail page also returned an AI-Mode email draft, an MCP fulfilment result and a grounded RAG answer with sources and confidence. Evidence: `docs/evidence/student-2/release-2/04-local-deployment-summary.json`.
 
 ### 8.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 
@@ -272,7 +289,7 @@ A first deploy failed validation and exposed four defects, fixed before the succ
 
 ### 9.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Cloud deployment evidence for Customer Orders.
+The successful group cloud workflow run 40471342463 deployed commit `1d0d0a2` to AWS in `ap-southeast-2`. The public Customer Orders frontend, backend and database API returned healthy responses through the load balancer. A temporary order was created, read, updated and deleted through the frontend. AI-Mode, MCP, RAG and Multi-Agent remained disabled, as required by the cloud baseline. Evidence: `docs/evidence/student-2/release-2/05-cloud-crud-validation.log`.
 
 ### 9.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 
@@ -313,7 +330,14 @@ Each run's workflow history (`multi-agent-workflow.json`) and coordination audit
 
 ### 10.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Planner → Worker → Reviewer → Human Review run, workflow history and audit log.
+Student 2 completed the shared Planner → Worker → Reviewer → Human Review workflow through both the frontend and terminal. The Planner created an evidence-based task plan; the Worker produced a shipment recommendation from order facts, MCP fulfilment and the shipping policy; the Reviewer checked the claims before handing control to the human reviewer.
+
+| Interface | Workflow result | Human decision | Audit evidence | Multi-Agent Review |
+|---|---|---|---|---|
+| Frontend UI | all three model stages completed | accept | per-order history and nine coordination events | supported |
+| Terminal | all three model stages completed | accept | workflow JSON and nine-event audit log | supported |
+
+The final decision is recorded for audit only and does not mutate or ship the order. Evidence: `docs/evidence/student-2/release-2/accepted-ui-run/` and `accepted-terminal-run/`.
 
 ### 10.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 

@@ -15,8 +15,8 @@ EVIDENCE = ROOT / "docs" / "evidence" / "student-2" / "release-2"
 PRE_COMMIT_LOG = EVIDENCE / "01-pre-commit-security-scans.log"
 ENDPOINT_TEST = ROOT / "student-2" / "endpoint-tests" / "test_live_order_endpoints.py"
 AI_MODE_URL = "http://localhost:7001"
-RUN_ID = "40629560676"
-RUN_COMMIT = "eafdc69"
+RUN_ID = "40673632219"
+RUN_COMMIT = "70ba5bf"
 
 
 def save(path: Path, body: dict) -> None:
@@ -123,7 +123,7 @@ def main() -> None:
         {
             **common,
             "execution_results": (
-                "Hosted GitHub Actions run 40629560676 passed on commit eafdc69. The workflow "
+                "Hosted GitHub Actions run 40673632219 passed on commit 70ba5bf. The workflow "
                 "started and health-checked the live Student 2 containers, then passed three "
                 "post-commit HTTP checks: GET order, PATCH valid status, and PATCH invalid status "
                 "returning HTTP 400 without changing the order."
