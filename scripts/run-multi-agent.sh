@@ -9,7 +9,7 @@ if [ -z "${PYTHON_BIN:-}" ]; then
     if "${candidate}" -c 'import sys' >/dev/null 2>&1; then PYTHON_BIN=${candidate}; break; fi
   done
 fi
-"${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ is required"'
+"${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 11), "Python 3.11+ is required"'
 
 if [ -f .env ]; then
   for key in LLM_MODEL LLM_TIMEOUT MULTI_AGENT_PLANNER_MODEL MULTI_AGENT_WORKER_MODEL \

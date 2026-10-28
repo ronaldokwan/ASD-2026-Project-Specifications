@@ -1,6 +1,7 @@
 """Flask and HTMX frontend for Student 3 Customer Account Management."""
 
 import os
+from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
@@ -50,6 +51,18 @@ def _table(oob=False):
     )
 
 
+def _workflow_created_at(item):
+    """Sort ISO workflow timestamps chronologically, with invalid values last."""
+    value = item.get("created_at", "")
+    try:
+        timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+        return (1, timestamp.timestamp())
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        return (0, 0)
+
+
 @app.get("/")
 def index():
     search = _search()
@@ -93,13 +106,45 @@ def customer_detail(customer_id):
 
 @app.get("/customers/<int:customer_id>/multi-agent/history")
 def multi_agent_history(customer_id):
+    offset = max(0, request.args.get("offset", default=0, type=int) or 0)
     try:
         history = api_client.list_multi_agent_workflows(customer_id)
     except ApiError as exc:
-        return render_template("partials/multi_agent_history.html", error=exc.message,
-                               workflows=[], customer_id=customer_id), exc.status
-    return render_template("partials/multi_agent_history.html", error=None,
-                           workflows=history.get("workflows", []), customer_id=customer_id)
+        if offset:
+            return render_template(
+                "partials/multi_agent_history_items.html",
+                error=exc.message,
+                workflows=[],
+                customer_id=customer_id,
+                total_count=0,
+                visible_count=0,
+            ), exc.status
+        return render_template(
+            "partials/multi_agent_history.html",
+            error=exc.message,
+            workflows=[],
+            customer_id=customer_id,
+            total_count=0,
+            visible_count=0,
+        ), exc.status
+
+    workflows = sorted(
+        history.get("workflows", []), key=_workflow_created_at, reverse=True
+    )
+    visible_count = min(offset + 5, len(workflows))
+    context = {
+        "error": None,
+        "workflows": workflows[:visible_count],
+        "customer_id": customer_id,
+        "total_count": len(workflows),
+        "visible_count": visible_count,
+    }
+    template = (
+        "partials/multi_agent_history_items.html"
+        if offset
+        else "partials/multi_agent_history.html"
+    )
+    return render_template(template, **context)
 
 
 @app.get("/partials/form")

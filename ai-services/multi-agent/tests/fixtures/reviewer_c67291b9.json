@@ -1,0 +1,92 @@
+{
+  "workflow_id": "c67291b9-dbc7-4039-98ce-aae1cc7763f4",
+  "worker_result": {
+    "recommendation": "The customer's stored loyalty tier is Gold, and the approved benefit for this tier is either fifteen percent off the next purchase or early access to the next seasonal sale. These are the only approved benefits for Gold loyalty.",
+    "rationale": "The customer's stored loyalty tier is Gold, and the loyalty policy specifies that the only approved benefits for this tier are either fifteen percent off the next purchase or early access to the next seasonal sale.",
+    "policy_basis": "loyalty_policy",
+    "evidence_refs": [
+      "customer_facts",
+      "loyalty_policy"
+    ],
+    "application_added_evidence_refs": []
+  },
+  "evidence": [
+    {
+      "id": "customer_facts",
+      "source": "synthetic regression facts",
+      "status": "available",
+      "content": "{\"loyalty_tier\":\"Gold\"}"
+    },
+    {
+      "id": "loyalty_policy",
+      "source": "shared-rag-customer-loyalty-policy",
+      "status": "available",
+      "content": "{\"status\": \"ok\", \"answer\": \"Gold customers may receive either fifteen percent off the next purchase or early access to the next seasonal sale. These are the only approved Gold loyalty benefits.\", \"sources\": [{\"source\": \"customer-loyalty-policy.md\", \"section\": \"Gold Membership\", \"snippet\": \"Gold Membership Gold customers may receive either fifteen percent off the next purchase or early access to the next seasonal sale. These are the only approved Gold loyalty benefits.\"}], \"confidence\": \"medium\"}",
+      "meaning": "Authoritative policy evidence for approved benefits only when its source section matches the customer's stored tier."
+    }
+  ],
+  "reviewer_attempts": [
+    {
+      "attempt": 1,
+      "error": "Reviewer contradiction must quote the actual Worker rationale",
+      "model": "deepseek-r1:8b",
+      "elapsed_seconds": 21.99,
+      "output": {
+        "action": "not_supported",
+        "claim_assessment": {
+          "recommendation": "supported",
+          "rationale": "supported",
+          "consistency": "contradictory"
+        },
+        "findings": [
+          {
+            "severity": "high",
+            "finding": "The rationale states that the only approved benefits for Gold loyalty are either fifteen percent off the next purchase or early access to the next seasonal sale, but the policy_basis field references the loyalty_policy which explicitly states that these are the only approved benefits for Gold. This",
+            "evidence_ref": "loyalty_policy",
+            "classification": "contradiction",
+            "claim_field": "rationale",
+            "conflicting_claims": {
+              "recommendation": "The customer's stored loyalty tier is Gold, and the approved benefit for this tier is either fifteen percent off the next purchase or early access to the next seasonal sale.",
+              "rationale": "The customer's stored loyalty tier is Gold, and the loyalty policy specifies that the only approved benefits for this tier are either fifteen percent off the next purchase or early access to the next seasonal,"
+            }
+          }
+        ],
+        "missing_information": [],
+        "recommendations": [
+          "Verify the policy_basis reference in the rationale against the actual policy content."
+        ]
+      }
+    },
+    {
+      "attempt": 2,
+      "error": "Reviewer contradiction must quote the actual Worker recommendation",
+      "model": "deepseek-r1:8b",
+      "elapsed_seconds": 21.001,
+      "output": {
+        "action": "not_supported",
+        "claim_assessment": {
+          "recommendation": "supported",
+          "rationale": "supported",
+          "consistency": "contradictory"
+        },
+        "findings": [
+          {
+            "severity": "high",
+            "finding": "The rationale incorrectly states that the only approved benefits for Gold loyalty are either fifteen percent off the next purchase or early access to the next seasonal sale.",
+            "evidence_ref": "loyalty_policy",
+            "classification": "contradiction",
+            "claim_field": "rationale",
+            "conflicting_claims": {
+              "recommendation": "The customer's stored loyalty tier is Gold, and the approved benefit for this tier is either fifteen percent (15%) off the next purchase or early access to the next seasonal sale.",
+              "rationale": "The customer's stored loyalty tier is Gold, and the loyalty policy specifies that the only approved benefits for this tier are either fifteen percent off the next purchase or early access to the next seasonal sale."
+            }
+          }
+        ],
+        "missing_information": [],
+        "recommendations": [
+          "Verify the exact wording of the loyalty policy section for Gold benefits."
+        ]
+      }
+    }
+  ]
+}

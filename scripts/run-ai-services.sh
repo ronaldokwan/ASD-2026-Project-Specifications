@@ -14,7 +14,7 @@ if [ -z "${PYTHON_BIN:-}" ]; then
     fi
   done
 fi
-"${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 10), "Python 3.10+ is required"'
+"${PYTHON_BIN}" -c 'import sys; assert sys.version_info >= (3, 11), "Python 3.11+ is required"'
 
 # Use the same model settings as Compose, otherwise these services ask Ollama
 # for a model it never pulled. Only host-safe keys are read: the *_URL entries
