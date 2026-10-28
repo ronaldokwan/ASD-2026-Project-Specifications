@@ -45,6 +45,14 @@ class Config:
     QUESTION_MIN_CHARS = 5
     QUESTION_MAX_CHARS = 500
 
+    # Shared Planner -> Worker -> Reviewer service.
+    MULTI_AGENT_URL = os.getenv(
+        "MULTI_AGENT_URL", "http://host.docker.internal:7004"
+    ).rstrip("/")
+    MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "180"))
+    MULTI_AGENT_ENABLED = _enabled("MULTI_AGENT_ENABLED")
+    MULTI_AGENT_SUBJECT = "student-4-stock"
+
     PORT = int(os.getenv("SERVICE_PORT", "8004"))
 
     # Business rules for inventory management, enforced on every write.

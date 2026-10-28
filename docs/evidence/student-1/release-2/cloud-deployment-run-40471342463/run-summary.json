@@ -1,0 +1,90 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-10-27T08:07:17Z",
+  "displayTitle": "cloud-deployment",
+  "event": "workflow_dispatch",
+  "headBranch": "main",
+  "headSha": "1d0d0a2",
+  "jobs": [
+    {
+      "completedAt": "2026-10-27T08:13:41Z",
+      "conclusion": "success",
+      "name": "Required integrated validation",
+      "startedAt": "2026-10-27T08:07:23Z",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/setup-python@v5"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run actions/setup-java@v4"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run hashicorp/setup-terraform@v3"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install application and scan dependencies"
+        },
+        {
+          "conclusion": "success",
+          "name": "Security hooks"
+        },
+        {
+          "conclusion": "success",
+          "name": "Release 2 tests"
+        },
+        {
+          "conclusion": "success",
+          "name": "Validate infrastructure, Compose and scripts"
+        },
+        {
+          "conclusion": "success",
+          "name": "Build integrated application images"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload validation evidence"
+        }
+      ],
+      "url": "https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40471342463/job/122078933916"
+    },
+    {
+      "completedAt": "2026-10-27T08:26:08Z",
+      "conclusion": "success",
+      "name": "Deploy validated commit to AWS",
+      "startedAt": "2026-10-27T08:13:45Z",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run hashicorp/setup-terraform@v3"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run aws-actions/configure-aws-credentials@v4"
+        },
+        {
+          "conclusion": "success",
+          "name": "Apply infrastructure, publish this tested commit, deploy and validate"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload cloud execution evidence"
+        }
+      ],
+      "url": "https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40471342463/job/122081228409"
+    }
+  ],
+  "updatedAt": "2026-10-27T08:26:09Z",
+  "url": "https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40471342463"
+}

@@ -10,15 +10,23 @@ on:
     paths:
       - "student-4/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
       - "docker-compose.yml"
+      - "infra/aws/**"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/cloud-deployment.yml"
       - ".github/workflows/student-4.yml"
   pull_request:
     paths:
       - "student-4/**"
       - "ai-services/ai-mode/**"
+      - "ai-services/multi-agent/**"
       - "shared/**"
       - "docker-compose.yml"
+      - "infra/aws/**"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/cloud-deployment.yml"
       - ".github/workflows/student-4.yml"
   workflow_dispatch:
 
@@ -35,6 +43,10 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -42,7 +54,16 @@ jobs:
           pip install -r student-4/backend/requirements.txt
           pip install -r student-4/frontend/requirements.txt
           pip install -r ai-services/ai-mode/requirements.txt
+          pip install -r ai-services/multi-agent/requirements.txt
+          pip install pre-commit==4.3.0
           pip install flake8
+      - name: Security hooks
+        run: pre-commit run --all-files
+      - name: Validate AWS infrastructure
+        run: |
+          terraform -chdir=infra/aws fmt -check -recursive
+          terraform -chdir=infra/aws init -backend=false -input=false
+          terraform -chdir=infra/aws validate
       - name: Lint
         run: |
           flake8 student-4 ai-services/ai-mode --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -51,6 +72,8 @@ jobs:
         run: pytest student-4/tests -v --junitxml=reports/student-4-tests.xml
       - name: Shared agentic loop tests (AI-Mode)
         run: pytest ai-services/ai-mode/tests -v --junitxml=reports/ai-mode-tests.xml
+      - name: Shared multi-agent workflow tests
+        run: pytest ai-services/multi-agent/tests -v --junitxml=reports/multi-agent-tests.xml
       - name: Upload test evidence for the technical report
         if: always()
         uses: actions/upload-artifact@v4

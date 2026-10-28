@@ -49,7 +49,11 @@
                         hx-post="/stock/{{ item.id }}/mcp-check"
                         hx-target="#mcp-panel"
                         hx-swap="innerHTML">MCP check</button>
-                <button class="btn danger"
+                      <button class="btn ai"
+                              hx-post="/stock/{{ item.id }}/multi-agent"
+                              hx-target="#multi-agent-panel"
+                              hx-swap="innerHTML show:#multi-agent-card:top">Multi-Agent review</button>
+                      <button class="btn danger"
                         hx-post="/stock/{{ item.id }}/delete"
                         hx-target="#alerts"
                         hx-swap="innerHTML"
