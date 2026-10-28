@@ -62,6 +62,7 @@ public final class MultiAgentModels {
         List<Evidence> evidence,
         @JsonProperty("revision_count") Integer revisionCount,
         @JsonProperty("max_revisions") Integer maxRevisions,
+        @JsonProperty("completion_gate") Map<String, Boolean> completionGate,
         String failure,
         String error
     ) {}

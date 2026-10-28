@@ -36,6 +36,9 @@ build/
 # Generated test evidence
 /reports/
 
+# Local review/render scratch files
+/tmp/
+
 # Terraform plans/state and local cloud configuration
 .terraform/
 *.tfstate

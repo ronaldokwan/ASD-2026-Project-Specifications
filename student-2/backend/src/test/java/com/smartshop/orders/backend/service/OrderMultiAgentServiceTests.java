@@ -137,7 +137,14 @@ class OrderMultiAgentServiceTests {
     private WorkflowResponse workflow(String subjectRef) {
         return new WorkflowResponse(
             "wf-42", subjectRef, "human_review", "human_review",
-            Map.of(), Map.of(), Map.of(), null, List.of(), List.of(), 0, 1, null, null
+            Map.of(), Map.of(), Map.of(), null, List.of(), List.of(), 0, 1,
+            Map.of(
+                "planner_completed", true,
+                "worker_completed", true,
+                "reviewer_completed", true,
+                "human_decision_recorded", false
+            ),
+            null, null
         );
     }
 

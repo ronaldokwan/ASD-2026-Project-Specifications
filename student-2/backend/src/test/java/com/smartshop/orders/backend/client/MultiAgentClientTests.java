@@ -66,6 +66,34 @@ class MultiAgentClientTests {
     }
 
     @Test
+    void preservesTheCompletionGateNeededByAgenticLoopReview() {
+        server.expect(once(), requestTo("http://multi-agent:7004/workflow/wf-42"))
+            .andRespond(withSuccess("""
+                {
+                  "workflow_id":"wf-42",
+                  "subject_ref":"student-2-order:42",
+                  "status":"accepted",
+                  "stage":"completed",
+                  "completion_gate":{
+                    "planner_completed":true,
+                    "worker_completed":true,
+                    "reviewer_completed":true,
+                    "human_decision_recorded":true
+                  }
+                }
+                """, MediaType.APPLICATION_JSON));
+
+        var response = client.get("wf-42");
+
+        assertThat(response.completionGate())
+            .containsEntry("planner_completed", true)
+            .containsEntry("worker_completed", true)
+            .containsEntry("reviewer_completed", true)
+            .containsEntry("human_decision_recorded", true);
+        server.verify();
+    }
+
+    @Test
     void refusesCallsWhenMultiAgentModeIsDisabled() {
         MultiAgentClient disabled = new MultiAgentClient(RestClient.create(), false);
 

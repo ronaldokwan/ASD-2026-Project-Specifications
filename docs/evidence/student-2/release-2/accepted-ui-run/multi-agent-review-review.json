@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 65303,
+  "fallback_used": false,
+  "mode": "multi_agent_workflow_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "supported",
+    "findings": "No unsupported claims, contradictions, defects, or missing information have been found.",
+    "recommendations": "Review the order facts and shipping policy to confirm that the order is indeed ready for shipment.",
+    "risks": "No significant risks have been identified.",
+    "validation_log": {
+      "authoritative_assessment": "supported",
+      "contradiction": false,
+      "evidence_assessment": "supported",
+      "evidence_gate": "All model stages and a human decision are present.",
+      "mode": "multi_agent_workflow",
+      "model_assessment": "supported",
+      "model_reviewed": true,
+      "review_id": "fe91e010-71da-4f77-b54d-f8e707bde931"
+    },
+    "workflow_review": "The workflow for student-2-order:33 has been completed. The planner, worker, and reviewer stages have all been completed successfully, and the human decision has been recorded. The order facts, MCP fulfilment result, and shipping policy have been used to determine that the order is ready for shipment."
+  },
+  "review_id": "fe91e010-71da-4f77-b54d-f8e707bde931",
+  "status": "reviewed",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'multi_agent_workflow_review' with 1 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n  \"workflow_review\": \"The workflow for student-2-order:33 has been completed. The planner, worker, and reviewer stages have all been completed successfully, and the human decision has been recorded. The order facts, MCP fulfilment result, and shipping policy have been used to d",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

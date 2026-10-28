@@ -1,0 +1,131 @@
+{
+  "workflow_id": "fbed2798-0647-4331-9f63-9a5c548031d8",
+  "subject_ref": "student-2-order:33",
+  "status": "accepted",
+  "stage": "completed",
+  "plan": {
+    "application_enforced": {
+      "acceptance_criteria": [
+        "Confirm the current order status, lines, quantity, total and inventory commitment from order_facts.",
+        "Use mcp_fulfilment to determine whether deterministic fulfilment checks passed.",
+        "Use shipping_policy for the policy rules supporting the shipment recommendation."
+      ],
+      "constraints": [
+        "Use only supplied evidence and cite its exact evidence ID.",
+        "Do not infer customer data, payment state or inventory beyond the supplied evidence.",
+        "The recommendation is informational and must not mutate, ship or otherwise change the order.",
+        "If required evidence is unavailable or insufficient, state that a safe recommendation cannot be made."
+      ]
+    },
+    "model_generated": {
+      "tasks": [
+        {
+          "evidence_refs": [
+            "order_facts"
+          ],
+          "task": "Retrieve order facts"
+        },
+        {
+          "evidence_refs": [
+            "mcp_fulfilment"
+          ],
+          "task": "Validate order fulfilment"
+        },
+        {
+          "evidence_refs": [
+            "shipping_policy"
+          ],
+          "task": "Check shipping policy"
+        },
+        {
+          "evidence_refs": [
+            "order_facts",
+            "mcp_fulfilment",
+            "shipping_policy"
+          ],
+          "task": "Make recommendation based on evidence"
+        }
+      ]
+    }
+  },
+  "worker_result": {
+    "application_added_evidence_refs": [],
+    "evidence_refs": [
+      "order_facts",
+      "mcp_fulfilment",
+      "shipping_policy"
+    ],
+    "policy_basis": "shipping_policy",
+    "rationale": "The order is ready for shipment as confirmed by the order fulfilment validation, and the shipping policy does not impose any additional restrictions that would prevent shipment.",
+    "recommendation": "Based on the current order facts, the order is ready for shipment as determined by the order fulfilment validation. The shipping policy does not present any additional blockers for this order, as it meets all the specified criteria for shipment, including having a pending status, valid order lines, positive quantities and totals, and committed inventory."
+  },
+  "reviewer_result": {
+    "action": "ready_for_human",
+    "claim_assessment": {
+      "consistency": "not_applicable",
+      "rationale": "supported",
+      "recommendation": "supported"
+    },
+    "findings": [],
+    "missing_information": [],
+    "recommendations": [
+      "Review the order fulfilment validation and shipping policy to ensure they align with the current order status and inventory commitment."
+    ]
+  },
+  "human_decision": {
+    "decision": "accept",
+    "feedback": "Checked against the order facts, MCP fulfilment result and shipping policy.",
+    "reviewed_at": "2026-10-28T09:51:53.945001+00:00"
+  },
+  "roles": [
+    {
+      "completed_at": "2026-10-28T09:49:19.718734+00:00",
+      "model": "llama3.1:8b",
+      "role": "planner"
+    },
+    {
+      "completed_at": "2026-10-28T09:49:47.727771+00:00",
+      "model": "qwen2.5:3b",
+      "revision": 0,
+      "role": "worker"
+    },
+    {
+      "completed_at": "2026-10-28T09:51:06.640899+00:00",
+      "model": "llama3.1:8b",
+      "role": "reviewer"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "order_facts",
+      "source": "student-2-orders-api",
+      "status": "available",
+      "meaning": "Authoritative for the current sanitised order facts. Customer identity is deliberately excluded.",
+      "content": "{\"order_number\":\"ORD-20260902-163153-BA5E70\",\"status\":\"pending\",\"line_count\":1,\"total_quantity\":1,\"order_total\":59,\"products\":[\"SKU-AUD-1002\"],\"inventory_committed\":true}"
+    },
+    {
+      "id": "mcp_fulfilment",
+      "source": "shared-mcp-check_order_fulfilment",
+      "status": "available",
+      "meaning": "Authoritative deterministic validation of the order fulfilment rules; it does not define shipping policy.",
+      "content": "{\"ok\":true,\"tool\":\"check_order_fulfilment\",\"result\":{\"ready_to_ship\":true,\"blockers\":[],\"checked_rules\":[\"order_number_present\",\"order_is_pending\",\"contains_order_lines\",\"positive_quantity\",\"positive_total\",\"inventory_committed\"],\"summary\":\"Order ORD-20260902-163153-BA5E70 is ready for shipment.\"},\"error\":null}"
+    },
+    {
+      "id": "shipping_policy",
+      "source": "shared-rag-orders-shipping-policy",
+      "status": "available",
+      "meaning": "Authoritative shipping-policy evidence only when the RAG response cites the SmartShop shipping policy.",
+      "content": "{\"status\":\"ok\",\"answer\":\"# SmartShop Order Shipping Policy This is the internal shipping policy for the SmartShop teaching project. 1. An order may proceed to shipment only when its status is `pending`, it contains at least one valid order line, its total quantity and order total are positive, and inventory was committed when the order was saved. 2. An order that is already `shipped` or `delivered` is not awaiting shipment and must not be shipped a second time. 3. An order with missing\",\"message\":null,\"confidence\":\"medium\",\"sources\":[{\"doc_id\":\"orders-shipping-policy-v1\",\"chunk_id\":\"orders-shipping-policy-v1::0\",\"snippet\":\"# SmartShop Order Shipping Policy This is the internal shipping policy for the SmartShop teaching project. 1. An order may proceed to shipment only when its status is `pending`, it contains at least o\",\"metadata\":{\"doc_id\":\"orders-shipping-policy-v1\",\"doc_type\":\"shipping_policy\",\"feature\":\"orders\",\"source_authority\":\"policy\"}}],\"retrieved_count\":1,\"elapsed_ms\":17977,\"error\":null}"
+    }
+  ],
+  "revision_count": 0,
+  "max_revisions": 1,
+  "completion_gate": {
+    "human_decision_recorded": true,
+    "planner_completed": true,
+    "reviewer_completed": true,
+    "worker_completed": true
+  },
+  "failure": null,
+  "error": null
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "elapsed_ms": 107074,
+  "fallback_used": false,
+  "mode": "multi_agent_workflow_review",
+  "model": "llama3.1:8b",
+  "ok": true,
+  "result": {
+    "assessment": "supported",
+    "findings": "No issues were found with the workflow or the evidence. The order facts, MCP fulfilment result, and shipping policy all align with the current order status and inventory commitment.",
+    "recommendations": "Review the order fulfilment validation and shipping policy to ensure they align with the current order status and inventory commitment.",
+    "risks": "No risks were identified in the workflow or the evidence.",
+    "validation_log": {
+      "authoritative_assessment": "supported",
+      "contradiction": false,
+      "evidence_assessment": "supported",
+      "evidence_gate": "All model stages and a human decision are present.",
+      "mode": "multi_agent_workflow",
+      "model_assessment": "supported",
+      "model_reviewed": true,
+      "review_id": "7f15286e-3c85-4b20-955b-a7bea89914bc"
+    },
+    "workflow_review": "The workflow has successfully completed with a human decision to accept the order for shipment. The planner, worker, and reviewer stages have all been completed, and the evidence references, stage states, and human decision are in agreement."
+  },
+  "review_id": "7f15286e-3c85-4b20-955b-a7bea89914bc",
+  "status": "reviewed",
+  "trace": [
+    {
+      "attempt": 1,
+      "detail": "Built a grounded prompt for goal 'multi_agent_workflow_review' with 1 context fact(s).",
+      "step": "Plan"
+    },
+    {
+      "attempt": 1,
+      "detail": "Called llama3.1:8b through the Ollama runtime.",
+      "raw_preview": "{\n  \"workflow_review\": \"The workflow has successfully completed with a human decision to accept the order for shipment. The planner, worker, and reviewer stages have all been completed, and the evidence references, stage states, and human decision are in agreement.\",\n  \"assessmen",
+      "step": "Act"
+    },
+    {
+      "attempt": 1,
+      "detail": "Output parsed and satisfied every guardrail.",
+      "status": "passed",
+      "step": "Observe"
+    }
+  ]
+}

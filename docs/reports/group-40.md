@@ -112,7 +112,13 @@ Findings resolved: S201 `debug=True` removed from the three Student 1 services a
 
 ### 5.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Pre-commit security testing report.
+Student 2 executed the shared pre-commit configuration over all tracked files on 27 Oct 2026 at commit `1d0d0a2`; the command exited successfully and the Git hook was installed for subsequent commits. Ruff security rules, detect-secrets and pip-audit all passed. Ruff and pip-audit cover the shared Python AI services and Python dependencies, while Student 2's Customer Orders services are Java/Maven; detect-secrets covers Student 2 source, workflow and configuration files. The strict pip-audit run retained only the four documented ChromaDB advisory exceptions that currently have no fixed release, and found no additional blocking vulnerability. Evidence: `docs/evidence/student-2/release-2/01-pre-commit-security-scans.log`.
+
+| Hook | Student 2 / shared scope | Result |
+|---|---|---|
+| Ruff security (`--select S`) | Shared Python AI services, scripts and configured Python services; Student 2 contains no Python source | **Passed** |
+| detect-secrets | All covered tracked files, including Student 2 source, workflow and configuration | **Passed** |
+| pip-audit `--strict` | 16 shared Python requirement files; Java dependencies are validated by Maven | **Passed** (4 documented ChromaDB exceptions) |
 
 ### 5.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 
@@ -346,7 +352,12 @@ Commit history: [github.com/ronaldokwan/ASD-2026-Project-Specifications/commits/
 
 ### 12.2 Student 2 – Jinying Li
 
-> TODO (Student 2): Release 2 contribution record.
+| Date | Work |
+|---|---|
+| 22 Oct 2026 | Extended `student-2.yml` with post-commit tests for live order retrieval and status updates, including the HTTP 400 validation case and uploaded test evidence. |
+| 23 Oct 2026 | Integrated Customer Orders with the shared Multi-Agent Server. Added the Planner, Worker and Reviewer workflow, sanitised order/MCP/RAG evidence, Human Review decisions and per-order workflow history in the frontend. |
+| 27 Oct 2026 | Ran the shared Ruff, detect-secrets and pip-audit checks; validated the local Student 2 containers and native AI services; collected local and AWS Customer Orders CRUD evidence. |
+| 28 Oct 2026 | Added the completion-gate integration and Human Review UI fix, expanded backend/frontend tests, generated Testing Review and Multi-Agent Workflow Review evidence, and verified the full Student 2 Maven build. |
 
 ### 12.3 Student 3 – Vishvak Ananthakrishnan Rameshkumar
 

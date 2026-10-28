@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" font-family="Segoe UI, Calibri, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <style>
+      .node{fill:#fff;stroke:#333;stroke-width:1.5}.agent{fill:#e9f5ec;stroke:#2f7d4a;stroke-width:1.5}.human{fill:#fdeceb;stroke:#b5443b;stroke-width:1.5}
+      .title{font-size:25px;font-weight:700;fill:#111;text-anchor:middle}.t{font-size:17px;font-weight:600;fill:#111;text-anchor:middle}.s{font-size:13px;fill:#444;text-anchor:middle}
+      .band{font-size:15px;font-weight:600}.lbl{font-size:13px;fill:#222}.e{stroke:#333;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <text x="700" y="32" class="title">Student 2 Customer Orders Release 2 Design Flow</text>
+  <rect x="10" y="50" width="1380" height="150" rx="10" fill="#eef4fb" stroke="#4a78b5" stroke-width="1.5"/>
+  <text x="26" y="75" class="band" fill="#2c5a94">Containerised microservices: Docker Compose locally and AWS ECS Fargate in the cloud</text>
+  <rect class="node" x="60" y="100" width="280" height="70" rx="8"/><text class="t" x="200" y="130">Frontend :3002</text><text class="s" x="200" y="152">Spring Boot · Thymeleaf · HTMX</text>
+  <rect class="node" x="560" y="100" width="280" height="70" rx="8"/><text class="t" x="700" y="130">Backend/API :8002</text><text class="s" x="700" y="152">Order API · sanitised evidence builder</text>
+  <rect class="node" x="1060" y="100" width="280" height="70" rx="8"/><text class="t" x="1200" y="130">Database API :9002</text><text class="s" x="1200" y="152">SQLite · encrypted EFS in AWS</text>
+  <path class="e" d="M340,135 L558,135"/><text class="lbl" x="425" y="126">REST</text><path class="e" d="M840,135 L1058,135"/><text class="lbl" x="925" y="126">REST</text>
+  <rect x="10" y="225" width="1380" height="485" rx="10" fill="#fdf6ec" stroke="#c08a2e" stroke-width="1.5"/>
+  <text x="26" y="250" class="band" fill="#8a5f14">Native host services: local only and disabled by default in the required AWS baseline</text>
+  <rect class="node" x="45" y="285" width="270" height="66" rx="8"/><text class="t" x="180" y="313">AI-Mode :7001</text><text class="s" x="180" y="335">R0 agentic loop and report reviews</text>
+  <rect class="node" x="365" y="285" width="270" height="66" rx="8"/><text class="t" x="500" y="313">MCP :7002/mcp</text><text class="s" x="500" y="335">check_order_fulfilment</text>
+  <rect class="node" x="685" y="285" width="270" height="66" rx="8"/><text class="t" x="820" y="313">RAG :7003</text><text class="s" x="820" y="335">order facts and shipping policy</text>
+  <rect class="node" x="1005" y="285" width="340" height="66" rx="8"/><text class="t" x="1175" y="313">Multi-Agent Server :7004</text><text class="s" x="1175" y="335">workflow history and coordination audit</text>
+  <path class="e" d="M630,170 C520,220 220,230 182,283"/><path class="e" d="M670,170 C630,225 515,245 503,283"/><path class="e" d="M720,170 C760,225 815,245 820,283"/><path class="e" d="M800,170 C980,215 1135,235 1170,283"/>
+  <text class="lbl" x="1015" y="380">Evidence supplied by Backend/API:</text><text class="lbl" x="1015" y="400">order_facts · mcp_fulfilment · shipping_policy</text>
+  <rect x="55" y="420" width="1290" height="220" rx="10" fill="#fff" stroke="#c08a2e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="75" y="447" class="band" fill="#8a5f14">Human-supervised order review</text>
+  <rect class="agent" x="90" y="475" width="260" height="80" rx="8"/><text class="t" x="220" y="507">Planner</text><text class="s" x="220" y="530">creates tasks and evidence plan</text>
+  <rect class="agent" x="400" y="475" width="260" height="80" rx="8"/><text class="t" x="530" y="507">Worker</text><text class="s" x="530" y="530">writes grounded recommendation</text>
+  <rect class="agent" x="710" y="475" width="260" height="80" rx="8"/><text class="t" x="840" y="507">Reviewer</text><text class="s" x="840" y="530">checks claims against evidence</text>
+  <rect class="human" x="1020" y="475" width="290" height="80" rx="8"/><text class="t" x="1165" y="507">Human Review</text><text class="s" x="1165" y="530">accept · partial accept · reject</text>
+  <path class="e" d="M350,515 L398,515"/><path class="e" d="M660,515 L708,515"/><path class="e" d="M970,515 L1018,515"/>
+  <path class="e" d="M1165,555 L1165,675 L32,675 L32,135 L58,135"/><text class="lbl" x="410" y="668">decision, history and audit evidence return to the frontend; agents cannot mutate the order</text>
+</svg>

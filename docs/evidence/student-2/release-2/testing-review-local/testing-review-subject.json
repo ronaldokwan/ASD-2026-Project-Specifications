@@ -1,0 +1,54 @@
+{
+  "mode": "testing_report",
+  "subject": {
+    "student": 2,
+    "feature": "Customer Orders",
+    "test_code": "#!/usr/bin/env python3\n\"\"\"Post-commit checks against the running Student 2 backend container.\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport sys\nimport time\nfrom urllib.error import HTTPError, URLError\nfrom urllib.request import Request, urlopen\n\n\nBACKEND_URL = \"http://localhost:8002\"\nDATABASE_URL = \"http://localhost:9002\"\n\n\ndef request_json(method: str, url: str, payload: dict | None = None) -> tuple[int, dict]:\n    data = None if payload is None else json.dumps(payload).encode(\"utf-8\")\n    request = Request(url, data=data, method=method)\n    if data is not None:\n        request.add_header(\"Content-Type\", \"application/json\")\n    try:\n        with urlopen(request, timeout=10) as response:\n            body = response.read().decode(\"utf-8\")\n            return response.status, json.loads(body) if body else {}\n    except HTTPError as error:\n        body = error.read().decode(\"utf-8\")\n        return error.code, json.loads(body) if body else {}\n\n\ndef wait_for_backend() -> None:\n    for _ in range(30):\n        try:\n            status, _ = request_json(\"GET\", f\"{BACKEND_URL}/actuator/health\")\n            if status == 200:\n                return\n        except (URLError, TimeoutError, json.JSONDecodeError):\n            pass\n        time.sleep(2)\n    raise AssertionError(\"Student 2 backend did not become healthy\")\n\n\ndef require(condition: bool, message: str) -> None:\n    if not condition:\n        raise AssertionError(message)\n\n\ndef main() -> int:\n    wait_for_backend()\n    order_id: int | None = None\n    unique = time.time_ns()\n    fixture = {\n        \"orderNumber\": f\"ORD-CI-{unique}\",\n        \"customerEmail\": f\"ci-{unique}@example.com\",\n        \"status\": \"pending\",\n        \"lines\": [\n            {\n                \"sku\": \"SKU-CI-0001\",\n                \"quantity\": 2,\n                \"unitPrice\": 19.95,\n            }\n        ],\n    }\n\n    try:\n        create_status, created = request_json(\n            \"POST\", f\"{DATABASE_URL}/internal/orders\", fixture\n        )\n        require(create_status == 201, f\"fixture creation returned HTTP {create_status}\")\n        order_id = int(created[\"id\"])\n\n        get_status, fetched = request_json(\n            \"GET\", f\"{BACKEND_URL}/api/orders/{order_id}\"\n        )\n        require(get_status == 200, f\"GET order returned HTTP {get_status}\")\n        require(fetched.get(\"id\") == order_id, \"GET returned a different order id\")\n        require(\n            fetched.get(\"orderNumber\") == fixture[\"orderNumber\"],\n            \"GET returned a different order number\",\n        )\n        require(fetched.get(\"status\") == \"pending\", \"GET returned the wrong status\")\n        require(fetched.get(\"totalQuantity\") == 2, \"GET returned the wrong quantity\")\n        print(\n            \"PASSED live GET /api/orders/{id}: persisted order returned through \"\n            \"backend -> database API\"\n        )\n\n        patch_status, updated = request_json(\n            \"PATCH\",\n            f\"{BACKEND_URL}/api/orders/{order_id}/status\",\n            {\"status\": \"shipped\"},\n        )\n        require(patch_status == 200, f\"valid PATCH returned HTTP {patch_status}\")\n        require(updated.get(\"status\") == \"shipped\", \"PATCH did not return shipped\")\n        print(\n            \"PASSED live PATCH /api/orders/{id}/status: valid status was persisted\"\n        )\n\n        invalid_status, invalid_body = request_json(\n            \"PATCH\",\n            f\"{BACKEND_URL}/api/orders/{order_id}/status\",\n            {\"status\": \"cancelled\"},\n        )\n        require(invalid_status == 400, f\"invalid PATCH returned HTTP {invalid_status}\")\n        require(\n            invalid_body.get(\"error\") == \"Validation failed\",\n            \"invalid PATCH did not return the validation error\",\n        )\n\n        final_status, final_order = request_json(\n            \"GET\", f\"{BACKEND_URL}/api/orders/{order_id}\"\n        )\n        require(final_status == 200, f\"final GET returned HTTP {final_status}\")\n        require(\n            final_order.get(\"status\") == \"shipped\",\n            \"invalid PATCH changed the persisted order\",\n        )\n        print(\n            \"PASSED live PATCH validation: unsupported status returned HTTP 400 \"\n            \"without changing the order\"\n        )\n        print(\"3/3 live endpoint checks passed against the Student 2 containers\")\n        return 0\n    except (AssertionError, KeyError, TypeError, ValueError, URLError) as error:\n        print(f\"FAILED live endpoint checks: {error}\", file=sys.stderr)\n        return 1\n    finally:\n        if order_id is not None:\n            try:\n                request_json(\"DELETE\", f\"{DATABASE_URL}/internal/orders/{order_id}\")\n            except (HTTPError, URLError, TimeoutError, json.JSONDecodeError):\n                print(\n                    f\"WARNING: could not remove test fixture order {order_id}\",\n                    file=sys.stderr,\n                )\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n",
+    "pre_commit_security_results": [
+      {
+        "name": "ruff-security",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "01-pre-commit-security-scans.log"
+      },
+      {
+        "name": "detect-secrets",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "01-pre-commit-security-scans.log"
+      },
+      {
+        "name": "pip-audit",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "01-pre-commit-security-scans.log"
+      }
+    ],
+    "execution_results": "The security hooks were executed locally. The backend endpoint checks were not run as post-commit tests, and no hosted GitHub Actions run is supplied.",
+    "post_commit_backend_endpoint_tests": [
+      {
+        "endpoint": "get_order",
+        "route": "GET /api/orders/{id}",
+        "test_ref": "student-2/endpoint-tests/test_live_order_endpoints.py",
+        "phase": "local",
+        "status": "not_run",
+        "tests": 0,
+        "passed": 0
+      },
+      {
+        "endpoint": "update_order_status",
+        "route": "PATCH /api/orders/{id}/status",
+        "test_ref": "student-2/endpoint-tests/test_live_order_endpoints.py",
+        "phase": "local",
+        "status": "not_run",
+        "tests": 0,
+        "passed": 0
+      }
+    ],
+    "hosted_ci": {
+      "workflow": "student-2.yml",
+      "run_id": null,
+      "status": "not_run"
+    }
+  }
+}

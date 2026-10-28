@@ -1,0 +1,24 @@
+Student 2 AWS Customer Orders validation
+========================================
+
+Deployment workflow: 40471342463
+Commit: 1d0d0a21198bedc10977d220ee0bde4d8abe558a
+Deployment conclusion: success
+Region: ap-southeast-2
+Validation date: 2026-10-28
+
+Shared home page................................................HTTP 200
+Student 2 frontend health.......................................HTTP 200 / UP
+Student 2 order list............................................HTTP 200
+Create report-validation order.................................HTTP 302; order 11
+Read order 11...................................................HTTP 200
+Created order number............................................ORD-20261028-015218-18BB8D
+Update order 11 status to shipped...............................HTTP 302
+Read updated order 11...........................................HTTP 200; status shipped
+Delete order 11.................................................HTTP 302
+Filter for deleted report-validation order......................No orders found
+Direct read after deletion......................................Application reports database HTTP 404
+
+The temporary order used student2-r2-report@example.com and SKU-AUD-1002.
+It was deleted at the end of the validation. AI-Mode, MCP, RAG and Multi-Agent
+remain disabled by default in the required cloud baseline.

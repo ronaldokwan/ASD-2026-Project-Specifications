@@ -1,0 +1,41 @@
+{
+  "workflow_id": "972e182a-f1d8-4d1e-86c5-35649a66f0d8",
+  "subject_ref": "student-2-order:15",
+  "status": "accepted",
+  "stage": "completed",
+  "evidence_refs": [
+    "order_facts",
+    "mcp_fulfilment",
+    "shipping_policy"
+  ],
+  "planner": {
+    "model": "llama3.1:8b",
+    "tasks": [
+      "Retrieve order facts",
+      "Validate order fulfilment",
+      "Check shipping policy",
+      "Compare order status with shipping policy"
+    ]
+  },
+  "worker": {
+    "model": "qwen2.5:3b",
+    "recommendation": "Order ORD-20260901-113953-273ABA is ready for shipment.",
+    "evidence_refs": [
+      "order_facts",
+      "mcp_fulfilment",
+      "shipping_policy"
+    ]
+  },
+  "reviewer": {
+    "model": "deepseek-r1:8b",
+    "action": "ready_for_human",
+    "recommendation": "supported",
+    "rationale": "supported",
+    "consistency": "consistent"
+  },
+  "human_decision": {
+    "decision": "accept",
+    "feedback": "The recommendation is supported by the order facts, MCP fulfilment result and shipping policy.",
+    "reviewed_at": "2026-10-22T19:56:11.852067Z"
+  }
+}

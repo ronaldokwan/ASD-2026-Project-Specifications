@@ -13,7 +13,7 @@
     </section>
 
     <section th:if="${workflow != null}" class="workflow-card" aria-live="polite"
-             th:attr="hx-get=@{/orders/{id}/multi-agent/{workflowId}(id=${orderId},workflowId=${workflow.workflowId})},hx-trigger=${#lists.contains({'queued','planning','working','reviewing','revising'}, workflow.status) ? 'every 2s' : null}"
+             th:attr="hx-get=@{/orders/{id}/multi-agent/{workflowId}(id=${orderId},workflowId=${workflow.workflowId})},hx-trigger=${#lists.contains({'queued','planning','working','reviewing','revising'}, workflow.status) ? 'every 2s' : 'none'}"
              hx-target="this" hx-swap="outerHTML">
         <div class="result-meta" th:text="|Shared Multi-Agent · ${#strings.toUpperCase(#strings.replace(workflow.status, '_', ' '))}|">Workflow</div>
         <p class="result-footnote" th:text="|Workflow ID: ${workflow.workflowId} · Stage: ${workflow.stage}|">Workflow details</p>

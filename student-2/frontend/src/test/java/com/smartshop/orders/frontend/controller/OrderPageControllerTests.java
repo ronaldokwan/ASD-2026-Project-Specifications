@@ -32,7 +32,8 @@ class OrderPageControllerTests {
             "Human Review · Final decision required",
             "Accept recommendation",
             "Partially accept with corrections",
-            "Reject recommendation"
+            "Reject recommendation",
+            "? 'every 2s' : 'none'"
         );
     }
 

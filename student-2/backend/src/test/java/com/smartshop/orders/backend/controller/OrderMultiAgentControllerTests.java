@@ -52,7 +52,11 @@ class OrderMultiAgentControllerTests {
         mockMvc.perform(get("/api/orders/{id}/multi-agent/{workflowId}", 42L, "wf-42"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.subject_ref").value("student-2-order:42"))
-            .andExpect(jsonPath("$.status").value("human_review"));
+            .andExpect(jsonPath("$.status").value("human_review"))
+            .andExpect(jsonPath("$.completion_gate.planner_completed").value(true))
+            .andExpect(jsonPath("$.completion_gate.worker_completed").value(true))
+            .andExpect(jsonPath("$.completion_gate.reviewer_completed").value(true))
+            .andExpect(jsonPath("$.completion_gate.human_decision_recorded").value(false));
     }
 
     @Test
@@ -76,7 +80,14 @@ class OrderMultiAgentControllerTests {
     private WorkflowResponse workflow() {
         return new WorkflowResponse(
             "wf-42", "student-2-order:42", "human_review", "human_review",
-            Map.of(), Map.of(), Map.of(), null, List.of(), List.of(), 0, 1, null, null
+            Map.of(), Map.of(), Map.of(), null, List.of(), List.of(), 0, 1,
+            Map.of(
+                "planner_completed", true,
+                "worker_completed", true,
+                "reviewer_completed", true,
+                "human_decision_recorded", false
+            ),
+            null, null
         );
     }
 }

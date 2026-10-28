@@ -1,0 +1,34 @@
+Student 2 Release 2 - Pre-Commit Security Scan Evidence
+=======================================================
+
+Student: Jinying Li (Student 2 - Customer Orders)
+Date: 2026-10-27
+Commit tested: 1d0d0a21198bedc10977d220ee0bde4d8abe558a
+Configuration: .pre-commit-config.yaml
+Command: pre-commit run --all-files --show-diff-on-failure
+Exit code: 0
+
+Results
+-------
+Ruff security rules......................................................Passed
+detect-secrets staged-file scan.........................................Passed
+pip-audit relevant Python requirements..................................Passed
+
+Coverage notes
+--------------
+- Ruff 0.12.10 applied Bandit-compatible security rules (`--select S`) to
+  the shared Python AI services, scripts, and configured Python student
+  services. Student 2 is implemented in Java and therefore contains no
+  Python source files for Ruff to scan.
+- detect-secrets 1.5.0 scanned all tracked files covered by the shared hook,
+  including Student 2 source, workflow, and configuration files. No secrets
+  were detected.
+- pip-audit 2.9.0 checked all 16 Python requirements files used by the shared
+  local AI services and Python microservices. The four explicitly documented
+  ChromaDB advisories without a fixed release were accepted by advisory ID;
+  no additional vulnerability caused the strict scan to fail.
+- Student 2's Java dependencies and source are compiled and tested by Maven
+  in the Student 2 CI workflow; pip-audit does not apply to Maven dependencies.
+
+The local Git pre-commit hook was installed after validation. Future commits
+from this checkout invoke the three configured scans automatically.

@@ -1,0 +1,9 @@
+{"at":"2026-10-22T19:55:17.682628Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"workflow_created","stage":"queued","status":"queued"}
+{"at":"2026-10-22T19:55:17.686041Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_started","stage":"planner","status":"planning","model":"llama3.1:8b"}
+{"at":"2026-10-22T19:55:31.640306Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_completed","stage":"planner","status":"planning"}
+{"at":"2026-10-22T19:55:31.641549Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_started","stage":"worker","status":"working","model":"qwen2.5:3b"}
+{"at":"2026-10-22T19:55:38.985651Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_completed","stage":"worker","status":"working"}
+{"at":"2026-10-22T19:55:38.987580Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_started","stage":"reviewer","status":"reviewing","model":"deepseek-r1:8b"}
+{"at":"2026-10-22T19:55:55.608158Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"stage_completed","stage":"reviewer","status":"reviewing","action":"ready_for_human"}
+{"at":"2026-10-22T19:55:55.609403Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"human_review_required","stage":"human_review","status":"human_review"}
+{"at":"2026-10-22T19:56:11.852080Z","workflow_id":"972e182a-f1d8-4d1e-86c5-35649a66f0d8","event":"human_decision_recorded","stage":"completed","status":"accepted","decision":"accept"}

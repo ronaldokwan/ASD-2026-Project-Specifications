@@ -1,0 +1,35 @@
+{
+  "student": "Student 2 - Customer Orders",
+  "workflow": ".github/workflows/student-2.yml",
+  "run_id": "40629560676",
+  "run_url": "https://github.com/ronaldokwan/ASD-2026-Project-Specifications/actions/runs/40629560676",
+  "head_commit": "eafdc69",
+  "conclusion": "success",
+  "endpoint_tests": [
+    {
+      "endpoint": "GET /api/orders/{id}",
+      "test": "live persisted order is returned through backend to database API",
+      "result": "passed"
+    },
+    {
+      "endpoint": "PATCH /api/orders/{id}/status",
+      "test": "live valid status update is persisted",
+      "result": "passed"
+    },
+    {
+      "endpoint": "PATCH /api/orders/{id}/status",
+      "test": "live unsupported status returns HTTP 400 without changing the order",
+      "result": "passed"
+    }
+  ],
+  "additional_validation": "3/3 live endpoint checks passed against the running Student 2 containers",
+  "pipeline_checks": [
+    "Student 2 controller contract tests",
+    "Maven clean verify for all Student 2 modules",
+    "Docker Compose validation",
+    "three image builds",
+    "integrated slice startup and health checks",
+    "live GET and PATCH endpoint checks",
+    "controller and live endpoint evidence artifact uploads"
+  ]
+}

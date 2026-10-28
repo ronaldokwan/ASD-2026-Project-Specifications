@@ -586,7 +586,15 @@ def _generate_with_ollama(query, context_text):
     try:
         response = requests.post(
             "{}/api/generate".format(OLLAMA_URL),
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False},
+            json={
+                "model": LLM_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                # The multi-agent workflow loads a different model immediately
+                # after RAG evidence collection. Release this model so local
+                # machines do not need enough memory for both at once.
+                "keep_alive": 0,
+            },
             timeout=LLM_TIMEOUT,
         )
         response.raise_for_status()
