@@ -86,10 +86,11 @@ locals {
       role          = "backend", port = 8004, health_path = "/health", health_kind = "python"
       listener_port = null, discovery_name = "student-4-backend", persistent = false, db_file = ""
       environment = {
-        DATABASE_URL    = "http://student-4-db.${local.namespace}:9004", SERVICE_PORT = "8004"
-        AI_MODE_ENABLED = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
-        AI_MODE_URL     = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
-        RAG_SERVER_URL  = "http://127.0.0.1:7003"
+        DATABASE_URL        = "http://student-4-db.${local.namespace}:9004", SERVICE_PORT = "8004"
+        AI_MODE_ENABLED     = "false", MCP_ENABLED = "false", RAG_ENABLED = "false"
+        MULTI_AGENT_ENABLED = tostring(var.multi_agent_enabled), MULTI_AGENT_URL = var.multi_agent_url
+        AI_MODE_URL         = "http://127.0.0.1:7001", MCP_SERVER_URL = "http://127.0.0.1:7002"
+        RAG_SERVER_URL      = "http://127.0.0.1:7003"
       }
     }
     "student-4-frontend" = {
@@ -299,7 +300,9 @@ resource "aws_lb" "app" {
   internal           = false
   subnets            = aws_subnet.public[*].id
   security_groups    = [aws_security_group.alb.id]
-  tags               = { Name = "${var.name_prefix}-alb" }
+  # CPU-only Ollama answers can take longer than the 60-second default.
+  idle_timeout = var.enable_cloud_ai ? 300 : 60
+  tags         = { Name = "${var.name_prefix}-alb" }
 }
 
 resource "aws_service_discovery_private_dns_namespace" "app" {
@@ -421,7 +424,8 @@ resource "aws_ecs_task_definition" "service" {
     image        = "${aws_ecr_repository.services[each.key].repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = each.value.port, hostPort = each.value.port, protocol = "tcp" }]
-    environment = [for name, value in each.value.environment : {
+    # Backends switch to the AI services only in the bonus profile (cloud-ai.tf).
+    environment = [for name, value in local.service_environment[each.key] : {
       name  = name
       value = name == "HOME_URL" ? local.home_url : value
     }]

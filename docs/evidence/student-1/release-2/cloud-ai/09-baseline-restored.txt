@@ -1,0 +1,29 @@
+$ date -u
+Wed Oct 28 09:31:27 UTC 2026
+$ curl -s http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001/health   (Student 1 AWS frontend -> backend, trimmed)
+{
+  "status": "ok",
+  "backend": {
+    "status": "ok",
+    "database": {
+      "status": "ok",
+      "products": 12
+    },
+    "ai_mode": {
+      "status": "disabled"
+    },
+    "mcp_server": {
+      "status": "disabled"
+    },
+    "rag_server": {
+      "status": "disabled"
+    },
+    "multi_agent_server": {
+      "status": "disabled"
+    }
+  }
+}
+$ aws ecs describe-clusters --clusters asd26-g40-r2-cluster --query 'clusters[0].[activeServicesCount,runningTasksCount]'
+16	16
+$ bash scripts/aws/validate-runtime.sh   (last line)
+{"checked_at":"2026-10-28T09:30:54Z", "base_url":"http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com", "home":"200", "frontend_ports":[3001,3002,3003,3004,3005], "student3_crud":"create-update-delete-and-database-list-verified", "student1_crud":"create-update-delete-and-database-list-verified", "student1_ai_services":"disabled", "student5_crud":"create-update-delete-and-database-list-verified", "controlled_recovery":"no"}

@@ -1,0 +1,114 @@
+# Multi-server system test, all five students, 2026-10-28T09:00:12Z at 9759f7d
+
+## Terminal 1 - Docker Compose (containerised microservices)
+SERVICE              STATE     STATUS
+ollama               running   Up 16 minutes (healthy)
+shared-home          running   Up 3 hours
+student-1-backend    running   Up 3 hours (healthy)
+student-1-db         running   Up 3 hours (healthy)
+student-1-frontend   running   Up 3 hours
+student-3-backend    running   Up 3 hours (healthy)
+student-3-db         running   Up 3 hours (healthy)
+student-3-frontend   running   Up 3 hours (healthy)
+student-4-backend    running   Up 3 hours (healthy)
+student-4-db         running   Up 3 hours (healthy)
+student-4-frontend   running   Up 3 hours
+student-5-backend    running   Up 3 hours (healthy)
+student-5-db         running   Up 3 hours (healthy)
+student-5-frontend   running   Up 3 hours
+student2-api         running   Up 3 hours (healthy)
+student2-db          running   Up 3 hours (healthy)
+student2-frontend    running   Up 3 hours (healthy)
+
+## Terminal 2 - native host services (not containerised)
+ok   no AI service is a Compose service
+ok   AI-Mode      :7001/health -> HTTP 200
+     {"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"}
+
+ok   MCP server   :7002/health -> HTTP 200
+     {"service":"mcp-server","status":"ok","protocol":"MCP Streamable HTTP","endpoint":"/mcp","tools":["review_quality_check","check_review_quality","check_customer_profile","check_order_fulfilment","check_product_listing","check_stock_reorder"]}
+ok   RAG server   :7003/health -> HTTP 200
+     {"model":"qwen2.5:0.5b","service":"rag-server","status":"ok"}
+
+ok   Multi-Agent  :7004/health -> HTTP 200
+     {"available_models":["qwen2.5:3b","qwen2.5:0.5b","llama3.1:8b","qwen2.5-coder:7b","deepseek-r1:8b","qwen3.5:4b"],"missing_role_models":{},"roles":{"planner":"llama3.1:8b","reviewer":"llama3.1:8b","worker":"qwen2.5:3b"},"service":"multi-agent","status":"ok"}
+
+ok   Ollama       :11434/api/tags -> HTTP 200
+     {"models":[{"name":"qwen2.5:3b","model":"qwen2.5:3b","modified_at":"2026-10-28T08:56:35.260652283Z","size":1929912432,"digest":"357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b","details":{"parent_model":"","format":"gguf","family":"qwen2","families":["qwen2"],"parameter_size":"3.1B","quantization_level":"Q4_K_M","context_length":32768,"embedding_length":2048},"capabilities":["comp
+
+## Terminal 3 - every student: frontend -> backend/API -> database
+ok   home page    :3000/ -> HTTP 200
+     <!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASD 2026 – Group 40 – Agentic AI Retail Application</title>
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+
+<body>
+  <header class="app-header">
+    <h1>Agentic AI Retail Application</h1>
+    <span class="subtitle">ASD 2026 &middot; 
+- Student 1 Product Catalogue
+ok     frontend   :3001/health -> HTTP 200
+     {"backend":{"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/products.db","feature":"Product Catalogue","owner":"Ronaldo Kwan","products":15,"service":"student-1-db","status":"ok","student":1},"feature":"Pr
+ok     database   :9001/health -> HTTP 200
+     {"db_path":"/data/products.db","feature":"Product Catalogue","owner":"Ronaldo Kwan","products":15,"service":"student-1-db","status":"ok","student":1}
+
+ok     backend    :8001/health -> HTTP 200
+     {"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/products.db","feature":"Product Catalogue","owner":"Ronaldo Kwan","products":15,"service":"student-1-db","status":"ok","student":1},"feature":"Product Catal
+ok     backend -> database  GET :8001/api/products -> HTTP 200
+     {"count":15,"products":[{"category":"Home","created_at":"2026-10-01 14:23:08","description":"Dimmable LED desk lamp with a USB charging port","id":32,"name":"Aurora Desk Lamp","price":49.0,"sku":"SKU-HOM-3003","status":"active","updated_at":"2026-10-01 14:23:08"},{"category":"Computing","created_at":"2026-09-03 14:00:53","description":"The AMD 5100 gaming chip is a high-performance processor desig
+- Student 2 Customer Orders
+ok     frontend   :3002/actuator/health -> HTTP 200
+     {"groups":["liveness","readiness"],"status":"UP"}
+ok     database   :9002/actuator/health -> HTTP 200
+     {"groups":["liveness","readiness"],"status":"UP"}
+ok     backend    :8002/actuator/health -> HTTP 200
+     {"groups":["liveness","readiness"],"status":"UP"}
+ok     backend -> database  GET :8002/api/orders -> HTTP 200
+     [{"id":20,"orderNumber":"ORD-20260903-105237-6F94BB","customerEmail":"seed-order-010@example.com","status":"pending","orderedAt":"2026-09-03T10:52:37.385","updatedAt":"2026-09-03T10:52:37.385","lines":[{"id":30,"sku":"SKU-WEA-4001","productName":"Trail Runner Cap","quantity":1,"unitPrice":29.95,"lineTotal":29.95}],"totalQuantity":1,"orderTotal":29.95},{"id":19,"orderNumber":"ORD-20260903-105237-E5
+- Student 3 Customer Accounts
+ok     frontend   :3003/health -> HTTP 200
+     {"backend":{"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"customers":12,"db_path":"/data/customers.db","feature":"Customer Account Management","service":"student-3-db","status":"ok","student":3},"feature":"Customer Acco
+ok     database   :9003/health -> HTTP 200
+     {"customers":12,"db_path":"/data/customers.db","feature":"Customer Account Management","service":"student-3-db","status":"ok","student":3}
+
+ok     backend    :8003/health -> HTTP 200
+     {"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"customers":12,"db_path":"/data/customers.db","feature":"Customer Account Management","service":"student-3-db","status":"ok","student":3},"feature":"Customer Account Managem
+ok     backend -> database  GET :8003/api/customers -> HTTP 200
+     {"count":12,"customers":[{"address":"7 Market Place, Orange NSW","email":"alex.morgan@example.test","id":10,"joined_at":"2026-07-07","loyalty_tier":"Bronze","name":"Alex Morgan","phone":"0400 000 110"},{"address":"12 Wattle Lane, Sydney NSW","email":"avery.brooks@example.test","id":1,"joined_at":"2026-01-15","loyalty_tier":"Bronze","name":"Avery Brooks","phone":"0400 000 101"},{"address":"19 Coast
+- Student 4 Inventory and Stock
+ok     frontend   :3004/health -> HTTP 200
+     {"backend":{"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/stock.db","feature":"Inventory and Stock","owner":"Jonathan Czesler","service":"student-4-database","status":"ok","stock_items":12,"student":4},"
+ok     database   :9004/health -> HTTP 200
+     {"db_path":"/data/stock.db","feature":"Inventory and Stock","owner":"Jonathan Czesler","service":"student-4-database","status":"ok","stock_items":12,"student":4}
+
+ok     backend    :8004/health -> HTTP 200
+     {"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/stock.db","feature":"Inventory and Stock","owner":"Jonathan Czesler","service":"student-4-database","status":"ok","stock_items":12,"student":4},"feature":"I
+ok     backend -> database  GET :8004/api/stock -> HTTP 200
+     {"count":12,"stock":[{"category":"Home","created_at":"2026-09-03 10:52:22","id":10,"last_restocked":"2026-09-03 10:52:37","location":"Cabinet C3","name":"Aroma Diffuser Mini","quantity":21,"restock_threshold":20,"sku":"SKU-HOM-3003","stock_level":"good","updated_at":"2026-09-03 10:52:37"},{"category":"Audio","created_at":"2026-09-03 10:52:22","id":1,"last_restocked":"2026-09-03 10:52:22","location
+- Student 5 Reviews and Ratings
+ok     frontend   :3005/health -> HTTP 200
+     {"backend":{"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/reviews.db","feature":"Reviews and Ratings","owner":"Alexander McGuinn","reviews":12,"service":"student-5-db","status":"ok","student":5},"feature
+ok     database   :9005/health -> HTTP 200
+     {"db_path":"/data/reviews.db","feature":"Reviews and Ratings","owner":"Alexander McGuinn","reviews":12,"service":"student-5-db","status":"ok","student":5}
+
+ok     backend    :8005/health -> HTTP 200
+     {"ai_mode":{"model":"qwen2.5:0.5b","model_pulled":true,"models_available":["qwen2.5:3b","llama3.1:8b","qwen2.5:0.5b"],"ollama_reachable":true,"ollama_url":"http://localhost:11434","service":"ai-mode","status":"ok"},"database":{"db_path":"/data/reviews.db","feature":"Reviews and Ratings","owner":"Alexander McGuinn","reviews":12,"service":"student-5-db","status":"ok","student":5},"feature":"Reviews 
+ok     backend -> database  GET :8005/api/reviews -> HTTP 200
+     {"count":12,"reviews":[{"created_at":"2026-07-24 06:18:00","product_sku":"SKU-WEA-4002","rating":3,"review":"Heart rate tracking is accurate during runs but the app crashes when syncing sleep data.","review_id":"b6f1a2c0-0012-4a3e-9c2a-000000000012","user_id":"a7e2c9d4-0000-4f11-8b2a-100000000012"},{"created_at":"2026-07-22 20:35:00","product_sku":"SKU-HOM-3002","rating":5,"review":"So soft after 
+
+## Backends -> shared AI services (Student 1 path through all four)
+ok   backend -> MCP          check_product_listing -> HTTP 200
+     {"arguments":{"category":"Home","comparable_avg_price":96.5,"comparable_count":2,"comparable_max_price":119.0,"comparable_min_price":74.0,"description":"Dimmable LED desk lamp with a USB charging port","name":"Aurora Desk Lamp","price":49.0,"sku":"SKU-HOM-3003","status":"active"},"elapsed_ms":23,"product_id":32,"result":{"comparable_count":2,"description_word_count":9,"errors":[],"issues":[],"list
+ok   backend -> RAG          grounded answer -> HTTP 200
+     {"answer":"A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.","confidence":"medium","elapsed_ms":530,"question":"What makes a product listing ready to publish?","retrieved_count":1,"sources":[{"section":"Listing Readiness","snippet":"Listing Readiness A listing is ready to publish when it is active, has a valid category 
+ok   backend -> Multi-Agent  start listing review -> HTTP 202
+     {"status":"queued","workflow_id":"ac74ed7f-6637-4e4b-8ba1-75aeb8bd9552"}
+
+
+failures=0   (full responses: docs/evidence/group/release-2/05-multi-server-check-all.log)

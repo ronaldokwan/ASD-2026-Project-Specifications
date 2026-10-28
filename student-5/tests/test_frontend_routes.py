@@ -153,6 +153,43 @@ def test_moderation_panel_requires_a_review(frontend, fake_api):
     assert "write a review first" in html
 
 
+# --------------------------------------------------- Release 2: Multi-Agent
+def test_index_offers_the_multi_agent_panel_and_button(frontend, fake_api):
+    html = frontend.get("/").get_data(as_text=True)
+    assert 'id="multi-agent-panel"' in html
+    assert 'hx-post="/reviews/r1/multi-agent"' in html
+
+
+def test_start_multi_agent_renders_the_plan_worker_reviewer_trace(frontend, fake_api):
+    html = frontend.post("/reviews/r1/multi-agent").get_data(as_text=True)
+    assert "Check moderation signal" in html
+    assert "Publish as-is." in html
+    assert "Accept recommendation" in html
+    assert 'hx-post="/reviews/r1/multi-agent/workflow-123/review"' in html
+
+
+def test_multi_agent_outage_is_reported(frontend, fake_api, monkeypatch):
+    def boom(review_id):
+        raise api_client.ApiError("Multi-Agent workflow unavailable", 503)
+
+    monkeypatch.setattr(api_client, "start_multi_agent_review", boom)
+    response = frontend.post("/reviews/r1/multi-agent")
+    html = response.get_data(as_text=True)
+    assert response.status_code == 503
+    assert "Multi-Agent workflow unavailable" in html
+    assert "run-ai-services.sh" in html
+
+
+def test_human_decision_shows_the_final_outcome(frontend, fake_api):
+    html = frontend.post(
+        "/reviews/r1/multi-agent/workflow-123/review",
+        data={"decision": "accept", "feedback": "looks good"},
+    ).get_data(as_text=True)
+    assert fake_api["multi_agent_reviews"] == [{"decision": "accept", "feedback": "looks good"}]
+    assert "Accepted" in html
+    assert "looks good" in html
+
+
 def test_backend_outage_is_reported_on_the_page(frontend, monkeypatch):
     def boom(**_kwargs):
         raise api_client.ApiError("Reviews and Ratings API is unreachable.", 503)

@@ -1,0 +1,53 @@
+
+
+
+  
+  
+  <section class="multi-agent-result" aria-live="polite"
+    
+      hx-get="/products/12/multi-agent/0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9"
+      hx-trigger="load delay:2s" hx-target="this" hx-swap="outerHTML"
+    >
+
+    <div class="alert info">
+      Product #12 &middot; workflow
+      <strong>planning</strong>
+      <span class="muted">(planner stage running&hellip;)</span>
+    </div>
+    
+
+    <p class="muted"><small>Workflow <code>0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9</code>
+      </small></p>
+
+    
+
+    
+
+    
+
+    
+
+    
+    
+
+    
+      <details><summary>Evidence supplied to the agents</summary>
+        <ul>
+          
+            <li><strong>product_facts</strong> &middot; student-1-product-api &middot; available
+              <pre>{&#34;sku&#34;: &#34;SKU-WEA-4002&#34;, &#34;name&#34;: &#34;Everyday Fitness Band&#34;, &#34;category&#34;: &#34;Wearables&#34;, &#34;price_aud&#34;: 89.0, &#34;status&#34;: &#34;active&#34;, &#34;description_word_count&#34;: 13, &#34;description&#34;: &#34;Slim activity tracker with heart-rate monitoring, sleep tracking and a seven day battery.&#34;, &#34;readiness_checks&#34;: {&#34;status_is_active&#34;: true, &#34;category_is_valid&#34;: true, &#34;price_within_1_to_9999_aud&#34;: true, &#34;description_has_at_least_8_words&#34;: true}, &#34;failed_checks&#34;: []}</pre></li>
+          
+            <li><strong>mcp_listing</strong> &middot; shared-mcp-check_product_listing &middot; available
+              <pre>{&#34;tool&#34;: &#34;check_product_listing&#34;, &#34;sku&#34;: &#34;SKU-WEA-4002&#34;, &#34;listing_status&#34;: &#34;ready&#34;, &#34;description_word_count&#34;: 13, &#34;issues&#34;: [], &#34;warnings&#34;: [&#34;price is 197.2% above the category average of 29.95&#34;], &#34;errors&#34;: []}</pre></li>
+          
+            <li><strong>catalogue_policy</strong> &middot; shared-rag-product-catalogue-policy &middot; available
+              <pre>{&#34;status&#34;: &#34;ok&#34;, &#34;answer&#34;: &#34;A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;, &#34;sources&#34;: [{&#34;source&#34;: &#34;product-catalogue-policy.md&#34;, &#34;section&#34;: &#34;Listing Readiness&#34;, &#34;snippet&#34;: &#34;Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;, &#34;text&#34;: &#34;Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;}], &#34;confidence&#34;: &#34;medium&#34;, &#34;retrieved_count&#34;: 1, &#34;elapsed_ms&#34;: 2731}</pre></li>
+          
+        </ul>
+      </details>
+    
+
+    
+
+    
+  </section>

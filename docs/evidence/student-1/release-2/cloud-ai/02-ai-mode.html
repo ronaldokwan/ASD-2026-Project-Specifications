@@ -1,0 +1,84 @@
+
+
+
+  
+    <div class="alert ok">
+      Suggestion ready — model <code>qwen2.5:3b</code>,
+      1 attempt,
+      10005 ms.
+    </div>
+  
+
+  <div class="field">
+    <label>Suggested description</label>
+    <p id="ai-description" class="ai-output">Experience crystal-clear audio with the Aurora Wireless Headphones, perfect for those who demand exceptional noise cancellation and a full day of battery life. Whether you&#39;re commuting to work or enjoying your favorite music, these headphones ensure an immersive listening experience without disturbing background noise.</p>
+  </div>
+
+  <div class="field">
+    <label>Suggested price</label>
+    <p class="ai-output"><strong id="ai-price">190.00</strong> AUD</p>
+  </div>
+
+  <button type="button" class="btn"
+          data-apply-ai
+          data-description="Experience crystal-clear audio with the Aurora Wireless Headphones, perfect for those who demand exceptional noise cancellation and a full day of battery life. Whether you&#39;re commuting to work or enjoying your favorite music, these headphones ensure an immersive listening experience without disturbing background noise."
+          data-price="190.00">
+    Apply to the form
+  </button>
+  <span class="muted" style="margin-left:8px">You review it before anything is saved.</span>
+
+  <h3 style="font-size:13px;margin:18px 0 6px">Agentic workflow trace</h3>
+  <div class="trace">
+    
+      <div class="trace-step ">
+        <span class="step-name">Plan</span>
+        <span class="muted"> · attempt 1</span>
+        <div>Built a grounded prompt for goal &#39;product_catalogue_copy&#39; with 9 context fact(s).</div>
+        
+      </div>
+    
+      <div class="trace-step ">
+        <span class="step-name">Act</span>
+        <span class="muted"> · attempt 1</span>
+        <div>Called qwen2.5:3b through the Ollama runtime.</div>
+        
+          <pre>{
+  &#34;description&#34;: &#34;Experience crystal-clear audio with the Aurora Wireless Headphones, perfect for those who demand exceptional noise cancellation and a full day of battery life. Whether you&#39;re commuting to work or enjoying your favorite music, these headphones ensure an immersi</pre>
+        
+      </div>
+    
+      <div class="trace-step ">
+        <span class="step-name">Observe</span>
+        <span class="muted"> · attempt 1</span>
+        <div>Output parsed and satisfied every guardrail.</div>
+        
+      </div>
+    
+  </div>
+
+  
+    <details style="margin-top:12px">
+      <summary class="muted">Grounding facts sent to the model (from the database microservice)</summary>
+      <table style="margin-top:8px">
+        
+          <tr><td class="muted">category</td><td>Audio</td></tr>
+        
+          <tr><td class="muted">category_avg_price</td><td>97.82</td></tr>
+        
+          <tr><td class="muted">category_price_range</td><td>34.5 to 199.95</td></tr>
+        
+          <tr><td class="muted">category_products</td><td>3</td></tr>
+        
+          <tr><td class="muted">comparable_products</td><td>Studio Wired Earbuds at $34.5, Pebble Bluetooth Speaker at $59.0, Aurora Wireless Headphones at $199.95</td></tr>
+        
+          <tr><td class="muted">currency</td><td>AUD</td></tr>
+        
+          <tr><td class="muted">product_name</td><td>Aurora Wireless Headphones</td></tr>
+        
+          <tr><td class="muted">seller</td><td>Group 40 retail store</td></tr>
+        
+          <tr><td class="muted">seller_keywords</td><td>noise cancelling, 30 hour battery</td></tr>
+        
+      </table>
+    </details>
+  

@@ -266,12 +266,18 @@ def run():
             "localhost:*",
             "host.docker.internal",
             "host.docker.internal:*",
+            # Cloud AI profile: backends call the MCP server by its Cloud Map name.
+            *[h.strip() for h in os.getenv("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()],
         ],
         allowed_origins=[],
     )
     mcp.run(
         transport="streamable-http",
-        host=os.getenv("MCP_BIND_ADDRESS", "0.0.0.0"),
+        # Direct invocation is loopback-only. The shared startup script opts
+        # into a host-reachable bind because Docker backends call
+        # host.docker.internal; a specific address can be configured when the
+        # host's Docker-facing interface is known and stable.
+        host=os.getenv("MCP_BIND_ADDRESS", "127.0.0.1"),
         port=port,
         streamable_http_path="/mcp",
         json_response=True,

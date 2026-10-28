@@ -1,0 +1,3 @@
+Ruff security rules......................................................Passed
+detect-secrets staged-file scan..........................................Passed
+pip-audit relevant Python requirements...................................Passed

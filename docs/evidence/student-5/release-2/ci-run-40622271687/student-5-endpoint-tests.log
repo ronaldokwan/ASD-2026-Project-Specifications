@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.17, pytest-9.0.3, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+cachedir: .pytest_cache
+rootdir: /home/runner/work/ASD-2026-Project-Specifications/ASD-2026-Project-Specifications
+collecting ... collected 8 items
+
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_persists_a_normalised_record PASSED [ 12%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_rejects_an_out_of_range_rating PASSED [ 25%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_rejects_a_too_short_review PASSED [ 37%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_reports_every_missing_field PASSED [ 50%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_changes_only_the_supplied_fields PASSED [ 62%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_with_invalid_rating_leaves_the_record_unchanged PASSED [ 75%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_with_empty_body_is_rejected PASSED [ 87%]
+student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_of_unknown_id_is_404 PASSED [100%]
+
+==================================== PASSES ====================================
+- generated xml file: /home/runner/work/ASD-2026-Project-Specifications/ASD-2026-Project-Specifications/reports/student-5-endpoint-tests.xml -
+=========================== short test summary info ============================
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_persists_a_normalised_record
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_rejects_an_out_of_range_rating
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_rejects_a_too_short_review
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_create_review_reports_every_missing_field
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_changes_only_the_supplied_fields
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_with_invalid_rating_leaves_the_record_unchanged
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_with_empty_body_is_rejected
+PASSED student-5/endpoint-tests/test_post_commit_endpoints.py::test_update_review_of_unknown_id_is_404
+============================== 8 passed in 0.28s ===============================

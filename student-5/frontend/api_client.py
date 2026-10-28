@@ -12,6 +12,7 @@ import requests
 BACKEND_URL = os.getenv("BACKEND_URL", "http://student-5-backend:8005").rstrip("/")
 TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
+MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "20"))
 
 
 class ApiError(Exception):
@@ -96,6 +97,32 @@ def moderate_review(product_sku, review_text, rating):
         "/api/reviews/moderate",
         timeout=AI_TIMEOUT,
         json={"product_sku": product_sku, "review_text": review_text, "rating": rating},
+    )
+
+
+def start_multi_agent_review(review_id):
+    """Release 2: run the shared Planner -> Worker -> Reviewer moderation workflow."""
+    return _call("POST", "/api/reviews/{}/multi-agent".format(review_id), timeout=MULTI_AGENT_TIMEOUT)
+
+
+def get_multi_agent_workflow(review_id, workflow_id):
+    return _call(
+        "GET", "/api/reviews/{}/multi-agent/{}".format(review_id, workflow_id),
+        timeout=MULTI_AGENT_TIMEOUT,
+    )
+
+
+def list_multi_agent_workflows(review_id):
+    return _call(
+        "GET", "/api/reviews/{}/multi-agent/history".format(review_id),
+        timeout=MULTI_AGENT_TIMEOUT,
+    )
+
+
+def review_multi_agent_workflow(review_id, workflow_id, payload):
+    return _call(
+        "POST", "/api/reviews/{}/multi-agent/{}/review".format(review_id, workflow_id),
+        json=payload, timeout=MULTI_AGENT_TIMEOUT,
     )
 
 

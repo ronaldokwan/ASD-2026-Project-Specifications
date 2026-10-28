@@ -13,7 +13,7 @@ Monitor warehouse inventory and keep stock at optimal levels, with AI restocking
 | Database      | `database/` | 9004 | SQLite behind a small Flask data API |
 
 - **Frontend functions:** Low-stock alerts, a visual low-stock indicator on product lookups, AI restocking advice, per-item MCP reorder checks, and inventory-grounded RAG questions.
-- **Backend/API functions:** CRUD on `/api/stock`, plus `GET /api/stock/low`; AI advice, shared MCP reorder checks, and shared RAG answers.
+- **Backend/API functions:** CRUD on `/api/stock`, plus `GET /api/stock/low`; AI advice, shared MCP reorder checks, shared RAG answers, and a Planner -> Worker -> Reviewer restock workflow with human review.
 - **Database tables:** `stock (product_id, product_name, sku, quantity, location, restock_threshold, last_restock)` — seed **at least 10 records**.
 
 ## Use Student 1 as the reference implementation
@@ -52,6 +52,14 @@ Then work through this checklist:
 - Your feature must be reachable from the unified home page (`shared/index.html`).
 - MCP reorder checks call the shared `check_stock_reorder` tool; inventory RAG documents use
   `metadata.feature=inventory_stock` and are synchronized best-effort after writes.
+- Multi-Agent reviews use only the selected stock record, the application-owned reorder rule,
+  and the deterministic MCP result. Reviews are advisory; the human decision never changes stock.
+- Local Docker Compose enables Multi-Agent by default and calls the shared service at port 7004.
+  AWS defaults the integration off because that service is not provisioned in the application VPC.
+  Set Terraform variables `multi_agent_enabled=true` and `multi_agent_url` to a reachable private
+  service URL to enable it there. The GitHub deployment accepts the corresponding
+  `MULTI_AGENT_ENABLED` and `MULTI_AGENT_URL` environment variables; no cloud credentials or model
+  secrets are stored in Terraform.
 - Keep student-specific changes inside `student-4/`. Shared MCP tool changes must be coordinated
   with the team and kept to the shared tool contract, implementation, registration, and tests.
 - Work on a branch and open a Pull Request.

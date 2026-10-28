@@ -1,0 +1,44 @@
+$ git log --oneline -1
+9759f7d Add test results and reports for students 3, 4, and 5; update group report and release templates
+$ git status --short
+ M docs/reports/group-40-report-updates-student-1.md
+A  student-1/security_hook_demo.py
+$ git commit -m "Add product search helper"
+[WARNING] Unstaged files detected.
+[INFO] Stashing unstaged files to C:\Users\ronal\.cache\pre-commit\patch1793170698-8460.
+Ruff security rules......................................................Failed
+- hook id: ruff-security
+- exit code: 1
+
+S602 `subprocess` call with `shell=True` identified, security issue
+ --> student-1\security_hook_demo.py:8:12
+  |
+7 | def list_products(user_filter):
+8 |     return subprocess.run("grep " + user_filter + " products.csv", shell=True, check=False)
+  |            ^^^^^^^^^^^^^^
+  |
+
+Found 1 error.
+
+detect-secrets staged-file scan..........................................Failed
+- hook id: detect-secrets
+- exit code: 1
+
+ERROR: Potential secrets about to be committed to git repo!
+
+Secret Type: AWS Access Key
+Location:    student-1\security_hook_demo.py:4
+
+Possible mitigations:
+  - For information about putting your secrets in a safer place, please ask in
+    #security
+  - Mark false positives with an inline `pragma: allowlist secret` comment
+
+If a secret has already been committed, visit
+https://help.github.com/articles/removing-sensitive-data-from-a-repository
+
+pip-audit relevant Python requirements...................................Passed
+[INFO] Restored changes from C:\Users\ronal\.cache\pre-commit\patch1793170698-8460.
+[exit code 1]
+$ git log --oneline -1
+9759f7d Add test results and reports for students 3, 4, and 5; update group report and release templates
