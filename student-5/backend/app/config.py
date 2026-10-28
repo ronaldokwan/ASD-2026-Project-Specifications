@@ -42,6 +42,13 @@ class Config:
     MCP_TOOL = "check_review_quality"
     RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "120"))
 
+    # Release 2: shared native Multi-Agent Server (Planner -> Worker -> Reviewer).
+    MULTI_AGENT_URL = os.getenv(
+        "MULTI_AGENT_URL", "http://host.docker.internal:7004"
+    ).rstrip("/")
+    MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "20"))
+    MULTI_AGENT_ENABLED = _enabled("MULTI_AGENT_ENABLED")
+
     PORT = int(os.getenv("SERVICE_PORT", "8005"))
 
     # Business rules for reviews, enforced on every write and used as the

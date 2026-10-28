@@ -1,0 +1,53 @@
+{
+  "mode": "testing_report",
+  "subject": {
+    "student": 5,
+    "feature": "Reviews and Ratings",
+    "test_code": "\"\"\"Release 2 post-commit CI/CD tests: two Reviews and Ratings endpoint functions.\n\nThese run against the *live* Student 5 backend/API container that\nstudent-5.yml starts after every push, so they exercise the real HTTP\nsurface, the database microservice and its SQLite volume.\n\n    1. create_review   POST /api/reviews\n    2. update_review   PUT  /api/reviews/<id>\n\nRun locally against a running stack:\n\n    STUDENT5_API_URL=http://localhost:8005 pytest student-5/endpoint-tests -v\n\"\"\"\n\nimport os\nimport uuid\n\nimport pytest\nimport requests\n\nAPI_URL = os.getenv(\"STUDENT5_API_URL\", \"\").rstrip(\"/\")\n\npytestmark = pytest.mark.skipif(\n    not API_URL, reason=\"STUDENT5_API_URL is not set (post-commit endpoint tests)\"\n)\n\n\ndef _payload(**overrides):\n    payload = {\n        \"product_sku\": \"sku-ci-{}\".format(uuid.uuid4().hex[:6]),\n        \"user_id\": \"ci-runner\",\n        \"rating\": \"4\",\n        \"review\": \"  Solid build and clear sound, created by the post-commit tests.  \",\n    }\n    payload.update(overrides)\n    return payload\n\n\n@pytest.fixture()\ndef created():\n    \"\"\"Reviews created by a test, deleted afterwards so reruns stay clean.\"\"\"\n    ids = []\n    yield ids\n    for review_id in ids:\n        requests.delete(\"{}/api/reviews/{}\".format(API_URL, review_id), timeout=10)\n\n\ndef _create(created, payload):\n    response = requests.post(\"{}/api/reviews\".format(API_URL), json=payload, timeout=10)\n    if response.status_code == 201:\n        created.append(response.json()[\"review_id\"])\n    return response\n\n\ndef _get(review_id):\n    return requests.get(\"{}/api/reviews/{}\".format(API_URL, review_id), timeout=10)\n\n\n# -------------------------------------------------- endpoint 1: create_review\ndef test_create_review_persists_a_normalised_record(created):\n    payload = _payload()\n    response = _create(created, payload)\n\n    assert response.status_code == 201\n    body = response.json()\n    assert body[\"product_sku\"] == payload[\"product_sku\"].upper()   # SKU upper-cased\n    assert body[\"rating\"] == 4                                      # \"4\" coerced to int\n    assert body[\"review\"] == payload[\"review\"].strip()              # whitespace trimmed\n    stored = _get(body[\"review_id\"])\n    assert stored.status_code == 200\n    assert stored.json()[\"user_id\"] == \"ci-runner\"\n\n\ndef test_create_review_rejects_an_out_of_range_rating(created):\n    response = _create(created, _payload(rating=6))\n\n    assert response.status_code == 400\n    assert \"rating must be between 1 and 5\" in response.json()[\"details\"]\n\n\ndef test_create_review_rejects_a_too_short_review(created):\n    response = _create(created, _payload(review=\"ok\"))\n\n    assert response.status_code == 400\n    assert \"review must be between 5 and 1000 characters\" in response.json()[\"details\"]\n\n\ndef test_create_review_reports_every_missing_field(created):\n    response = _create(created, {})\n\n    assert response.status_code == 400\n    details = response.json()[\"details\"]\n    for field in (\"product_sku\", \"user_id\", \"rating\", \"review\"):\n        assert \"{} is required\".format(field) in details\n\n\n# -------------------------------------------------- endpoint 2: update_review\ndef test_update_review_changes_only_the_supplied_fields(created):\n    original = _create(created, _payload()).json()\n\n    response = requests.put(\n        \"{}/api/reviews/{}\".format(API_URL, original[\"review_id\"]),\n        json={\"rating\": 2}, timeout=10,\n    )\n\n    assert response.status_code == 200\n    stored = _get(original[\"review_id\"]).json()\n    assert stored[\"rating\"] == 2\n    assert stored[\"review\"] == original[\"review\"]\n    assert stored[\"product_sku\"] == original[\"product_sku\"]\n\n\ndef test_update_review_with_invalid_rating_leaves_the_record_unchanged(created):\n    original = _create(created, _payload()).json()\n\n    response = requests.put(\n        \"{}/api/reviews/{}\".format(API_URL, original[\"review_id\"]),\n        json={\"rating\": 0}, timeout=10,\n    )\n\n    assert response.status_code == 400\n    assert _get(original[\"review_id\"]).json()[\"rating\"] == original[\"rating\"]\n\n\ndef test_update_review_with_empty_body_is_rejected(created):\n    original = _create(created, _payload()).json()\n\n    response = requests.put(\n        \"{}/api/reviews/{}\".format(API_URL, original[\"review_id\"]),\n        json={}, timeout=10,\n    )\n\n    assert response.status_code == 400\n    assert \"no updatable fields supplied\" in response.json()[\"details\"]\n\n\ndef test_update_review_of_unknown_id_is_404():\n    response = requests.put(\n        \"{}/api/reviews/{}\".format(API_URL, uuid.uuid4()),\n        json={\"rating\": 3}, timeout=10,\n    )\n\n    assert response.status_code == 404\n",
+    "pre_commit_security_results": [
+      {
+        "name": "ruff-security",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "student-5-pre-commit.log"
+      },
+      {
+        "name": "detect-secrets",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "student-5-pre-commit.log"
+      },
+      {
+        "name": "pip-audit",
+        "status": "passed",
+        "phase": "pre_commit",
+        "source": "student-5-pre-commit.log"
+      }
+    ],
+    "post_commit_backend_endpoint_tests": [
+      {
+        "endpoint": "create_review",
+        "route": "POST /api/reviews",
+        "test_ref": "student-5/endpoint-tests/test_post_commit_endpoints.py",
+        "phase": "post_commit",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4
+      },
+      {
+        "endpoint": "update_review",
+        "route": "PUT /api/reviews/<id>",
+        "test_ref": "student-5/endpoint-tests/test_post_commit_endpoints.py",
+        "phase": "post_commit",
+        "status": "passed",
+        "tests": 4,
+        "passed": 4
+      }
+    ],
+    "hosted_ci": {
+      "workflow": "student-5.yml",
+      "run_id": "40622271687",
+      "status": "passed"
+    }
+  }
+}

@@ -32,6 +32,13 @@
                     hx-get="/partials/form/{{ review.review_id }}"
                     hx-target="#review-form"
                     hx-swap="outerHTML">Edit</button>
+            <button class="btn ai"
+                    hx-post="/reviews/{{ review.review_id }}/multi-agent"
+                    hx-target="#multi-agent-panel"
+                    hx-swap="innerHTML show:#multi-agent-card:top"
+                    title="Run the shared Planner -> Worker -> Reviewer moderation workflow">
+              Multi-Agent review
+            </button>
             <button class="btn danger"
                     hx-post="/reviews/{{ review.review_id }}/delete"
                     hx-target="#alerts"

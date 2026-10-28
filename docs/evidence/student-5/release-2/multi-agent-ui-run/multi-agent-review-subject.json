@@ -1,0 +1,143 @@
+{
+  "mode": "multi_agent_workflow",
+  "subject": {
+    "workflow": {
+      "completion_gate": {
+        "human_decision_recorded": true,
+        "planner_completed": true,
+        "reviewer_completed": true,
+        "worker_completed": true
+      },
+      "created_at": "2026-10-28T03:55:45.304123+00:00",
+      "evidence": [
+        {
+          "content": "{\"review_id\": \"b6f1a2c0-0009-4a3e-9c2a-000000000009\", \"product_sku\": \"SKU-COM-2003\", \"rating\": 5, \"review_text\": \"The brown switches feel amazing and the PBT keycaps have not shown a hint of shine yet.\", \"existing_review_count\": 1, \"average_rating\": 5.0}",
+          "id": "review_facts",
+          "meaning": "Authoritative for the submitted review text, star rating, product and this product's review history.",
+          "source": "student-5-reviews-db",
+          "status": "available"
+        },
+        {
+          "content": "{\"flagged\": false, \"reasons\": [\"no issues found\"], \"spam_score\": 0.0, \"duplicate_risk\": \"low\", \"word_count\": 17}",
+          "id": "mcp_moderation",
+          "meaning": "Validates spam and quality signals (flagged, reasons, spam_score, duplicate_risk) only. It does not itself decide whether to publish the review.",
+          "source": "shared-mcp-check_review_quality",
+          "status": "available"
+        }
+      ],
+      "human_decision": {
+        "decision": "accept",
+        "feedback": "Moderation signal and 5-star positive text agree.",
+        "reviewed_at": "2026-10-28T03:58:59.796408+00:00"
+      },
+      "max_revisions": 1,
+      "plan": {
+        "application_enforced": {
+          "acceptance_criteria": [
+            "Identify the moderation signal in mcp_moderation (flagged, reasons, spam_score, duplicate_risk).",
+            "Check whether the review text and star rating are consistent with each other.",
+            "Call out evidence that is actually missing or unavailable; do not call supplied facts missing."
+          ],
+          "constraints": [
+            "review_facts is authoritative for the submitted review text, rating and product.",
+            "mcp_moderation validates spam and quality signals only; it does not decide whether to publish.",
+            "Do not invent prior reviewer history or policy not present in the supplied evidence.",
+            "Do not publish, edit or delete the review yourself."
+          ]
+        },
+        "model_generated": {
+          "tasks": [
+            {
+              "evidence_refs": [
+                "review_facts"
+              ],
+              "task": "Extract review text and rating"
+            },
+            {
+              "evidence_refs": [
+                "mcp_moderation"
+              ],
+              "task": "Check moderation result"
+            },
+            {
+              "evidence_refs": [
+                "review_facts",
+                "mcp_moderation"
+              ],
+              "task": "Determine review status based on moderation result and review text"
+            }
+          ]
+        }
+      },
+      "request": {
+        "goal": "Assess whether this review should be published as-is, flagged for moderator attention, or rejected, using only the review's own text and rating and the moderation check result.",
+        "plan_contract": {
+          "acceptance_criteria": [
+            "Identify the moderation signal in mcp_moderation (flagged, reasons, spam_score, duplicate_risk).",
+            "Check whether the review text and star rating are consistent with each other.",
+            "Call out evidence that is actually missing or unavailable; do not call supplied facts missing."
+          ],
+          "constraints": [
+            "review_facts is authoritative for the submitted review text, rating and product.",
+            "mcp_moderation validates spam and quality signals only; it does not decide whether to publish.",
+            "Do not invent prior reviewer history or policy not present in the supplied evidence.",
+            "Do not publish, edit or delete the review yourself."
+          ]
+        },
+        "worker_evidence_ids": [
+          "review_facts",
+          "mcp_moderation"
+        ],
+        "worker_required_evidence_ids": [
+          "review_facts",
+          "mcp_moderation"
+        ]
+      },
+      "reviewer_result": {
+        "action": "ready_for_human",
+        "claim_assessment": {
+          "consistency": "not_applicable",
+          "rationale": "supported",
+          "recommendation": "supported"
+        },
+        "findings": [],
+        "missing_information": [],
+        "recommendations": []
+      },
+      "revision_count": 0,
+      "roles": [
+        {
+          "completed_at": "2026-10-28T03:55:59.290288+00:00",
+          "model": "llama3.1:8b",
+          "role": "planner"
+        },
+        {
+          "completed_at": "2026-10-28T03:56:08.221129+00:00",
+          "model": "qwen2.5:3b",
+          "revision": 0,
+          "role": "worker"
+        },
+        {
+          "completed_at": "2026-10-28T03:56:24.740931+00:00",
+          "model": "llama3.1:8b",
+          "role": "reviewer"
+        }
+      ],
+      "stage": "completed",
+      "status": "accepted",
+      "subject_ref": "student-5-review:b6f1a2c0-0009-4a3e-9c2a-000000000009",
+      "updated_at": "2026-10-28T03:58:59.796439+00:00",
+      "worker_result": {
+        "application_added_evidence_refs": [],
+        "evidence_refs": [
+          "review_facts",
+          "mcp_moderation"
+        ],
+        "policy_basis": "mcp_moderation",
+        "rationale": "The review text and rating are consistent, and the moderation check result indicates no issues found.",
+        "recommendation": "Given the review's high rating and absence of flagged issues or spam, the review should be published as-is."
+      },
+      "workflow_id": "7460ad30-694a-45a2-8a32-4bfddcbbb6ce"
+    }
+  }
+}
