@@ -300,7 +300,9 @@ resource "aws_lb" "app" {
   internal           = false
   subnets            = aws_subnet.public[*].id
   security_groups    = [aws_security_group.alb.id]
-  tags               = { Name = "${var.name_prefix}-alb" }
+  # CPU-only Ollama answers can take longer than the 60-second default.
+  idle_timeout = var.enable_cloud_ai ? 300 : 60
+  tags         = { Name = "${var.name_prefix}-alb" }
 }
 
 resource "aws_service_discovery_private_dns_namespace" "app" {
@@ -422,7 +424,8 @@ resource "aws_ecs_task_definition" "service" {
     image        = "${aws_ecr_repository.services[each.key].repository_url}:${var.image_tag}"
     essential    = true
     portMappings = [{ containerPort = each.value.port, hostPort = each.value.port, protocol = "tcp" }]
-    environment = [for name, value in each.value.environment : {
+    # Backends switch to the AI services only in the bonus profile (cloud-ai.tf).
+    environment = [for name, value in local.service_environment[each.key] : {
       name  = name
       value = name == "HOME_URL" ? local.home_url : value
     }]

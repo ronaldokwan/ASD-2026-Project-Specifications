@@ -65,5 +65,5 @@ Commit history: https://github.com/ronaldokwan/ASD-2026-Project-Specifications/c
 
 | Date | Work |
 |---|---|
-| 26–27 Oct 2026 | GitHub OIDC deploy role (`infra/aws/github-oidc/`) and the `aws-production` environment; fixed three `cloud-deployment.yml` failures (Student 2 image paths, OIDC trust subject, `validate-runtime.sh` health-check wait); first successful hosted deployment (run 40471342463); multi-server check script; evidence logs |
+| 26–27 Oct 2026 | GitHub OIDC deploy role (`infra/aws/github-oidc/`) and the `aws-production` environment; fixed three `cloud-deployment.yml` failures (Student 2 image paths, OIDC trust subject, `validate-runtime.sh` health-check wait), after which run 40471342463 deployed to AWS; multi-server check script; evidence logs |
 | 28 Oct 2026 | Collected the run 40471342463 deployment evidence; integrated the group report as team leader |

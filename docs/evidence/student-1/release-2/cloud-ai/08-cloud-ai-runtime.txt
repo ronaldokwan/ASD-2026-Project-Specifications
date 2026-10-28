@@ -1,0 +1,38 @@
+$ aws ecs describe-tasks --cluster asd26-g40-r2-cluster --tasks <ai-services task> (summarised)
+containers: mcp-server=HEALTHY, rag-server=HEALTHY, multi-agent=HEALTHY, ollama=HEALTHY,
+  ai-mode=HEALTHY
+cpu: '16384'
+health: HEALTHY
+lastStatus: RUNNING
+memory: '32768'
+privateIp: 10.40.128.23
+publicIp: null
+$ curl -s http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001/health   (Student 1 backend AI status)
+{
+  "ai_mode": {
+    "status": "ok",
+    "ollama_url": "http://127.0.0.1:11434",
+    "models_available": [
+      "llama3.1:8b",
+      "qwen2.5:3b"
+    ]
+  },
+  "mcp_server": {
+    "status": "ok",
+    "protocol": "MCP Streamable HTTP",
+    "endpoint": "/mcp"
+  },
+  "rag_server": {
+    "model": "qwen2.5:3b",
+    "service": "rag-server",
+    "status": "ok"
+  },
+  "multi_agent_server": {
+    "status": "ok",
+    "roles": {
+      "planner": "llama3.1:8b",
+      "reviewer": "llama3.1:8b",
+      "worker": "qwen2.5:3b"
+    }
+  }
+}

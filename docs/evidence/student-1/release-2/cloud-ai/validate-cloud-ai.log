@@ -1,0 +1,12 @@
+[07:20:51] Cloud AI profile check against http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001
+  ai_mode            ok
+  mcp_server         ok
+  rag_server         ok
+  multi_agent_server ok
+[07:20:52] Using product 12
+[07:21:02] B1 AI-Mode: suggestion with Plan/Act/Observe trace
+[07:21:03] B2 MCP: check_product_listing returned
+[07:21:07] B3 RAG: grounded answer with sources
+[07:21:11] B4 Multi-Agent: workflow 0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9 started
+[07:23:25] B4 Multi-Agent: Planner, Worker and Reviewer finished; awaiting Human Review
+[07:23:25] B4 Multi-Agent: human decision recorded

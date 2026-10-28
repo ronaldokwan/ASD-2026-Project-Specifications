@@ -1,0 +1,117 @@
+
+
+
+  
+  
+  <section class="multi-agent-result" aria-live="polite"
+    >
+
+    <div class="alert ok">
+      Product #12 &middot; workflow
+      <strong>accepted</strong>
+      
+    </div>
+    
+
+    <p class="muted"><small>Workflow <code>0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9</code>
+       &middot; models:
+        planner=llama3.1:8b, worker=qwen2.5:3b, reviewer=llama3.1:8b
+        &middot; revisions 0/1</small></p>
+
+    
+
+    
+      <h3>1. Planner</h3>
+      <ol>
+        
+          <li>Check if failed_checks in product_facts is empty <small class="muted">[product_facts]</small></li>
+        
+          <li>If failed_checks is not empty, list each failed check as the fix <small class="muted">[product_facts]</small></li>
+        
+          <li>Check listing_status in mcp_listing and issues, warnings or errors <small class="muted">[mcp_listing]</small></li>
+        
+          <li>Verify catalogue policy for Listing Readiness rules <small class="muted">[catalogue_policy]</small></li>
+        
+      </ol>
+      <details><summary>Application-enforced criteria and constraints</summary>
+        <ul>
+          <li>Base readiness on readiness_checks and failed_checks in product_facts.</li><li>Cite catalogue_policy as the source of the readiness rules.</li><li>Name every failed check as a fix, or state that none failed.</li>
+          <li>product_facts is authoritative for stored product fields and rule results.</li><li>mcp_listing is an independent cross-check; it does not define catalogue policy.</li><li>Do not invent prices, stock, sales or competitor data.</li><li>Do not edit, publish, archive or delete the product.</li>
+        </ul>
+      </details>
+    
+
+    
+      <h3>2. Worker</h3>
+      <p><strong>The product listing for SKU-WEA-4002 is ready to publish under the catalogue policy as there are no failed checks in product_facts.</strong></p>
+      <p>Since the product_facts indicates that all required fields (active status, valid category, and price within AUD 1-9999) are met with no failed_checks, it aligns with the catalogue_policy&#39;s requirement for a description of at least eight words. The policy is authoritative as stated in its Listing Readiness section.</p>
+      <p class="muted"><small>Policy basis: catalogue_policy
+        &middot; cites product_facts, catalogue_policy
+        </small></p>
+    
+
+    
+      
+      <h3>3. Reviewer &middot; not supported</h3>
+      
+      
+        <p class="muted"><small>Recommendation unsupported;
+          rationale supported;
+          consistency contradictory.</small></p>
+      
+      
+        <ul>
+          
+            <li><span class="badge">high</span> The product listing for SKU-WEA-4002 is not ready to publish under the catalogue policy because it has a price that is 197.2% above the category average of 29.95.
+              <small class="muted">[mcp_listing]</small></li>
+          
+        </ul>
+      
+      
+      <p><strong>Recommendations:</strong> Check the product listing&#39;s price and adjust it to be within the category average.</p>
+    
+
+    
+    
+      <h3>Application cross-check</h3>
+      <div class="alert ok">
+        
+        The readiness rules say <strong>ready</strong>.
+        The Worker's verdict matches.
+        
+      </div>
+    
+
+    
+      <details><summary>Evidence supplied to the agents</summary>
+        <ul>
+          
+            <li><strong>product_facts</strong> &middot; student-1-product-api &middot; available
+              <pre>{&#34;sku&#34;: &#34;SKU-WEA-4002&#34;, &#34;name&#34;: &#34;Everyday Fitness Band&#34;, &#34;category&#34;: &#34;Wearables&#34;, &#34;price_aud&#34;: 89.0, &#34;status&#34;: &#34;active&#34;, &#34;description_word_count&#34;: 13, &#34;description&#34;: &#34;Slim activity tracker with heart-rate monitoring, sleep tracking and a seven day battery.&#34;, &#34;readiness_checks&#34;: {&#34;status_is_active&#34;: true, &#34;category_is_valid&#34;: true, &#34;price_within_1_to_9999_aud&#34;: true, &#34;description_has_at_least_8_words&#34;: true}, &#34;failed_checks&#34;: []}</pre></li>
+          
+            <li><strong>mcp_listing</strong> &middot; shared-mcp-check_product_listing &middot; available
+              <pre>{&#34;tool&#34;: &#34;check_product_listing&#34;, &#34;sku&#34;: &#34;SKU-WEA-4002&#34;, &#34;listing_status&#34;: &#34;ready&#34;, &#34;description_word_count&#34;: 13, &#34;issues&#34;: [], &#34;warnings&#34;: [&#34;price is 197.2% above the category average of 29.95&#34;], &#34;errors&#34;: []}</pre></li>
+          
+            <li><strong>catalogue_policy</strong> &middot; shared-rag-product-catalogue-policy &middot; available
+              <pre>{&#34;status&#34;: &#34;ok&#34;, &#34;answer&#34;: &#34;A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;, &#34;sources&#34;: [{&#34;source&#34;: &#34;product-catalogue-policy.md&#34;, &#34;section&#34;: &#34;Listing Readiness&#34;, &#34;snippet&#34;: &#34;Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;, &#34;text&#34;: &#34;Listing Readiness A listing is ready to publish when it is active, has a valid category and price, and has a description of at least eight words.&#34;}], &#34;confidence&#34;: &#34;medium&#34;, &#34;retrieved_count&#34;: 1, &#34;elapsed_ms&#34;: 2731}</pre></li>
+          
+        </ul>
+      </details>
+    
+
+    
+      
+      <h3>4. Human review &middot; accept</h3>
+      <p>Cloud bonus check: reviewed on AWS and accepted.</p>
+      
+      
+      <p class="muted"><small>Recorded 2026-10-28T07:23:26.489594+00:00. The decision is advisory: the product
+        itself is only changed through the catalogue form.</small></p>
+
+    
+
+    
+      <div hx-get="/products/12/multi-agent/history?current=0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9"
+           hx-trigger="load" hx-swap="innerHTML"></div>
+    
+  </section>

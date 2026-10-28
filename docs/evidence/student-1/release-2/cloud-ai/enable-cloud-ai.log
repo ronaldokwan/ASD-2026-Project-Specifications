@@ -1,0 +1,1477 @@
+Application image tag: 1d0d0a21198bedc10977d220ee0bde4d8abe558a
+Verifying existing dedicated Terraform state bucket: asd26-g40-tfstate-ronaldo
+Terraform state bucket is private, versioned, encrypted and TLS-only.
+Initializing the backend...
+
+Initializing provider plugins...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using previously-installed hashicorp/aws v5.100.0
+
+Terraform has been successfully initialized!
+
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.
+Success! The configuration is valid.
+
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_ecr_repository.cloud_ai[0] will be created
+  + resource "aws_ecr_repository" "cloud_ai" {
+      + arn                  = (known after apply)
+      + force_delete         = true
+      + id                   = (known after apply)
+      + image_tag_mutability = "IMMUTABLE"
+      + name                 = "asd26-g40-r2/ai-services"
+      + registry_id          = (known after apply)
+      + repository_url       = (known after apply)
+      + tags                 = {
+          + "Application" = "asd-group-application"
+          + "Service"     = "ai-services"
+        }
+      + tags_all             = {
+          + "Application" = "asd-group-application"
+          + "Service"     = "ai-services"
+        }
+
+      + encryption_configuration {
+          + encryption_type = "AES256"
+          + kms_key         = (known after apply)
+        }
+
+      + image_scanning_configuration {
+          + scan_on_push = true
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+aws_ecr_repository.cloud_ai[0]: Creating...
+aws_ecr_repository.cloud_ai[0]: Creation complete after 0s [id=asd26-g40-r2/ai-services]
+╷
+│ Warning: Resource targeting is in effect
+│ 
+│ You are creating a plan with the -target option, which means that the
+│ result of this plan may not represent all of the changes requested by the
+│ current configuration.
+│ 
+│ The -target option is not for routine use, and is provided only for
+│ exceptional situations such as recovering from errors or mistakes, or when
+│ Terraform specifically suggests to use it as part of an error message.
+╵
+╷
+│ Warning: Applied changes may be incomplete
+│ 
+│ The plan was created with the -target option in effect, so some changes
+│ requested in the configuration may have been ignored and the output values
+│ may not be fully updated. Run the following command to verify that no other
+│ changes are pending:
+│     terraform plan
+│ 
+│ Note that the -target option is not suitable for routine use, and is
+│ provided only for exceptional situations such as recovering from errors or
+│ mistakes, or when Terraform specifically suggests to use it as part of an
+│ error message.
+╵
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+database_filesystem_id = "fs-05bce2f0bb4af16a7"
+ecr_repository_urls = {
+  "shared-home" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/shared-home"
+  "student-1-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-backend"
+  "student-1-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-db"
+  "student-1-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-frontend"
+  "student-3-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-backend"
+  "student-3-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-db"
+  "student-3-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-frontend"
+  "student-4-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-backend"
+  "student-4-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-db"
+  "student-4-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-frontend"
+  "student-5-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-backend"
+  "student-5-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-db"
+  "student-5-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-frontend"
+  "student2-api" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-api"
+  "student2-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-db"
+  "student2-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-frontend"
+}
+frontend_urls = {
+  "home" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com"
+  "student_1" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001"
+  "student_2" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3002"
+  "student_3" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3003"
+  "student_4" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3004"
+  "student_5" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3005"
+}
+load_balancer_dns_name = "asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com"
+Login Succeeded
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.cloud
+#1 transferring dockerfile: 1.11kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 1.2s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 123B done
+#3 DONE 0.0s
+
+#4 [1/9] FROM docker.io/library/python:3.11-slim@sha256:96909ccf1d448a93a966e9fc47a607781b0f22975f3dc17a4cec879600d0a827
+#4 resolve docker.io/library/python:3.11-slim@sha256:96909ccf1d448a93a966e9fc47a607781b0f22975f3dc17a4cec879600d0a827 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.40kB done
+#5 DONE 0.0s
+
+#6 [4/9] COPY mcp-server/requirements.txt requirements/mcp-server.txt
+#6 CACHED
+
+#7 [7/9] RUN pip install --no-cache-dir gunicorn==22.0.0       -r requirements/ai-mode.txt -r requirements/mcp-server.txt       -r requirements/rag-server.txt -r requirements/multi-agent.txt
+#7 CACHED
+
+#8 [8/9] COPY . .
+#8 CACHED
+
+#9 [2/9] WORKDIR /srv
+#9 CACHED
+
+#10 [6/9] COPY multi-agent/requirements.txt requirements/multi-agent.txt
+#10 CACHED
+
+#11 [3/9] COPY ai-mode/requirements.txt requirements/ai-mode.txt
+#11 CACHED
+
+#12 [5/9] COPY rag-server/requirements.txt requirements/rag-server.txt
+#12 CACHED
+
+#13 [9/9] RUN useradd --uid 1000 --create-home ai     && mkdir -p /srv/rag-server/data /tmp/ai-data     && chown -R ai:ai /srv/rag-server/data /tmp/ai-data
+#13 CACHED
+
+#14 exporting to image
+#14 exporting layers done
+#14 exporting manifest sha256:6813a9a7941f0e004cd21ef392842f35ee143be4e4ce4236607c9c617af417de done
+#14 exporting config sha256:7ae163efa284ef75631a31c1b0a00537dc54968a3612b042d7799bcaaa19e2cf done
+#14 exporting attestation manifest sha256:bee175fbd44c6b254b55bd79ef71ea95c96f0e92514ae50f2648573ea148e0d7 0.0s done
+#14 exporting manifest list sha256:dd77211e4ba376c7cfc93aa27150da818b4e1f0b8e45b4e0c1fe830091972f48
+#14 exporting manifest list sha256:dd77211e4ba376c7cfc93aa27150da818b4e1f0b8e45b4e0c1fe830091972f48 0.0s done
+#14 naming to 604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511 done
+#14 unpacking to 604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511 0.0s done
+#14 DONE 0.1s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/82on98qvk2htk66w7i3s33xcc
+The push refers to repository [604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services]
+6fc242d221a6: Waiting
+6289fff671ca: Waiting
+24ff04c92107: Waiting
+361db8171547: Waiting
+ef2296ceec30: Waiting
+d8caa81f79fc: Waiting
+c05f9b551e57: Waiting
+4c8faac443ab: Waiting
+ee5aaeba9945: Waiting
+5d5d913ab5b6: Waiting
+4f4fb700ef54: Waiting
+736ed1246fcb: Waiting
+89addfff078f: Waiting
+6289fff671ca: Waiting
+24ff04c92107: Waiting
+361db8171547: Waiting
+ef2296ceec30: Waiting
+d8caa81f79fc: Waiting
+c05f9b551e57: Waiting
+4c8faac443ab: Waiting
+ee5aaeba9945: Waiting
+5d5d913ab5b6: Waiting
+4f4fb700ef54: Waiting
+736ed1246fcb: Waiting
+89addfff078f: Waiting
+6fc242d221a6: Waiting
+5d5d913ab5b6: Waiting
+89addfff078f: Pushed
+6289fff671ca: Pushed
+361db8171547: Pushed
+d8caa81f79fc: Pushed
+4c8faac443ab: Pushed
+4f4fb700ef54: Pushed
+736ed1246fcb: Pushed
+ef2296ceec30: Pushed
+5d5d913ab5b6: Pushed
+ee5aaeba9945: Pushed
+24ff04c92107: Pushed
+6fc242d221a6: Pushed
+c05f9b551e57: Pushed
+ai-9759f7d-20261028071511: digest: sha256:dd77211e4ba376c7cfc93aa27150da818b4e1f0b8e45b4e0c1fe830091972f48 size: 856
+aws_ecr_repository.services["student2-db"]: Refreshing state... [id=asd26-g40-r2/student2-db]
+aws_iam_role.execution: Refreshing state... [id=asd26-g40-r2-execution]
+aws_ecr_repository.services["student2-api"]: Refreshing state... [id=asd26-g40-r2/student2-api]
+aws_ecr_repository.services["shared-home"]: Refreshing state... [id=asd26-g40-r2/shared-home]
+aws_ecr_repository.services["student-1-backend"]: Refreshing state... [id=asd26-g40-r2/student-1-backend]
+aws_vpc.app: Refreshing state... [id=vpc-0199a0ff5b17890cd]
+aws_ecr_repository.services["student-3-backend"]: Refreshing state... [id=asd26-g40-r2/student-3-backend]
+aws_iam_role.task: Refreshing state... [id=asd26-g40-r2-task]
+aws_efs_file_system.databases: Refreshing state... [id=fs-05bce2f0bb4af16a7]
+aws_ecr_repository.services["student-4-frontend"]: Refreshing state... [id=asd26-g40-r2/student-4-frontend]
+aws_ecr_repository.services["student-5-db"]: Refreshing state... [id=asd26-g40-r2/student-5-db]
+aws_ecr_repository.services["student-1-db"]: Refreshing state... [id=asd26-g40-r2/student-1-db]
+aws_ecr_repository.services["student-1-frontend"]: Refreshing state... [id=asd26-g40-r2/student-1-frontend]
+aws_ecr_repository.services["student-4-db"]: Refreshing state... [id=asd26-g40-r2/student-4-db]
+aws_ecr_repository.services["student-5-backend"]: Refreshing state... [id=asd26-g40-r2/student-5-backend]
+aws_ecr_repository.services["student-4-backend"]: Refreshing state... [id=asd26-g40-r2/student-4-backend]
+aws_ecr_repository.services["student-3-frontend"]: Refreshing state... [id=asd26-g40-r2/student-3-frontend]
+aws_ecr_repository.services["student2-frontend"]: Refreshing state... [id=asd26-g40-r2/student2-frontend]
+aws_ecr_repository.services["student-5-frontend"]: Refreshing state... [id=asd26-g40-r2/student-5-frontend]
+aws_ecr_repository.services["student-3-db"]: Refreshing state... [id=asd26-g40-r2/student-3-db]
+data.aws_availability_zones.available: Reading...
+aws_ecs_cluster.app: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:cluster/asd26-g40-r2-cluster]
+aws_ecr_repository.cloud_ai[0]: Refreshing state... [id=asd26-g40-r2/ai-services]
+aws_cloudwatch_log_group.services["student-1-backend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-1-backend]
+aws_cloudwatch_log_group.services["student2-api"]: Refreshing state... [id=/ecs/asd26-g40-r2/student2-api]
+aws_cloudwatch_log_group.services["student-4-frontend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-4-frontend]
+aws_cloudwatch_log_group.services["student-5-backend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-5-backend]
+data.aws_availability_zones.available: Read complete after 0s [id=ap-southeast-2]
+aws_cloudwatch_log_group.services["student-3-frontend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-3-frontend]
+aws_cloudwatch_log_group.services["shared-home"]: Refreshing state... [id=/ecs/asd26-g40-r2/shared-home]
+aws_cloudwatch_log_group.services["student2-frontend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student2-frontend]
+aws_cloudwatch_log_group.services["student-5-frontend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-5-frontend]
+aws_cloudwatch_log_group.services["student-1-frontend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-1-frontend]
+aws_cloudwatch_log_group.services["student-4-db"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-4-db]
+aws_cloudwatch_log_group.services["student-3-db"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-3-db]
+aws_cloudwatch_log_group.services["student2-db"]: Refreshing state... [id=/ecs/asd26-g40-r2/student2-db]
+aws_cloudwatch_log_group.services["student-5-db"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-5-db]
+aws_cloudwatch_log_group.services["student-4-backend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-4-backend]
+aws_cloudwatch_log_group.services["student-3-backend"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-3-backend]
+aws_cloudwatch_log_group.services["student-1-db"]: Refreshing state... [id=/ecs/asd26-g40-r2/student-1-db]
+aws_efs_access_point.databases["student-1-db"]: Refreshing state... [id=fsap-025ef613512103bb6]
+aws_efs_access_point.databases["student-4-db"]: Refreshing state... [id=fsap-0b9cf593c541981df]
+aws_efs_access_point.databases["student-5-db"]: Refreshing state... [id=fsap-0613f4db86518a447]
+aws_efs_access_point.databases["student2-db"]: Refreshing state... [id=fsap-054c987c289804ef9]
+aws_efs_access_point.databases["student-3-db"]: Refreshing state... [id=fsap-06c943ae1d0801c97]
+aws_service_discovery_private_dns_namespace.app: Refreshing state... [id=ns-gjfhjbiy5uir3fnb]
+aws_subnet.public[1]: Refreshing state... [id=subnet-0c4c333463f17adfc]
+aws_route_table.private[1]: Refreshing state... [id=rtb-0b4aab17d7742b81d]
+aws_internet_gateway.app: Refreshing state... [id=igw-033478a58d67e823b]
+aws_route_table.private[0]: Refreshing state... [id=rtb-0b6fd32ad634bfdb7]
+aws_subnet.public[0]: Refreshing state... [id=subnet-029ed9deded80c3e3]
+aws_subnet.private[1]: Refreshing state... [id=subnet-0a7600eec51fd7ac0]
+aws_lb_target_group.frontend["student2-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-student2-frontend/4bc324af4c1cd6a8]
+aws_lb_target_group.frontend["student-4-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-student-4-frontend/7c5c62207b03796c]
+aws_lb_target_group.frontend["student-5-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-student-5-frontend/9061e57bd5a0e2e9]
+aws_lb_target_group.frontend["shared-home"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-shared-home/d3b1d2ea3d548245]
+aws_lb_target_group.frontend["student-1-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-student-1-frontend/e3a20373c5dcd6be]
+aws_subnet.private[0]: Refreshing state... [id=subnet-0c6baf83c4ee1e929]
+aws_lb_target_group.frontend["student-3-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:targetgroup/asd26-g40-r2-student-3-frontend/608c12680672b8df]
+aws_security_group.alb: Refreshing state... [id=sg-05ab033aa5e0ee9d1]
+aws_route_table.public: Refreshing state... [id=rtb-03cc1e5957d24bf38]
+aws_vpc_endpoint.s3[0]: Refreshing state... [id=vpce-048f7afffa6662113]
+aws_service_discovery_service.internal["student-5-db"]: Refreshing state... [id=srv-ai63v3ryekmsys43]
+aws_service_discovery_service.internal["student-4-backend"]: Refreshing state... [id=srv-y5q6p6mx2vdvywlr]
+aws_service_discovery_service.internal["student-1-backend"]: Refreshing state... [id=srv-w25gzpcy7omibom4]
+aws_service_discovery_service.internal["student-3-backend"]: Refreshing state... [id=srv-gxlat7r4smejjzjt]
+aws_service_discovery_service.internal["student-1-db"]: Refreshing state... [id=srv-562eoc4n5cndwvmf]
+aws_service_discovery_service.internal["student2-db"]: Refreshing state... [id=srv-4voi33dtveazhfl3]
+aws_service_discovery_service.internal["student2-api"]: Refreshing state... [id=srv-ysyhcirdeizkzlfo]
+aws_service_discovery_service.internal["student-4-db"]: Refreshing state... [id=srv-dkp7a4gsm7ddv7u5]
+aws_service_discovery_service.internal["student-5-backend"]: Refreshing state... [id=srv-rkgqbmsbejydg4pg]
+aws_service_discovery_service.internal["student-3-db"]: Refreshing state... [id=srv-bp73fh66dqj2x3xx]
+aws_route_table_association.private[0]: Refreshing state... [id=rtbassoc-0fbabc6042a76572d]
+aws_route_table_association.private[1]: Refreshing state... [id=rtbassoc-0440ca803eeb631e6]
+aws_security_group_rule.alb_http: Refreshing state... [id=sgrule-3488832422]
+aws_lb.app: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:loadbalancer/app/asd26-g40-r2-alb/1574a480e9134b0c]
+aws_security_group_rule.alb_frontend_ports["student-3-frontend"]: Refreshing state... [id=sgrule-1541934611]
+aws_security_group_rule.alb_frontend_ports["student-5-frontend"]: Refreshing state... [id=sgrule-2058652890]
+aws_security_group.tasks: Refreshing state... [id=sg-000cc897b81d7e57a]
+aws_security_group_rule.alb_frontend_ports["student-1-frontend"]: Refreshing state... [id=sgrule-1155297364]
+aws_security_group_rule.alb_frontend_ports["student2-frontend"]: Refreshing state... [id=sgrule-3117068816]
+aws_security_group_rule.alb_frontend_ports["student-4-frontend"]: Refreshing state... [id=sgrule-2559979737]
+aws_route_table_association.public[1]: Refreshing state... [id=rtbassoc-08eee981dffe64762]
+aws_route_table_association.public[0]: Refreshing state... [id=rtbassoc-082da0711b410dca5]
+aws_security_group.efs: Refreshing state... [id=sg-07132aa39dda8e4c6]
+aws_security_group.endpoint[0]: Refreshing state... [id=sg-0a41204cfa5210f5b]
+aws_lb_listener.http: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/1e30c09809085c5e]
+aws_lb_listener.frontends["student-1-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/2536f4e6f708723d]
+aws_lb_listener.frontends["student2-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/8187993d60ac45f0]
+aws_lb_listener.frontends["student-4-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/df5b1b3028f4646b]
+aws_lb_listener.frontends["student-3-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/94078b980396a0bb]
+aws_lb_listener.frontends["student-5-frontend"]: Refreshing state... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:listener/app/asd26-g40-r2-alb/1574a480e9134b0c/ff765815c11be148]
+aws_efs_mount_target.private[0]: Refreshing state... [id=fsmt-0a6849f9e13fd5fa2]
+aws_efs_mount_target.private[1]: Refreshing state... [id=fsmt-058d87b0078dd2be4]
+aws_vpc_endpoint.interface["logs"]: Refreshing state... [id=vpce-0c924322008f9b796]
+aws_vpc_endpoint.interface["ecr.dkr"]: Refreshing state... [id=vpce-0d399561a673812e2]
+aws_vpc_endpoint.interface["ecr.api"]: Refreshing state... [id=vpce-06a8ba1fd65782fde]
+aws_iam_role_policy_attachment.execution: Refreshing state... [id=asd26-g40-r2-execution-20261027082214692900000001]
+aws_iam_role_policy.efs_client: Refreshing state... [id=asd26-g40-r2-task:asd26-g40-r2-efs-client]
+aws_ecs_task_definition.service["shared-home"]: Refreshing state... [id=asd26-g40-r2-shared-home]
+aws_ecs_task_definition.service["student2-frontend"]: Refreshing state... [id=asd26-g40-r2-student2-frontend]
+aws_ecs_task_definition.service["student-4-backend"]: Refreshing state... [id=asd26-g40-r2-student-4-backend]
+aws_ecs_task_definition.service["student-4-frontend"]: Refreshing state... [id=asd26-g40-r2-student-4-frontend]
+aws_ecs_task_definition.service["student-1-backend"]: Refreshing state... [id=asd26-g40-r2-student-1-backend]
+aws_ecs_task_definition.service["student-5-backend"]: Refreshing state... [id=asd26-g40-r2-student-5-backend]
+aws_ecs_task_definition.service["student-5-db"]: Refreshing state... [id=asd26-g40-r2-student-5-db]
+aws_ecs_task_definition.service["student2-api"]: Refreshing state... [id=asd26-g40-r2-student2-api]
+aws_ecs_task_definition.service["student2-db"]: Refreshing state... [id=asd26-g40-r2-student2-db]
+aws_ecs_task_definition.service["student-1-db"]: Refreshing state... [id=asd26-g40-r2-student-1-db]
+aws_ecs_task_definition.service["student-4-db"]: Refreshing state... [id=asd26-g40-r2-student-4-db]
+aws_ecs_task_definition.service["student-5-frontend"]: Refreshing state... [id=asd26-g40-r2-student-5-frontend]
+aws_ecs_task_definition.service["student-3-frontend"]: Refreshing state... [id=asd26-g40-r2-student-3-frontend]
+aws_ecs_task_definition.service["student-1-frontend"]: Refreshing state... [id=asd26-g40-r2-student-1-frontend]
+aws_ecs_task_definition.service["student-3-db"]: Refreshing state... [id=asd26-g40-r2-student-3-db]
+aws_ecs_task_definition.service["student-3-backend"]: Refreshing state... [id=asd26-g40-r2-student-3-backend]
+aws_ecs_service.database["student-5-db"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-db]
+aws_ecs_service.database["student-3-db"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-db]
+aws_ecs_service.database["student-4-db"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-db]
+aws_ecs_service.database["student-1-db"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-db]
+aws_ecs_service.database["student2-db"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-db]
+aws_ecs_service.backend["student-4-backend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-backend]
+aws_ecs_service.backend["student2-api"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-api]
+aws_ecs_service.backend["student-1-backend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-backend]
+aws_ecs_service.backend["student-5-backend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-backend]
+aws_ecs_service.backend["student-3-backend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-backend]
+aws_ecs_service.frontend["student-1-frontend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-frontend]
+aws_ecs_service.frontend["student-4-frontend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-frontend]
+aws_ecs_service.frontend["student-5-frontend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-frontend]
+aws_ecs_service.frontend["student-3-frontend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-frontend]
+aws_ecs_service.frontend["student2-frontend"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-frontend]
+aws_ecs_service.frontend["shared-home"]: Refreshing state... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-shared-home]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+  ~ update in-place
+-/+ destroy and then create replacement
+
+Terraform will perform the following actions:
+
+  # aws_cloudwatch_log_group.cloud_ai[0] will be created
+  + resource "aws_cloudwatch_log_group" "cloud_ai" {
+      + arn               = (known after apply)
+      + id                = (known after apply)
+      + log_group_class   = (known after apply)
+      + name              = "/ecs/asd26-g40-r2/ai-services"
+      + name_prefix       = (known after apply)
+      + retention_in_days = 30
+      + skip_destroy      = false
+      + tags              = {
+          + "Service" = "ai-services"
+        }
+      + tags_all          = {
+          + "Service" = "ai-services"
+        }
+    }
+
+  # aws_ecs_service.backend["student-1-backend"] will be updated in-place
+  ~ resource "aws_ecs_service" "backend" {
+        id                                 = "arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-backend"
+        name                               = "asd26-g40-r2-student-1-backend"
+        tags                               = {}
+      ~ task_definition                    = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-1-backend:5" -> (known after apply)
+        # (16 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_ecs_service.backend["student-3-backend"] will be updated in-place
+  ~ resource "aws_ecs_service" "backend" {
+        id                                 = "arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-backend"
+        name                               = "asd26-g40-r2-student-3-backend"
+        tags                               = {}
+      ~ task_definition                    = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-3-backend:5" -> (known after apply)
+        # (16 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_ecs_service.backend["student-4-backend"] will be updated in-place
+  ~ resource "aws_ecs_service" "backend" {
+        id                                 = "arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-backend"
+        name                               = "asd26-g40-r2-student-4-backend"
+        tags                               = {}
+      ~ task_definition                    = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-4-backend:5" -> (known after apply)
+        # (16 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_ecs_service.backend["student-5-backend"] will be updated in-place
+  ~ resource "aws_ecs_service" "backend" {
+        id                                 = "arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-backend"
+        name                               = "asd26-g40-r2-student-5-backend"
+        tags                               = {}
+      ~ task_definition                    = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-5-backend:5" -> (known after apply)
+        # (16 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_ecs_service.backend["student2-api"] will be updated in-place
+  ~ resource "aws_ecs_service" "backend" {
+        id                                 = "arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-api"
+        name                               = "asd26-g40-r2-student2-api"
+        tags                               = {}
+      ~ task_definition                    = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student2-api:5" -> (known after apply)
+        # (16 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_ecs_service.cloud_ai[0] will be created
+  + resource "aws_ecs_service" "cloud_ai" {
+      + availability_zone_rebalancing      = "DISABLED"
+      + cluster                            = "arn:aws:ecs:ap-southeast-2:604707013588:cluster/asd26-g40-r2-cluster"
+      + deployment_maximum_percent         = 100
+      + deployment_minimum_healthy_percent = 0
+      + desired_count                      = 1
+      + enable_ecs_managed_tags            = false
+      + enable_execute_command             = false
+      + iam_role                           = (known after apply)
+      + id                                 = (known after apply)
+      + launch_type                        = "FARGATE"
+      + name                               = "asd26-g40-r2-ai-services"
+      + platform_version                   = (known after apply)
+      + scheduling_strategy                = "REPLICA"
+      + tags_all                           = (known after apply)
+      + task_definition                    = (known after apply)
+      + triggers                           = (known after apply)
+      + wait_for_steady_state              = false
+
+      + deployment_circuit_breaker {
+          + enable   = true
+          + rollback = true
+        }
+
+      + network_configuration {
+          + assign_public_ip = false
+          + security_groups  = [
+              + "sg-000cc897b81d7e57a",
+            ]
+          + subnets          = [
+              + "subnet-0a7600eec51fd7ac0",
+              + "subnet-0c6baf83c4ee1e929",
+            ]
+        }
+
+      + service_registries {
+          + registry_arn = (known after apply)
+        }
+    }
+
+  # aws_ecs_task_definition.cloud_ai[0] will be created
+  + resource "aws_ecs_task_definition" "cloud_ai" {
+      + arn                      = (known after apply)
+      + arn_without_revision     = (known after apply)
+      + container_definitions    = jsonencode(
+            [
+              + {
+                  + command          = [
+                      + "python",
+                      + "app.py",
+                    ]
+                  + dependsOn        = [
+                      + {
+                          + condition     = "START"
+                          + containerName = "ollama"
+                        },
+                    ]
+                  + environment      = [
+                      + {
+                          + name  = "AI_MODE_REVIEW_DATA_DIR"
+                          + value = "/tmp/ai-data/agentic-reviews"
+                        },
+                      + {
+                          + name  = "LLM_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "LLM_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MCP_ALLOWED_HOSTS"
+                          + value = "ai-services.asd.internal,ai-services.asd.internal:*"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_DATA_DIR"
+                          + value = "/tmp/ai-data/multi-agent"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_PLANNER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_REVIEWER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_STAGE_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_WORKER_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "REVIEW_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "SERVICE_PORT"
+                          + value = "7001"
+                        },
+                    ]
+                  + essential        = true
+                  + healthCheck      = {
+                      + command     = [
+                          + "CMD-SHELL",
+                          + "python -c \"import socket; socket.create_connection(('127.0.0.1', 7001), 3)\"",
+                        ]
+                      + interval    = 30
+                      + retries     = 3
+                      + startPeriod = 60
+                      + timeout     = 5
+                    }
+                  + image            = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511"
+                  + logConfiguration = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/asd26-g40-r2/ai-services"
+                          + awslogs-region        = "ap-southeast-2"
+                          + awslogs-stream-prefix = "ai-mode"
+                        }
+                    }
+                  + name             = "ai-mode"
+                  + portMappings     = [
+                      + {
+                          + containerPort = 7001
+                          + hostPort      = 7001
+                          + protocol      = "tcp"
+                        },
+                    ]
+                  + workingDirectory = "/srv/ai-mode"
+                },
+              + {
+                  + command          = [
+                      + "python",
+                      + "server.py",
+                    ]
+                  + dependsOn        = [
+                      + {
+                          + condition     = "START"
+                          + containerName = "ollama"
+                        },
+                    ]
+                  + environment      = [
+                      + {
+                          + name  = "AI_MODE_REVIEW_DATA_DIR"
+                          + value = "/tmp/ai-data/agentic-reviews"
+                        },
+                      + {
+                          + name  = "LLM_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "LLM_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MCP_ALLOWED_HOSTS"
+                          + value = "ai-services.asd.internal,ai-services.asd.internal:*"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_DATA_DIR"
+                          + value = "/tmp/ai-data/multi-agent"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_PLANNER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_REVIEWER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_STAGE_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_WORKER_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "REVIEW_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "SERVICE_PORT"
+                          + value = "7002"
+                        },
+                    ]
+                  + essential        = true
+                  + healthCheck      = {
+                      + command     = [
+                          + "CMD-SHELL",
+                          + "python -c \"import socket; socket.create_connection(('127.0.0.1', 7002), 3)\"",
+                        ]
+                      + interval    = 30
+                      + retries     = 3
+                      + startPeriod = 60
+                      + timeout     = 5
+                    }
+                  + image            = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511"
+                  + logConfiguration = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/asd26-g40-r2/ai-services"
+                          + awslogs-region        = "ap-southeast-2"
+                          + awslogs-stream-prefix = "mcp-server"
+                        }
+                    }
+                  + name             = "mcp-server"
+                  + portMappings     = [
+                      + {
+                          + containerPort = 7002
+                          + hostPort      = 7002
+                          + protocol      = "tcp"
+                        },
+                    ]
+                  + workingDirectory = "/srv/mcp-server"
+                },
+              + {
+                  + command          = [
+                      + "python",
+                      + "server.py",
+                    ]
+                  + dependsOn        = [
+                      + {
+                          + condition     = "START"
+                          + containerName = "ollama"
+                        },
+                    ]
+                  + environment      = [
+                      + {
+                          + name  = "AI_MODE_REVIEW_DATA_DIR"
+                          + value = "/tmp/ai-data/agentic-reviews"
+                        },
+                      + {
+                          + name  = "LLM_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "LLM_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MCP_ALLOWED_HOSTS"
+                          + value = "ai-services.asd.internal,ai-services.asd.internal:*"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_DATA_DIR"
+                          + value = "/tmp/ai-data/multi-agent"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_PLANNER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_REVIEWER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_STAGE_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_WORKER_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "REVIEW_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "SERVICE_PORT"
+                          + value = "7004"
+                        },
+                    ]
+                  + essential        = true
+                  + healthCheck      = {
+                      + command     = [
+                          + "CMD-SHELL",
+                          + "python -c \"import socket; socket.create_connection(('127.0.0.1', 7004), 3)\"",
+                        ]
+                      + interval    = 30
+                      + retries     = 3
+                      + startPeriod = 60
+                      + timeout     = 5
+                    }
+                  + image            = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511"
+                  + logConfiguration = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/asd26-g40-r2/ai-services"
+                          + awslogs-region        = "ap-southeast-2"
+                          + awslogs-stream-prefix = "multi-agent"
+                        }
+                    }
+                  + name             = "multi-agent"
+                  + portMappings     = [
+                      + {
+                          + containerPort = 7004
+                          + hostPort      = 7004
+                          + protocol      = "tcp"
+                        },
+                    ]
+                  + workingDirectory = "/srv/multi-agent"
+                },
+              + {
+                  + command          = [
+                      + "ollama serve & until ollama list >/dev/null 2>&1; do sleep 1; done; for model in $AI_PULL_MODELS; do ollama pull \"$model\" || exit 1; done; touch /tmp/models-ready; wait",
+                    ]
+                  + entryPoint       = [
+                      + "/bin/sh",
+                      + "-c",
+                    ]
+                  + environment      = [
+                      + {
+                          + name  = "AI_PULL_MODELS"
+                          + value = "qwen2.5:3b llama3.1:8b"
+                        },
+                      + {
+                          + name  = "OLLAMA_HOST"
+                          + value = "127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "OLLAMA_KEEP_ALIVE"
+                          + value = "-1"
+                        },
+                      + {
+                          + name  = "OLLAMA_MAX_LOADED_MODELS"
+                          + value = "2"
+                        },
+                    ]
+                  + essential        = true
+                  + healthCheck      = {
+                      + command     = [
+                          + "CMD-SHELL",
+                          + "test -f /tmp/models-ready",
+                        ]
+                      + interval    = 30
+                      + retries     = 10
+                      + startPeriod = 300
+                      + timeout     = 5
+                    }
+                  + image            = "ollama/ollama:0.32.9"
+                  + logConfiguration = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/asd26-g40-r2/ai-services"
+                          + awslogs-region        = "ap-southeast-2"
+                          + awslogs-stream-prefix = "ollama"
+                        }
+                    }
+                  + name             = "ollama"
+                },
+              + {
+                  + command          = [
+                      + "python",
+                      + "http_server.py",
+                    ]
+                  + dependsOn        = [
+                      + {
+                          + condition     = "START"
+                          + containerName = "ollama"
+                        },
+                    ]
+                  + environment      = [
+                      + {
+                          + name  = "AI_MODE_REVIEW_DATA_DIR"
+                          + value = "/tmp/ai-data/agentic-reviews"
+                        },
+                      + {
+                          + name  = "LLM_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "LLM_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MCP_ALLOWED_HOSTS"
+                          + value = "ai-services.asd.internal,ai-services.asd.internal:*"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_DATA_DIR"
+                          + value = "/tmp/ai-data/multi-agent"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_PLANNER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_REVIEWER_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_STAGE_TIMEOUT"
+                          + value = "300"
+                        },
+                      + {
+                          + name  = "MULTI_AGENT_WORKER_MODEL"
+                          + value = "qwen2.5:3b"
+                        },
+                      + {
+                          + name  = "OLLAMA_URL"
+                          + value = "http://127.0.0.1:11434"
+                        },
+                      + {
+                          + name  = "REVIEW_MODEL"
+                          + value = "llama3.1:8b"
+                        },
+                      + {
+                          + name  = "SERVICE_PORT"
+                          + value = "7003"
+                        },
+                    ]
+                  + essential        = true
+                  + healthCheck      = {
+                      + command     = [
+                          + "CMD-SHELL",
+                          + "python -c \"import socket; socket.create_connection(('127.0.0.1', 7003), 3)\"",
+                        ]
+                      + interval    = 30
+                      + retries     = 3
+                      + startPeriod = 60
+                      + timeout     = 5
+                    }
+                  + image            = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/ai-services:ai-9759f7d-20261028071511"
+                  + logConfiguration = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/asd26-g40-r2/ai-services"
+                          + awslogs-region        = "ap-southeast-2"
+                          + awslogs-stream-prefix = "rag-server"
+                        }
+                    }
+                  + name             = "rag-server"
+                  + portMappings     = [
+                      + {
+                          + containerPort = 7003
+                          + hostPort      = 7003
+                          + protocol      = "tcp"
+                        },
+                    ]
+                  + workingDirectory = "/srv/rag-server"
+                },
+            ]
+        )
+      + cpu                      = "16384"
+      + enable_fault_injection   = (known after apply)
+      + execution_role_arn       = "arn:aws:iam::604707013588:role/asd26-g40-r2-execution"
+      + family                   = "asd26-g40-r2-ai-services"
+      + id                       = (known after apply)
+      + memory                   = "32768"
+      + network_mode             = "awsvpc"
+      + requires_compatibilities = [
+          + "FARGATE",
+        ]
+      + revision                 = (known after apply)
+      + skip_destroy             = false
+      + tags                     = {
+          + "ImageCommit" = "ai-9759f7d-20261028071511"
+          + "Service"     = "ai-services"
+        }
+      + tags_all                 = {
+          + "ImageCommit" = "ai-9759f7d-20261028071511"
+          + "Service"     = "ai-services"
+        }
+      + task_role_arn            = "arn:aws:iam::604707013588:role/asd26-g40-r2-task"
+      + track_latest             = false
+
+      + ephemeral_storage {
+          + size_in_gib = 60
+        }
+    }
+
+  # aws_ecs_task_definition.service["student-1-backend"] must be replaced
+-/+ resource "aws_ecs_task_definition" "service" {
+      ~ arn                      = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-1-backend:5" -> (known after apply)
+      ~ arn_without_revision     = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-1-backend" -> (known after apply)
+      ~ container_definitions    = jsonencode(
+          ~ [
+              ~ {
+                  ~ environment      = [
+                      ~ {
+                            name  = "AI_MODE_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "AI_MODE_URL"
+                          ~ value = "http://127.0.0.1:7001" -> "http://ai-services.asd.internal:7001"
+                        },
+                        {
+                            name  = "DATABASE_URL"
+                            value = "http://student-1-db.asd.internal:9001"
+                        },
+                      ~ {
+                            name  = "MCP_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MCP_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7002" -> "http://ai-services.asd.internal:7002"
+                        },
+                      ~ {
+                            name  = "MULTI_AGENT_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MULTI_AGENT_URL"
+                          ~ value = "http://127.0.0.1:7004" -> "http://ai-services.asd.internal:7004"
+                        },
+                      ~ {
+                            name  = "RAG_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "RAG_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7003" -> "http://ai-services.asd.internal:7003"
+                        },
+                        {
+                            name  = "SERVICE_PORT"
+                            value = "8001"
+                        },
+                    ]
+                    name             = "student-1-backend"
+                  - systemControls   = []
+                  - volumesFrom      = []
+                    # (6 unchanged attributes hidden)
+                },
+            ] # forces replacement
+        )
+      ~ enable_fault_injection   = false -> (known after apply)
+      ~ id                       = "asd26-g40-r2-student-1-backend" -> (known after apply)
+      ~ revision                 = 5 -> (known after apply)
+        tags                     = {
+            "ImageCommit" = "1d0d0a21198bedc10977d220ee0bde4d8abe558a"
+            "Service"     = "student-1-backend"
+        }
+        # (12 unchanged attributes hidden)
+    }
+
+  # aws_ecs_task_definition.service["student-3-backend"] must be replaced
+-/+ resource "aws_ecs_task_definition" "service" {
+      ~ arn                      = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-3-backend:5" -> (known after apply)
+      ~ arn_without_revision     = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-3-backend" -> (known after apply)
+      ~ container_definitions    = jsonencode(
+          ~ [
+              ~ {
+                  ~ environment      = [
+                      ~ {
+                            name  = "AI_MODE_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "AI_MODE_URL"
+                          ~ value = "http://127.0.0.1:7001" -> "http://ai-services.asd.internal:7001"
+                        },
+                        {
+                            name  = "DATABASE_URL"
+                            value = "http://student-3-db.asd.internal:9003"
+                        },
+                      ~ {
+                            name  = "MCP_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MCP_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7002" -> "http://ai-services.asd.internal:7002"
+                        },
+                      ~ {
+                            name  = "MULTI_AGENT_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MULTI_AGENT_URL"
+                          ~ value = "http://127.0.0.1:7004" -> "http://ai-services.asd.internal:7004"
+                        },
+                      ~ {
+                            name  = "RAG_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "RAG_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7003" -> "http://ai-services.asd.internal:7003"
+                        },
+                        {
+                            name  = "SERVICE_PORT"
+                            value = "8003"
+                        },
+                    ]
+                    name             = "student-3-backend"
+                  - systemControls   = []
+                  - volumesFrom      = []
+                    # (6 unchanged attributes hidden)
+                },
+            ] # forces replacement
+        )
+      ~ enable_fault_injection   = false -> (known after apply)
+      ~ id                       = "asd26-g40-r2-student-3-backend" -> (known after apply)
+      ~ revision                 = 5 -> (known after apply)
+        tags                     = {
+            "ImageCommit" = "1d0d0a21198bedc10977d220ee0bde4d8abe558a"
+            "Service"     = "student-3-backend"
+        }
+        # (12 unchanged attributes hidden)
+    }
+
+  # aws_ecs_task_definition.service["student-4-backend"] must be replaced
+-/+ resource "aws_ecs_task_definition" "service" {
+      ~ arn                      = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-4-backend:5" -> (known after apply)
+      ~ arn_without_revision     = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-4-backend" -> (known after apply)
+      ~ container_definitions    = jsonencode(
+          ~ [
+              ~ {
+                  ~ environment      = [
+                      ~ {
+                            name  = "AI_MODE_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "AI_MODE_URL"
+                          ~ value = "http://127.0.0.1:7001" -> "http://ai-services.asd.internal:7001"
+                        },
+                        {
+                            name  = "DATABASE_URL"
+                            value = "http://student-4-db.asd.internal:9004"
+                        },
+                      ~ {
+                            name  = "MCP_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MCP_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7002" -> "http://ai-services.asd.internal:7002"
+                        },
+                      ~ {
+                            name  = "RAG_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "RAG_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7003" -> "http://ai-services.asd.internal:7003"
+                        },
+                        {
+                            name  = "SERVICE_PORT"
+                            value = "8004"
+                        },
+                    ]
+                    name             = "student-4-backend"
+                  - systemControls   = []
+                  - volumesFrom      = []
+                    # (6 unchanged attributes hidden)
+                },
+            ] # forces replacement
+        )
+      ~ enable_fault_injection   = false -> (known after apply)
+      ~ id                       = "asd26-g40-r2-student-4-backend" -> (known after apply)
+      ~ revision                 = 5 -> (known after apply)
+        tags                     = {
+            "ImageCommit" = "1d0d0a21198bedc10977d220ee0bde4d8abe558a"
+            "Service"     = "student-4-backend"
+        }
+        # (12 unchanged attributes hidden)
+    }
+
+  # aws_ecs_task_definition.service["student-5-backend"] must be replaced
+-/+ resource "aws_ecs_task_definition" "service" {
+      ~ arn                      = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-5-backend:5" -> (known after apply)
+      ~ arn_without_revision     = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student-5-backend" -> (known after apply)
+      ~ container_definitions    = jsonencode(
+          ~ [
+              ~ {
+                  ~ environment      = [
+                      ~ {
+                            name  = "AI_MODE_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "AI_MODE_URL"
+                          ~ value = "http://127.0.0.1:7001" -> "http://ai-services.asd.internal:7001"
+                        },
+                        {
+                            name  = "CATALOGUE_URL"
+                            value = "http://student-1-backend.asd.internal:8001"
+                        },
+                        {
+                            name  = "DATABASE_URL"
+                            value = "http://student-5-db.asd.internal:9005"
+                        },
+                      ~ {
+                            name  = "MCP_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MCP_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7002" -> "http://ai-services.asd.internal:7002"
+                        },
+                      ~ {
+                            name  = "RAG_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "RAG_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7003" -> "http://ai-services.asd.internal:7003"
+                        },
+                        {
+                            name  = "SERVICE_PORT"
+                            value = "8005"
+                        },
+                    ]
+                    name             = "student-5-backend"
+                  - systemControls   = []
+                  - volumesFrom      = []
+                    # (6 unchanged attributes hidden)
+                },
+            ] # forces replacement
+        )
+      ~ enable_fault_injection   = false -> (known after apply)
+      ~ id                       = "asd26-g40-r2-student-5-backend" -> (known after apply)
+      ~ revision                 = 5 -> (known after apply)
+        tags                     = {
+            "ImageCommit" = "1d0d0a21198bedc10977d220ee0bde4d8abe558a"
+            "Service"     = "student-5-backend"
+        }
+        # (12 unchanged attributes hidden)
+    }
+
+  # aws_ecs_task_definition.service["student2-api"] must be replaced
+-/+ resource "aws_ecs_task_definition" "service" {
+      ~ arn                      = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student2-api:5" -> (known after apply)
+      ~ arn_without_revision     = "arn:aws:ecs:ap-southeast-2:604707013588:task-definition/asd26-g40-r2-student2-api" -> (known after apply)
+      ~ container_definitions    = jsonencode(
+          ~ [
+              ~ {
+                  ~ environment      = [
+                      ~ {
+                            name  = "AI_MODE_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "AI_MODE_URL"
+                          ~ value = "http://127.0.0.1:7001" -> "http://ai-services.asd.internal:7001"
+                        },
+                        {
+                            name  = "DATABASE_API_URL"
+                            value = "http://student2-db.asd.internal:9002"
+                        },
+                      ~ {
+                            name  = "MCP_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "MCP_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7002" -> "http://ai-services.asd.internal:7002"
+                        },
+                        {
+                            name  = "PRODUCT_API_URL"
+                            value = "http://student-1-backend.asd.internal:8001"
+                        },
+                      ~ {
+                            name  = "RAG_ENABLED"
+                          ~ value = "false" -> "true"
+                        },
+                      ~ {
+                            name  = "RAG_SERVER_URL"
+                          ~ value = "http://127.0.0.1:7003" -> "http://ai-services.asd.internal:7003"
+                        },
+                        {
+                            name  = "SERVER_PORT"
+                            value = "8002"
+                        },
+                        # (1 unchanged element hidden)
+                    ]
+                    name             = "student2-api"
+                  - systemControls   = []
+                  - volumesFrom      = []
+                    # (6 unchanged attributes hidden)
+                },
+            ] # forces replacement
+        )
+      ~ enable_fault_injection   = false -> (known after apply)
+      ~ id                       = "asd26-g40-r2-student2-api" -> (known after apply)
+      ~ revision                 = 5 -> (known after apply)
+        tags                     = {
+            "ImageCommit" = "1d0d0a21198bedc10977d220ee0bde4d8abe558a"
+            "Service"     = "student2-api"
+        }
+        # (12 unchanged attributes hidden)
+    }
+
+  # aws_eip.cloud_ai_nat[0] will be created
+  + resource "aws_eip" "cloud_ai_nat" {
+      + allocation_id        = (known after apply)
+      + arn                  = (known after apply)
+      + association_id       = (known after apply)
+      + carrier_ip           = (known after apply)
+      + customer_owned_ip    = (known after apply)
+      + domain               = "vpc"
+      + id                   = (known after apply)
+      + instance             = (known after apply)
+      + ipam_pool_id         = (known after apply)
+      + network_border_group = (known after apply)
+      + network_interface    = (known after apply)
+      + private_dns          = (known after apply)
+      + private_ip           = (known after apply)
+      + ptr_record           = (known after apply)
+      + public_dns           = (known after apply)
+      + public_ip            = (known after apply)
+      + public_ipv4_pool     = (known after apply)
+      + tags                 = {
+          + "Name" = "asd26-g40-r2-ai-nat"
+        }
+      + tags_all             = {
+          + "Name" = "asd26-g40-r2-ai-nat"
+        }
+      + vpc                  = (known after apply)
+    }
+
+  # aws_lb.app will be updated in-place
+  ~ resource "aws_lb" "app" {
+        id                                                           = "arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:loadbalancer/app/asd26-g40-r2-alb/1574a480e9134b0c"
+      ~ idle_timeout                                                 = 60 -> 300
+        name                                                         = "asd26-g40-r2-alb"
+        tags                                                         = {
+            "Name" = "asd26-g40-r2-alb"
+        }
+        # (26 unchanged attributes hidden)
+
+        # (4 unchanged blocks hidden)
+    }
+
+  # aws_nat_gateway.cloud_ai[0] will be created
+  + resource "aws_nat_gateway" "cloud_ai" {
+      + allocation_id                      = (known after apply)
+      + association_id                     = (known after apply)
+      + connectivity_type                  = "public"
+      + id                                 = (known after apply)
+      + network_interface_id               = (known after apply)
+      + private_ip                         = (known after apply)
+      + public_ip                          = (known after apply)
+      + secondary_private_ip_address_count = (known after apply)
+      + secondary_private_ip_addresses     = (known after apply)
+      + subnet_id                          = "subnet-029ed9deded80c3e3"
+      + tags                               = {
+          + "Name" = "asd26-g40-r2-ai-nat"
+        }
+      + tags_all                           = {
+          + "Name" = "asd26-g40-r2-ai-nat"
+        }
+    }
+
+  # aws_route.private_nat[0] will be created
+  + resource "aws_route" "private_nat" {
+      + destination_cidr_block = "0.0.0.0/0"
+      + id                     = (known after apply)
+      + instance_id            = (known after apply)
+      + instance_owner_id      = (known after apply)
+      + nat_gateway_id         = (known after apply)
+      + network_interface_id   = (known after apply)
+      + origin                 = (known after apply)
+      + route_table_id         = "rtb-0b6fd32ad634bfdb7"
+      + state                  = (known after apply)
+    }
+
+  # aws_route.private_nat[1] will be created
+  + resource "aws_route" "private_nat" {
+      + destination_cidr_block = "0.0.0.0/0"
+      + id                     = (known after apply)
+      + instance_id            = (known after apply)
+      + instance_owner_id      = (known after apply)
+      + nat_gateway_id         = (known after apply)
+      + network_interface_id   = (known after apply)
+      + origin                 = (known after apply)
+      + route_table_id         = "rtb-0b4aab17d7742b81d"
+      + state                  = (known after apply)
+    }
+
+  # aws_service_discovery_service.cloud_ai[0] will be created
+  + resource "aws_service_discovery_service" "cloud_ai" {
+      + arn           = (known after apply)
+      + force_destroy = false
+      + id            = (known after apply)
+      + name          = "ai-services"
+      + namespace_id  = (known after apply)
+      + tags_all      = (known after apply)
+      + type          = (known after apply)
+
+      + dns_config {
+          + namespace_id   = "ns-gjfhjbiy5uir3fnb"
+          + routing_policy = "MULTIVALUE"
+
+          + dns_records {
+              + ttl  = 10
+              + type = "A"
+            }
+        }
+
+      + health_check_custom_config {
+          + failure_threshold = 1
+        }
+    }
+
+Plan: 13 to add, 6 to change, 5 to destroy.
+
+Changes to Outputs:
+  + cloud_ai_enabled       = true
+aws_ecs_task_definition.service["student-1-backend"]: Destroying... [id=asd26-g40-r2-student-1-backend]
+aws_ecs_task_definition.service["student2-api"]: Destroying... [id=asd26-g40-r2-student2-api]
+aws_ecs_task_definition.service["student-3-backend"]: Destroying... [id=asd26-g40-r2-student-3-backend]
+aws_ecs_task_definition.service["student-4-backend"]: Destroying... [id=asd26-g40-r2-student-4-backend]
+aws_ecs_task_definition.service["student-5-backend"]: Destroying... [id=asd26-g40-r2-student-5-backend]
+aws_cloudwatch_log_group.cloud_ai[0]: Creating...
+aws_eip.cloud_ai_nat[0]: Creating...
+aws_service_discovery_service.cloud_ai[0]: Creating...
+aws_ecs_task_definition.service["student-4-backend"]: Destruction complete after 0s
+aws_ecs_task_definition.service["student2-api"]: Destruction complete after 0s
+aws_ecs_task_definition.service["student-5-backend"]: Destruction complete after 0s
+aws_ecs_task_definition.service["student-1-backend"]: Destruction complete after 0s
+aws_ecs_task_definition.service["student-3-backend"]: Destruction complete after 0s
+aws_lb.app: Modifying... [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:loadbalancer/app/asd26-g40-r2-alb/1574a480e9134b0c]
+aws_cloudwatch_log_group.cloud_ai[0]: Creation complete after 0s [id=/ecs/asd26-g40-r2/ai-services]
+aws_ecs_task_definition.cloud_ai[0]: Creating...
+aws_service_discovery_service.cloud_ai[0]: Creation complete after 0s [id=srv-5ch5bneesfolwiwf]
+aws_ecs_task_definition.cloud_ai[0]: Creation complete after 0s [id=asd26-g40-r2-ai-services]
+aws_eip.cloud_ai_nat[0]: Creation complete after 0s [id=eipalloc-05120484bf39816e0]
+aws_nat_gateway.cloud_ai[0]: Creating...
+aws_lb.app: Still modifying... [id=arn:aws:elasticloadbalancing:ap-southea.../app/asd26-g40-r2-alb/1574a480e9134b0c, 00m10s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [00m10s elapsed]
+aws_lb.app: Still modifying... [id=arn:aws:elasticloadbalancing:ap-southea.../app/asd26-g40-r2-alb/1574a480e9134b0c, 00m20s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [00m20s elapsed]
+aws_lb.app: Still modifying... [id=arn:aws:elasticloadbalancing:ap-southea.../app/asd26-g40-r2-alb/1574a480e9134b0c, 00m30s elapsed]
+aws_lb.app: Modifications complete after 30s [id=arn:aws:elasticloadbalancing:ap-southeast-2:604707013588:loadbalancer/app/asd26-g40-r2-alb/1574a480e9134b0c]
+aws_ecs_task_definition.service["student-3-backend"]: Creating...
+aws_ecs_task_definition.service["student2-api"]: Creating...
+aws_ecs_task_definition.service["student-5-backend"]: Creating...
+aws_ecs_task_definition.service["student-1-backend"]: Creating...
+aws_ecs_task_definition.service["student-4-backend"]: Creating...
+aws_nat_gateway.cloud_ai[0]: Still creating... [00m30s elapsed]
+aws_ecs_task_definition.service["student-5-backend"]: Creation complete after 1s [id=asd26-g40-r2-student-5-backend]
+aws_ecs_task_definition.service["student-4-backend"]: Creation complete after 1s [id=asd26-g40-r2-student-4-backend]
+aws_ecs_task_definition.service["student-3-backend"]: Creation complete after 1s [id=asd26-g40-r2-student-3-backend]
+aws_ecs_task_definition.service["student2-api"]: Creation complete after 1s [id=asd26-g40-r2-student2-api]
+aws_ecs_task_definition.service["student-1-backend"]: Creation complete after 1s [id=asd26-g40-r2-student-1-backend]
+aws_ecs_service.backend["student-3-backend"]: Modifying... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-backend]
+aws_ecs_service.backend["student-1-backend"]: Modifying... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-backend]
+aws_ecs_service.backend["student2-api"]: Modifying... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-api]
+aws_ecs_service.backend["student-4-backend"]: Modifying... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-backend]
+aws_ecs_service.backend["student-5-backend"]: Modifying... [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-backend]
+aws_ecs_service.backend["student-4-backend"]: Modifications complete after 0s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-4-backend]
+aws_ecs_service.backend["student2-api"]: Modifications complete after 0s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student2-api]
+aws_ecs_service.backend["student-3-backend"]: Modifications complete after 0s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-3-backend]
+aws_ecs_service.backend["student-1-backend"]: Modifications complete after 0s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-1-backend]
+aws_ecs_service.backend["student-5-backend"]: Modifications complete after 0s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-student-5-backend]
+aws_nat_gateway.cloud_ai[0]: Still creating... [00m40s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [00m50s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m00s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m10s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m20s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m30s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m40s elapsed]
+aws_nat_gateway.cloud_ai[0]: Still creating... [01m50s elapsed]
+aws_nat_gateway.cloud_ai[0]: Creation complete after 1m55s [id=nat-0a019c0e0684bf6b5]
+aws_route.private_nat[0]: Creating...
+aws_route.private_nat[1]: Creating...
+aws_route.private_nat[1]: Creation complete after 1s [id=r-rtb-0b4aab17d7742b81d1080289494]
+aws_route.private_nat[0]: Creation complete after 1s [id=r-rtb-0b6fd32ad634bfdb71080289494]
+aws_ecs_service.cloud_ai[0]: Creating...
+aws_ecs_service.cloud_ai[0]: Creation complete after 1s [id=arn:aws:ecs:ap-southeast-2:604707013588:service/asd26-g40-r2-cluster/asd26-g40-r2-ai-services]
+
+Apply complete! Resources: 13 added, 6 changed, 5 destroyed.
+
+Outputs:
+
+cloud_ai_enabled = true
+database_filesystem_id = "fs-05bce2f0bb4af16a7"
+ecr_repository_urls = {
+  "shared-home" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/shared-home"
+  "student-1-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-backend"
+  "student-1-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-db"
+  "student-1-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-1-frontend"
+  "student-3-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-backend"
+  "student-3-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-db"
+  "student-3-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-3-frontend"
+  "student-4-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-backend"
+  "student-4-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-db"
+  "student-4-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-4-frontend"
+  "student-5-backend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-backend"
+  "student-5-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-db"
+  "student-5-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student-5-frontend"
+  "student2-api" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-api"
+  "student2-db" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-db"
+  "student2-frontend" = "604707013588.dkr.ecr.ap-southeast-2.amazonaws.com/asd26-g40-r2/student2-frontend"
+}
+frontend_urls = {
+  "home" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com"
+  "student_1" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001"
+  "student_2" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3002"
+  "student_3" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3003"
+  "student_4" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3004"
+  "student_5" = "http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3005"
+}
+load_balancer_dns_name = "asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com"
+Waiting for the AI task (model download included) and the updated backends...
+All four AI services ready.
+{"checked_at":"2026-10-28T07:20:50Z","base_url":"http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"enabled","controlled_recovery":"no"}
+[07:20:51] Cloud AI profile check against http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001
+  ai_mode            ok
+  mcp_server         ok
+  rag_server         ok
+  multi_agent_server ok
+[07:20:52] Using product 12
+[07:21:02] B1 AI-Mode: suggestion with Plan/Act/Observe trace
+[07:21:03] B2 MCP: check_product_listing returned
+[07:21:07] B3 RAG: grounded answer with sources
+[07:21:11] B4 Multi-Agent: workflow 0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9 started
+[07:23:25] B4 Multi-Agent: Planner, Worker and Reviewer finished; awaiting Human Review
+[07:23:25] B4 Multi-Agent: human decision recorded
+{"checked_at":"2026-10-28T07:23:25Z","frontend":"http://asd26-g40-r2-alb-1236575834.ap-southeast-2.elb.amazonaws.com:3001","product_id":"12","workflow_id":"0f0b2b17-f2f6-43a7-a3a4-a7c64cbce9a9","ai_mode":"passed","mcp":"passed","rag":"passed","multi_agent":"passed"}
+exit 0

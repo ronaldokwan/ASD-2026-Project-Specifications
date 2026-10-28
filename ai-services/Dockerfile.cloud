@@ -1,0 +1,27 @@
+# Bonus cloud AI profile only. Locally these four services stay native host processes
+# (scripts/run-ai-services.sh); on AWS one image carries all of them and the ECS task
+# starts each as its own container, sharing localhost with the Ollama container.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /srv
+
+COPY ai-mode/requirements.txt requirements/ai-mode.txt
+COPY mcp-server/requirements.txt requirements/mcp-server.txt
+COPY rag-server/requirements.txt requirements/rag-server.txt
+COPY multi-agent/requirements.txt requirements/multi-agent.txt
+RUN pip install --no-cache-dir gunicorn==22.0.0 \
+      -r requirements/ai-mode.txt -r requirements/mcp-server.txt \
+      -r requirements/rag-server.txt -r requirements/multi-agent.txt
+
+COPY . .
+
+RUN useradd --uid 1000 --create-home ai \
+    && mkdir -p /srv/rag-server/data /tmp/ai-data \
+    && chown -R ai:ai /srv/rag-server/data /tmp/ai-data
+USER ai
+
+# Each ECS container overrides this with its own service (see infra/aws/cloud-ai.tf).
+CMD ["python", "ai-mode/app.py"]

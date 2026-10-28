@@ -266,6 +266,8 @@ def run():
             "localhost:*",
             "host.docker.internal",
             "host.docker.internal:*",
+            # Cloud AI profile: backends call the MCP server by its Cloud Map name.
+            *[h.strip() for h in os.getenv("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()],
         ],
         allowed_origins=[],
     )

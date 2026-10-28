@@ -44,11 +44,14 @@ check "frontend    :3001/" 200 http://localhost:3001/ -o /dev/null
 check "database    :9001/health" 200 http://localhost:9001/health
 check "backend     :8001/health (database + all four AI services)" 200 http://localhost:8001/health
 check "backend -> database  GET /api/products" 200 http://localhost:8001/api/products -o /dev/null
-check "backend -> MCP       check_product_listing" 200 -X POST http://localhost:8001/api/products/1/mcp-check \
+# Use a product that exists: earlier CRUD tests may have deleted the first ones.
+product_id="$(curl -s -m 10 http://localhost:8001/api/products | grep -o '"id": *[0-9]*' | head -1 | grep -o '[0-9]*$')"
+product_id="${product_id:-1}"
+check "backend -> MCP       check_product_listing" 200 -X POST http://localhost:8001/api/products/$product_id/mcp-check \
   -H 'Content-Type: application/json' -d '{}'
 check "backend -> RAG       grounded answer" 200 -X POST http://localhost:8001/api/catalogue/ask \
   -H 'Content-Type: application/json' -d '{"question":"What makes a product listing ready to publish?"}'
-check "backend -> Multi-Agent  start listing review" 202 -X POST http://localhost:8001/api/products/1/multi-agent \
+check "backend -> Multi-Agent  start listing review" 202 -X POST http://localhost:8001/api/products/$product_id/multi-agent \
   -H 'Content-Type: application/json' -d '{}'
 
 echo

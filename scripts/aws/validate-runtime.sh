@@ -102,12 +102,17 @@ product_id=""
 table="$(curl --fail --silent --show-error --get "$student1_url/partials/products" \
   --data-urlencode "search=$sku")"
 grep -q "No products match" <<<"$table"
+# The bonus cloud AI profile (enable-cloud-ai.sh) sets EXPECT_CLOUD_AI=enabled instead.
+ai_expected="${EXPECT_CLOUD_AI:-disabled}"
 curl --fail --silent --show-error "$student1_url/health" | python3 -c '
 import json, sys
 backend = json.load(sys.stdin)["backend"]
 for key in ("ai_mode", "mcp_server", "rag_server", "multi_agent_server"):
-    assert backend[key] == {"status": "disabled"}, key
-'
+    if sys.argv[1] == "enabled":
+        assert backend[key].get("status") == "ok", (key, backend[key])
+    else:
+        assert backend[key] == {"status": "disabled"}, key
+' "$ai_expected"
 
 # Student 5 Reviews and Ratings CRUD through its public frontend proxy.
 review_sku="SKU-AWS-REV-$(date -u +%H%M%S)$$"
@@ -141,6 +146,6 @@ if [[ "${EXERCISE_RECOVERY:-no}" == "yes" ]]; then
 fi
 
 mkdir -p "$root/reports"
-printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"disabled","student5_crud":"create-update-delete-and-database-list-verified","controlled_recovery":"%s"}\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$url" "${EXERCISE_RECOVERY:-no}" \
+printf '{"checked_at":"%s","base_url":"%s","home":"200","frontend_ports":[3001,3002,3003,3004,3005],"student3_crud":"create-update-delete-and-database-list-verified","student1_crud":"create-update-delete-and-database-list-verified","student1_ai_services":"%s","student5_crud":"create-update-delete-and-database-list-verified","controlled_recovery":"%s"}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$url" "$ai_expected" "${EXERCISE_RECOVERY:-no}" \
   | tee "$root/reports/aws-runtime-validation.json"
