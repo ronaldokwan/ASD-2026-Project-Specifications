@@ -74,4 +74,10 @@ def not_found(_):
 
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "false").strip().lower() in ("1", "true", "yes")
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "7003")), debug=debug)
+    # Direct invocation is loopback-only. The shared startup script opts into
+    # a host-reachable bind for Docker backends using host.docker.internal.
+    app.run(
+        host=os.getenv("RAG_BIND_ADDRESS", "127.0.0.1"),
+        port=int(os.getenv("SERVICE_PORT", "7003")),
+        debug=debug,
+    )

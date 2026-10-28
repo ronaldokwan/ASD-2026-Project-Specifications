@@ -1,0 +1,14 @@
+<div id="multi-agent-history-list">
+  {% if error %}<p class="muted">{{ error }}</p>
+  {% elif workflows %}
+    <ul>{% for item in workflows %}
+      <li><strong>{{ item.status|replace('_', ' ')|title }}</strong> · {{ item.created_at }}
+        {% if item.human_decision %} · {{ item.human_decision.decision|replace('_', ' ')|title }}{% endif %}
+        <button class="btn secondary compact" hx-get="/customers/{{ customer_id }}/multi-agent/{{ item.workflow_id }}" hx-target="#multi-agent-panel">View</button>
+      </li>
+    {% endfor %}</ul>
+    {% if visible_count < total_count %}
+      <button class="btn secondary compact" hx-get="/customers/{{ customer_id }}/multi-agent/history?offset={{ visible_count }}" hx-target="#multi-agent-history-list" hx-swap="outerHTML">Show more</button>
+    {% endif %}
+  {% else %}<p class="muted">No loyalty review workflows recorded for this customer yet.</p>{% endif %}
+</div>

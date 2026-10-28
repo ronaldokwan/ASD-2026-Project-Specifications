@@ -1,12 +1,5 @@
 <section class="multi-agent-history">
   <h3>Workflow history</h3>
   {% if error %}<p class="muted">{{ error }}</p>
-  {% elif workflows %}
-    <ul>{% for item in workflows %}
-      <li><strong>{{ item.status|replace('_', ' ')|title }}</strong> · {{ item.created_at }}
-        {% if item.human_decision %} · {{ item.human_decision.decision|replace('_', ' ')|title }}{% endif %}
-        <button class="btn secondary compact" hx-get="/customers/{{ customer_id }}/multi-agent/{{ item.workflow_id }}" hx-target="#multi-agent-panel">View</button>
-      </li>
-    {% endfor %}</ul>
-  {% else %}<p class="muted">No loyalty review workflows recorded for this customer yet.</p>{% endif %}
+  {% else %}{% include "partials/multi_agent_history_items.html" %}{% endif %}
 </section>

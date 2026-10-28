@@ -4,6 +4,7 @@ Student backends use the native RAG HTTP API on port 7003. This process is for
 MCP-aware local clients and uses the same validated pipeline functions.
 """
 
+import os
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer

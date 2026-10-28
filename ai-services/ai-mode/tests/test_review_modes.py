@@ -131,7 +131,7 @@ def test_local_tests_do_not_count_as_post_commit_backend_evidence(client, monkey
     assert result["result"]["assessment"] == "incomplete"
     assert "not identified as post-commit" in result["result"]["validation_log"]["evidence_gate"]
     assert "GitHub Actions" in result["result"]["validation_log"]["evidence_gate"]
-    assert "local results, not post-commit executions" in result["result"]["execution_results_review"]
+    assert "not identified as post-commit" in result["result"]["execution_results_review"]
 
 
 def test_testing_review_corrects_model_claim_that_local_tests_were_post_commit(client, monkeypatch):
@@ -158,8 +158,28 @@ def test_testing_review_corrects_model_claim_that_local_tests_were_post_commit(c
     })
     reviewed = response.get_json()["result"]
     assert reviewed["assessment"] == "incomplete"
-    assert "local results, not post-commit executions" in reviewed["execution_results_review"]
+    assert "not identified as post-commit" in reviewed["execution_results_review"]
     assert "not hosted CI results" in reviewed["execution_results_review"]
+
+
+def test_hosted_post_push_endpoint_results_are_identified_separately(client, monkeypatch):
+    response = _run_review(monkeypatch, "testing_report", {
+        "test_code": "assert customer response contains requested record",
+        "pre_commit_security_results": [
+            {"name": "ruff-security", "status": "passed", "exit_code": 0},
+            {"name": "detect-secrets", "status": "passed", "exit_code": 0},
+            {"name": "pip-audit", "status": "passed", "exit_code": 0},
+        ],
+        "post_commit_backend_endpoint_tests": [
+            {"endpoint": "GET /api/customers", "phase": "post_commit", "origin": "github_actions", "status": "passed", "exit_code": 0},
+            {"endpoint": "GET /api/customers/{id}", "phase": "post_commit", "origin": "github_actions", "status": "passed", "exit_code": 0},
+        ],
+        "hosted_ci": {"status": "passed", "run_id": "gh-run-42"},
+    })
+
+    result = response.get_json()["result"]
+    assert result["assessment"] == "passed"
+    assert result["validation_log"]["evidence_assessment"] == "passed"
 
 
 def test_complete_security_and_post_commit_endpoint_evidence_can_pass(client, monkeypatch):
@@ -187,6 +207,7 @@ def test_testing_review_prompt_separates_local_results_from_hosted_ci():
     task = task_for("testing_report")
     assert "not hosted CI results" in task
     assert "post-commit local executions" in task
+    assert "GitHub Actions result as a separate evidence source" in task
 
 
 def test_cloud_review_requires_three_runtime_categories(client, monkeypatch):
