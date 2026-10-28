@@ -148,13 +148,28 @@ if response.get("failures"):
     raise SystemExit(1)
 for service in response.get("services", []):
     deployments = service.get("deployments", [])
+    primary = [deployment for deployment in deployments
+               if deployment.get("status") == "PRIMARY"]
     if (service.get("status") != "ACTIVE"
             or service.get("runningCount") != service.get("desiredCount")
             or service.get("pendingCount") != 0
-            or len(deployments) != 1
-            or deployments[0].get("rolloutState") not in (None, "COMPLETED")
-            or deployments[0].get("runningCount") != deployments[0].get("desiredCount")
-            or deployments[0].get("pendingCount") != 0):
+            or len(primary) != 1):
+        raise SystemExit(1)
+
+    primary = primary[0]
+    if (primary.get("desiredCount") != service.get("desiredCount")
+            or primary.get("runningCount") != primary.get("desiredCount")
+            or primary.get("pendingCount") != 0
+            or primary.get("rolloutState") == "FAILED"):
+        raise SystemExit(1)
+
+    for deployment in deployments:
+        if deployment is primary:
+            continue
+        if (deployment.get("desiredCount") == 0
+                and deployment.get("runningCount") == 0
+                and deployment.get("pendingCount") == 0):
+            continue
         raise SystemExit(1)
 PY
   done

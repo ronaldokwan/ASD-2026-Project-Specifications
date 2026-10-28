@@ -14,6 +14,7 @@ on:
       - "shared/**"
       - "docker-compose.yml"
       - "infra/aws/**"
+      - "scripts/aws/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/cloud-deployment.yml"
       - ".github/workflows/student-4.yml"
@@ -25,6 +26,7 @@ on:
       - "shared/**"
       - "docker-compose.yml"
       - "infra/aws/**"
+      - "scripts/aws/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/cloud-deployment.yml"
       - ".github/workflows/student-4.yml"
@@ -59,6 +61,8 @@ jobs:
           pip install flake8
       - name: Security hooks
         run: pre-commit run --all-files
+      - name: AWS runtime readiness regression tests
+        run: bash scripts/aws/tests/test_validate_runtime_readiness.sh
       - name: Validate AWS infrastructure
         run: |
           terraform -chdir=infra/aws fmt -check -recursive
