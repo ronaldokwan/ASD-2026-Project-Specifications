@@ -12,6 +12,7 @@ import requests
 BACKEND_URL = os.getenv("BACKEND_URL", "http://student-4-backend:8004").rstrip("/")
 TIMEOUT = int(os.getenv("BACKEND_TIMEOUT", "15"))
 AI_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "120"))
+MULTI_AGENT_TIMEOUT = int(os.getenv("MULTI_AGENT_TIMEOUT", "180"))
 
 
 class ApiError(Exception):
@@ -104,6 +105,35 @@ def ask_inventory(question):
         "/api/stock/ask",
         timeout=AI_TIMEOUT,
         json={"question": question},
+    )
+
+
+def start_multi_agent_review(stock_id):
+    """Queue a Planner -> Worker -> Reviewer restock review."""
+    return _call(
+        "POST",
+        "/api/stock/{}/multi-agent".format(stock_id),
+        timeout=MULTI_AGENT_TIMEOUT,
+        json={},
+    )
+
+
+def get_multi_agent_workflow(stock_id, workflow_id):
+    return _call(
+        "GET", "/api/stock/{}/multi-agent/{}".format(stock_id, workflow_id)
+    )
+
+
+def list_multi_agent_workflows(stock_id):
+    return _call("GET", "/api/stock/{}/multi-agent/history".format(stock_id))
+
+
+def review_multi_agent_workflow(stock_id, workflow_id, payload):
+    """Record the human-review decision for one stock item."""
+    return _call(
+        "POST",
+        "/api/stock/{}/multi-agent/{}/review".format(stock_id, workflow_id),
+        json=payload,
     )
 
 

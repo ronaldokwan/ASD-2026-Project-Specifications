@@ -147,6 +147,8 @@ jobs:
           TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
           IMAGE_TAG: ${{ github.sha }}
           APPROVE_DEPLOYMENT: YES
+          TF_VAR_multi_agent_enabled: ${{ vars.MULTI_AGENT_ENABLED || 'false' }}
+          TF_VAR_multi_agent_url: ${{ vars.MULTI_AGENT_URL || 'http://127.0.0.1:7004' }}
         run: bash scripts/aws/deploy.sh
       - name: Upload cloud execution evidence
         if: always()

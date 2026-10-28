@@ -114,4 +114,4 @@ def reseed():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "9004")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("SERVICE_PORT", "9004")), debug=False)
